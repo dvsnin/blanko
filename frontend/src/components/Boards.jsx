@@ -4,7 +4,18 @@ import ProfileMenu from "./ProfileMenu";
 import ProfileModal from "./ProfileModal";
 import MenuPortal from "./MenuPortal";
 import NotificationsPanel from "./NotificationsPanel";
-import TemplatesIsland from "./TemplatesIsland"; // <- import the external templates component
+import TemplatesIsland from "./TemplatesIsland";
+import NotificationButton from "./NotificationButton";
+import ProfileButton from "./ProfileButton";
+
+/*
+  Boards.jsx (final)
+  - topbar uses .topbar-left, .topbar-center (spacer), .topbar-right
+  - NotificationButton and ProfileButton are separate presentational components
+  - ProfileMenu is rendered as a normal absolute dropdown (positioned via CSS)
+  - NotificationsPanel remains as the right-side fixed panel
+  - Menus are portal-aware (MenuPortal) and card menus keep previous logic
+*/
 
 const rawBoards = [
     { id: 1, title: "МояПикерДоска", owner: "Дмитрий Васнянин", updated: "14 ноября", lastOpened: "14 ноября", onlineUsers: 3 },
@@ -60,6 +71,8 @@ export default function Boards() {
 
     // Notifications panel state
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    // demo unread count — wire it to your API if needed
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // диалоги: null | { type: 'rename' | 'delete', boardId: number }
     const [dialog, setDialog] = useState(null);
@@ -311,23 +324,20 @@ export default function Boards() {
 
     return (
         <div className="boards-page">
-            {/* ---------- TOP BAR (search removed from here) ---------- */}
+            {/* ---------- TOP BAR ---------- */}
             <header className="topbar">
                 <div className="topbar-left">
                     <span className="topbar-logo">Blanko</span>
                 </div>
 
-                <div className="topbar-right">
-                    <button type="button" className="topbar-icon-btn" aria-label="Notifications" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsNotificationsOpen((v) => !v)}>
-                        <svg className="bell-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                    </button>
+                <div className="topbar-center" aria-hidden>
+                    {/* spacer for flex centering */}
+                </div>
 
-                    <button type="button" className="topbar-avatar" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsProfileMenuOpen((prev) => !prev)}>
-                        {userInitial}
-                    </button>
+                <div className="topbar-right">
+                    <NotificationButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen((v) => !v)} />
+
+                    <ProfileButton userInitial={userInitial} onClick={() => setIsProfileMenuOpen((prev) => !prev)} />
 
                     {isProfileMenuOpen && (
                         <ProfileMenu
@@ -357,6 +367,12 @@ export default function Boards() {
 
             {/* ---------- FILTERS + BOARDS ---------- */}
             <div className="boards-wrapper">
+                <div className="boards-header-line">
+                    <button type="button" className="primary-btn create-btn" onClick={handleCreateBoard} aria-label="Create board">
+                        + Create board
+                    </button>
+                </div>
+
                 <div className="boards-toolbar">
                     <div className="boards-filters">
                         <div className="filter-group">
@@ -373,25 +389,26 @@ export default function Boards() {
                                 <option value="me">Owned by me</option>
                             </select>
                         </div>
+
+                        <div className="filter-group">
+                            <span className="filter-label">Sort by</span>
+                            <select className="filter-select" defaultValue="last-opened">
+                                <option value="last-opened">Last opened</option>
+                                <option value="name">Name</option>
+                                <option value="updated">Last modified</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="boards-actions-right">
-                        <div className="boards-view-toggle">
-                            <button type="button" className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")} aria-label="Grid view" data-tooltip="Плитка">
-                                <span className="view-icon">▦</span>
-                            </button>
-                            <button type="button" className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")} aria-label="List view" data-tooltip="Список">
-                                <span className="view-icon">☰</span>
-                            </button>
-                        </div>
-
-                        <button type="button" className="primary-btn small" onClick={handleCreateBoard}>
-                            + Create board
+                    <div className="boards-view-toggle">
+                        <button type="button" className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")} aria-label="Grid view" data-tooltip="Плитка">
+                            <span className="view-icon">▦</span>
+                        </button>
+                        <button type="button" className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")} aria-label="List view" data-tooltip="Список">
+                            <span className="view-icon">☰</span>
                         </button>
                     </div>
                 </div>
-
-                <h2 className="boards-section-title">Your Boards</h2>
 
                 {view === "grid" ? (
                     <div className="boards-grid">
@@ -402,16 +419,11 @@ export default function Boards() {
                             return (
                                 <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
                                     <div className={`board-header board-header--${b.colorKey}`}>
-                                        {/* gradient top bar */}
-                                    </div>
-
-                                    <div className="board-info">
-                                        <div className="board-row-top">
-                                            <div className="board-title">{b.title}</div>
-
+                                        <div className="board-preview" />
+                                        <div className="board-card-controls">
                                             <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
                                                 <button type="button" className={`board-star-btn ${isStarred ? "board-star-btn--active" : ""}`} aria-label={isStarred ? "Unstar this board" : "Star this board"} onClick={(e) => { e.stopPropagation(); handleStarClick(b); }}>
-                                                    ★
+                                                    {isStarred ? "★" : "☆"}
                                                 </button>
                                             </div>
 
@@ -436,9 +448,12 @@ export default function Boards() {
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
 
+                                    <div className="board-info">
+                                        <div className="board-title">{b.title}</div>
                                         <div className="line"><span className="label">Owner:</span> {b.owner}</div>
-                                        <div className="line small">Last opened: {b.lastOpened}</div>
+                                        <div className="line"><span className="label">Last opened:</span> {b.lastOpened}</div>
                                     </div>
                                 </div>
                             );
