@@ -25,10 +25,13 @@
     top: 0;
     z-index: 120;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(15,23,42,0.03);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.03);
 }
 
-.topbar-left { flex: 0 0 auto; }
+.topbar-left {
+    flex: 0 0 auto;
+}
+
 .topbar-logo {
     font-size: 18px;
     font-weight: 800;
@@ -63,7 +66,7 @@
 /* divider below topbar */
 .topbar-divider {
     border: none;
-    border-bottom: 1px solid rgba(15,23,42,0.03);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.03);
     margin: 0;
 }
 
@@ -89,14 +92,15 @@
     align-items: center;
     margin-bottom: 12px;
 }
+
 .primary-btn.create-btn {
-    background: linear-gradient(90deg,#4f8bff 0%, #7e5bff 100%);
+    background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%);
     color: #ffffff;
     border: none;
     padding: 10px 16px;
     border-radius: 12px;
     font-weight: 700;
-    box-shadow: 0 8px 30px rgba(79,139,255,0.18);
+    box-shadow: 0 8px 30px rgba(79, 139, 255, 0.18);
     transition: transform 120ms ease, box-shadow 150ms ease, opacity 120ms ease;
     cursor: pointer;
     display: inline-flex;
@@ -107,18 +111,40 @@
 
 /* filters toolbar */
 .boards-toolbar {
-    display:flex;
+    display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
     margin-bottom: 16px;
 }
-.boards-filters { display:flex; gap:12px; align-items:center; }
-.filter-group { display:flex; gap:8px; align-items:center; font-size:13px; color:#6b7280; }
-.filter-select { border-radius: 999px; border:1px solid #e6e9f2; padding:6px 12px; background:#fff; }
+
+.boards-filters {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.filter-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.filter-select {
+    border-radius: 999px;
+    border: 1px solid #e6e9f2;
+    padding: 6px 12px;
+    background: #fff;
+}
 
 /* view toggle */
-.boards-view-toggle { display:flex; gap:8px; align-items:center; }
+.boards-view-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
 
 /* Grid */
 .boards-grid {
@@ -128,35 +154,183 @@
 }
 
 /* Card */
-.board-card { background: transparent; border-radius: 12px; overflow: visible; position: relative; }
-.board-header { height: 70px; border-top-left-radius: 12px; border-top-right-radius: 12px; position: relative; }
+.board-card {
+    background: transparent;
+    border-radius: 12px;
+    overflow: visible;
+    position: relative;
+}
+
+.board-header {
+    height: 70px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+    position: relative;
+}
+
 .board-info {
     background: #ffffff;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
     padding: 18px;
-    box-shadow: 0 10px 30px rgba(6,22,34,0.06);
+    box-shadow: 0 10px 30px rgba(6, 22, 34, 0.06);
     margin-top: -6px;
 }
 
 /* gradient variants */
-.board-header--mintBlue { background: linear-gradient(135deg, #c4f0c2, #8fd5ff); }
-.board-header--peach { background: linear-gradient(135deg, #ffd2a0, #ff9fb2); }
+.board-header--mintBlue {
+    background: linear-gradient(135deg, #c4f0c2, #8fd5ff);
+}
+
+.board-header--peach {
+    background: linear-gradient(135deg, #ffd2a0, #ff9fb2);
+}
+
 /* (rest of variants kept as before) */
 
 /* small UI pieces */
-.board-title { font-size: 16px; font-weight:700; color:#0f1724; }
-.line { font-size:13px; color:#6b7280; margin-top:8px; }
+.board-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f1724;
+}
+
+.line {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 8px;
+}
 
 /* Lists view (light tweaks) */
-.boards-list { margin-top: 12px; border-radius: 12px; overflow: visible; background: transparent; }
-.boards-list-row { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 8px 28px rgba(6,22,34,0.04); }
+.boards-list {
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: visible;
+    background: transparent;
+}
+
+.boards-list-row {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    box-shadow: 0 8px 28px rgba(6, 22, 34, 0.04);
+}
 
 /* Board controls (star/menu) */
-.board-card-controls { position:absolute; top:8px; right:8px; display:flex; gap:8px; z-index:5; }
+.board-card-controls {
+    position:absolute;
+    top:8px;
+    right:8px;
+    display:flex;
+    gap:8px;
+    z-index:5;
+
+    /* hidden by default, revealed on hover or when board is starred */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+}
+
+/* Show controls on hover of card */
+.board-card:hover .board-card-controls,
+.board-card--menu-open .board-card-controls,
+.board-card--starred .board-card-controls {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Menu wrapper: only visible on hover (or when menu is open) */
+.board-menu-wrapper {
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+.board-card:hover .board-menu-wrapper,
+.board-card--menu-open .board-menu-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Star wrapper: visible on hover; if board-card has --starred, keep it visible */
+.board-star-wrapper {
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 160ms ease, transform 160ms ease;
+    display: flex;
+    align-items: center;
+}
+.board-card:hover .board-star-wrapper,
+.board-card--starred .board-star-wrapper {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Ensure the star appears to the right of the menu visually */
+.board-card-controls { flex-direction: row; align-items: center; }
+/* menu first, star last so star looks at the far right */
+.board-menu-wrapper { order: 0; }
+.board-star-wrapper { order: 1; }
+
+/* Star active (persisted visual) */
+.board-star-wrapper--active .board-star-btn {
+    /* visually emphasize active star (you may already have a class) */
+    color: #f59e0b; /* amber */
+    background: transparent;
+    border: none;
+    font-size: 16px;
+}
+
+/* Board menu button baseline */
+.board-menu-btn,
+.board-star-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid rgba(15,23,42,0.06);
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 150ms ease, border-color 120ms ease;
+    padding: 0;
+    box-sizing: border-box;
+}
+.board-menu-btn:hover,
+.board-star-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(6,22,34,0.06);
+}
+
+/* If you want the starred button to look different when active */
+.board-star-btn--active {
+    color: #ffffff;
+    background: linear-gradient(90deg,#f59e0b 0%, #fbbf24 100%); /* warm gradient for active star */
+    border: none;
+    box-shadow: 0 10px 26px rgba(251,191,36,0.18);
+}
+
+/* Ensure small variations for list rows too */
+.boards-list-row.board-card--starred .boards-row-star-btn,
+.boards-list-row:hover .boards-row-star-btn {
+    opacity: 1;
+}
 
 /* Menus */
-.board-card-menu { position: relative; transform-origin: top right; background:#fff; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.12); padding:6px 0; min-width:260px; border:1px solid #e4e6f0; z-index:9999; }
+.board-card-menu {
+    position: relative;
+    transform-origin: top right;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    padding: 6px 0;
+    min-width: 260px;
+    border: 1px solid #e4e6f0;
+    z-index: 9999;
+}
 
 /* Toast, modals (kept compatible) */
 .boards-toast {
@@ -169,22 +343,57 @@
     padding: 8px 16px;
     border-radius: 8px;
     font-size: 14px;
-    box-shadow: 0 8px 28px rgba(2,6,23,0.4);
+    box-shadow: 0 8px 28px rgba(2, 6, 23, 0.4);
     z-index: 1000;
 }
 
 /* Modals */
-.boards-modal-backdrop { position: fixed; inset: 0; background: rgba(32,33,36,0.55); display:flex; align-items:center; justify-content:center; z-index:900; }
-.boards-modal { background:#fff; border-radius:24px; padding:24px; max-width:520px; width:100%; box-sizing:border-box; }
+.boards-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(32, 33, 36, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 900;
+}
+
+.boards-modal {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+    max-width: 520px;
+    width: 100%;
+    box-sizing: border-box;
+}
 
 /* Responsive */
 @media (max-width: 980px) {
-    .boards-wrapper { padding: 0 20px 60px; }
-    .boards-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+    .boards-wrapper {
+        padding: 0 20px 60px;
+    }
+
+    .boards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 16px;
+    }
 }
+
 @media (max-width: 720px) {
-    .topbar { padding: 0 12px; }
-    .topbar-center { display: none; }
-    .boards-wrapper { padding: 0 14px 60px; }
-    .boards-grid { grid-template-columns: 1fr; gap: 18px; }
+    .topbar {
+        padding: 0 12px;
+    }
+
+    .topbar-center {
+        display: none;
+    }
+
+    .boards-wrapper {
+        padding: 0 14px 60px;
+    }
+
+    .boards-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
 }

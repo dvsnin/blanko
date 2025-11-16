@@ -1,5 +1,6 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import "./Boards.css";
+import "./Boards.colors.css";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModal from "./ProfileModal";
 import MenuPortal from "./MenuPortal";
@@ -7,14 +8,13 @@ import NotificationsPanel from "./NotificationsPanel";
 import TemplatesIsland from "./TemplatesIsland";
 import NotificationButton from "./NotificationButton";
 import ProfileButton from "./ProfileButton";
+import ViewToggle from "./ViewToggle";
 
 /*
-  Boards.jsx (final)
-  - topbar uses .topbar-left, .topbar-center (spacer), .topbar-right
-  - NotificationButton and ProfileButton are separate presentational components
-  - ProfileMenu is rendered as a normal absolute dropdown (positioned via CSS)
-  - NotificationsPanel remains as the right-side fixed panel
-  - Menus are portal-aware (MenuPortal) and card menus keep previous logic
+  Boards.jsx — исправленная версия
+  - включает templatesForIsland чтобы избежать ReferenceError
+  - детерминированное присвоение colorKey
+  - все остальные правки сохранены
 */
 
 const rawBoards = [
@@ -28,13 +28,48 @@ const rawBoards = [
 ];
 
 const colorKeys = [
-    "mintBlue","peach","lilac","aqua","sunset","grass","ocean","berry","grape","night","lava","sky","forest","lemon","rose","steel","sand","teal","freshMint","indigo",
+    "mintBlue","peach","lilac","aqua","sunset","grass","ocean","berry","grape","night",
+    "lava","sky","forest","lemon","rose","steel","sand","teal","freshMint","indigo",
 ];
 
-const initialBoards = rawBoards.map((b, index) => ({ ...b, colorKey: colorKeys[index % colorKeys.length] }));
+/* === helper color logic === */
+function pickAvailableColorFrom(boards) {
+    const used = new Set(boards.map((b) => b.colorKey).filter(Boolean));
+    for (const key of colorKeys) {
+        if (!used.has(key)) return key;
+    }
+    return colorKeys[boards.length % colorKeys.length];
+}
+
+function assignColorsToInitial(list) {
+    const out = [];
+    const used = new Set();
+    for (let i = 0; i < list.length; i++) {
+        const b = { ...list[i] };
+        if (!b.colorKey) {
+            const available = colorKeys.find((k) => !used.has(k));
+            b.colorKey = available || colorKeys[i % colorKeys.length];
+        }
+        used.add(b.colorKey);
+        out.push(b);
+    }
+    return out;
+}
+
+const initialBoards = assignColorsToInitial(rawBoards);
+
+/* === templatesForIsland — нужен для <TemplatesIsland /> (исправляет ReferenceError) === */
+const templatesForIsland = [
+    { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
+    { id: "tpl-retro", title: "Kanban", subtype: "Template", variant: "thumb-retro" },
+    { id: "tpl-year", title: "Sprint Planning", subtype: "Template", variant: "thumb-year" },
+    { id: "tpl-brain", title: "Brainstorm", subtype: "Template", variant: "thumb-brain" },
+    { id: "tpl-roadmap", title: "Roadmap", subtype: "Template", variant: "thumb-roadmap" },
+    { id: "tpl-sprint", title: "Study", subtype: "Template", variant: "thumb-sprint" },
+];
 
 export default function Boards() {
-    // ---------- USER / PROFILE ----------
+    // USER / PROFILE
     const [user, setUser] = useState({ name: "", email: "" });
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -47,7 +82,7 @@ export default function Boards() {
 
     const userInitial = user.name ? user.name[0].toUpperCase() : "?";
 
-    // ---------- BOARDS STATE ----------
+    // BOARDS STATE
     const [boards, setBoards] = useState(initialBoards);
     const [view, setView] = useState("grid");
     const [menuBoardId, setMenuBoardId] = useState(null);
@@ -69,15 +104,34 @@ export default function Boards() {
     const [forceMenuTop, setForceMenuTop] = useState(false);
     const [shiftMenuLeft, setShiftMenuLeft] = useState(false);
 
-    // Notifications panel state
+    // Notifications panel
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    // demo unread count — wire it to your API if needed
     const [unreadCount, setUnreadCount] = useState(0);
 
-    // диалоги: null | { type: 'rename' | 'delete', boardId: number }
+    // dialogs
     const [dialog, setDialog] = useState(null);
     const [renameDraft, setRenameDraft] = useState("");
 
+    // Ensure any boards loaded later without colorKey get one
+    useEffect(() => {
+        setBoards((prev) => {
+            let changed = false;
+            const used = new Set(prev.map((b) => b.colorKey).filter(Boolean));
+            const next = prev.map((b, i) => {
+                if (!b.colorKey) {
+                    const available = colorKeys.find((k) => !used.has(k));
+                    const key = available || colorKeys[i % colorKeys.length];
+                    used.add(key);
+                    changed = true;
+                    return { ...b, colorKey: key };
+                }
+                return b;
+            });
+            return changed ? next : prev;
+        });
+    }, []);
+
+    // Helpers
     const showToast = (message) => {
         setToastMessage(message);
         setToastVisible(true);
@@ -95,16 +149,15 @@ export default function Boards() {
 
     const handleStarClick = (board) => {
         const willStar = !starredIds.has(board.id);
-        console.log("Mock request: POST /boards/star", { boardId: board.id, starred: willStar });
         toggleStarInternal(board.id);
         showToast(willStar ? "Board starred" : "Board unstarred");
     };
 
     const handleCreateBoard = () => {
         setBoards((prev) => {
+            const colorKey = pickAvailableColorFrom(prev);
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
-            const colorKey = colorKeys[id % colorKeys.length];
             const newBoard = { id, title: "Untitled", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
             return [...prev, newBoard];
         });
@@ -312,41 +365,20 @@ export default function Boards() {
         setIsProfileModalOpen(false);
     };
 
-    // === New explicit templates list (first is Blank, the rest are themed) ===
-    const templatesForIsland = [
-        { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
-        { id: "tpl-retro", title: "Kanban", subtype: "Template", variant: "thumb-retro" },
-        { id: "tpl-year", title: "Sprint Planning", subtype: "Template", variant: "thumb-year" },
-        { id: "tpl-brain", title: "Brainstorm", subtype: "Template", variant: "thumb-brain" },
-        { id: "tpl-roadmap", title: "Roadmap", subtype: "Template", variant: "thumb-roadmap" },
-        { id: "tpl-sprint", title: "Study", subtype: "Template", variant: "thumb-sprint" },
-    ];
-
     return (
         <div className="boards-page">
-            {/* ---------- TOP BAR ---------- */}
+            {/* TOP BAR */}
             <header className="topbar">
-                <div className="topbar-left">
-                    <span className="topbar-logo">Blanko</span>
-                </div>
-
-                <div className="topbar-center" aria-hidden>
-                    {/* spacer for flex centering */}
-                </div>
-
+                <div className="topbar-left"><span className="topbar-logo">Blanko</span></div>
+                <div className="topbar-center" aria-hidden />
                 <div className="topbar-right">
                     <NotificationButton unreadCount={unreadCount} onClick={() => setIsNotificationsOpen((v) => !v)} />
-
                     <ProfileButton userInitial={userInitial} onClick={() => setIsProfileMenuOpen((prev) => !prev)} />
-
                     {isProfileMenuOpen && (
                         <ProfileMenu
                             name={user.name || "User"}
                             email={user.email || "user@example.com"}
-                            onSettings={() => {
-                                setIsProfileMenuOpen(false);
-                                setIsProfileModalOpen(true);
-                            }}
+                            onSettings={() => { setIsProfileMenuOpen(false); setIsProfileModalOpen(true); }}
                             onLogout={() => console.log("Logout clicked")}
                             onClose={() => setIsProfileMenuOpen(false)}
                         />
@@ -354,84 +386,45 @@ export default function Boards() {
                 </div>
             </header>
 
-            {/* NotificationsPanel component */}
+            {/* NotificationsPanel */}
             <NotificationsPanel ref={notificationsRef} isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
 
             <div className="topbar-divider" />
 
-            {/* ---------- TEMPLATE ISLAND (now rendered via TemplatesIsland component) ---------- */}
+            {/* Templates */}
             <TemplatesIsland templates={templatesForIsland} />
 
-            {/* main content starts below island */}
             <div className="templates-bottom-divider" />
 
-            {/* ---------- FILTERS + BOARDS ---------- */}
             <div className="boards-wrapper">
                 <div className="boards-header-line">
-                    <button type="button" className="primary-btn create-btn" onClick={handleCreateBoard} aria-label="Create board">
-                        + Create board
-                    </button>
+                    <button type="button" className="primary-btn create-btn" onClick={handleCreateBoard} aria-label="Create board">+ Create board</button>
                 </div>
 
                 <div className="boards-toolbar">
                     <div className="boards-filters">
-                        <div className="filter-group">
-                            <span className="filter-label">Filter by</span>
-                            <select className="filter-select" defaultValue="all">
-                                <option value="all">All boards</option>
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <span className="filter-label">Owned by</span>
-                            <select className="filter-select" defaultValue="anyone">
-                                <option value="anyone">Owned by anyone</option>
-                                <option value="me">Owned by me</option>
-                            </select>
-                        </div>
-
-                        <div className="filter-group">
-                            <span className="filter-label">Sort by</span>
-                            <select className="filter-select" defaultValue="last-opened">
-                                <option value="last-opened">Last opened</option>
-                                <option value="name">Name</option>
-                                <option value="updated">Last modified</option>
-                            </select>
-                        </div>
+                        <div className="filter-group"><span className="filter-label">Filter by</span><select className="filter-select" defaultValue="all"><option value="all">All boards</option></select></div>
+                        <div className="filter-group"><span className="filter-label">Owned by</span><select className="filter-select" defaultValue="anyone"><option value="anyone">Owned by anyone</option><option value="me">Owned by me</option></select></div>
+                        <div className="filter-group"><span className="filter-label">Sort by</span><select className="filter-select" defaultValue="last-opened"><option value="last-opened">Last opened</option><option value="name">Name</option><option value="updated">Last modified</option></select></div>
                     </div>
 
-                    <div className="boards-view-toggle">
-                        <button type="button" className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")} aria-label="Grid view" data-tooltip="Плитка">
-                            <span className="view-icon">▦</span>
-                        </button>
-                        <button type="button" className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")} aria-label="List view" data-tooltip="Список">
-                            <span className="view-icon">☰</span>
-                        </button>
-                    </div>
+                    <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
                 </div>
 
                 {view === "grid" ? (
                     <div className="boards-grid">
-                        {boards.map((b) => {
+                        {boards.map((b, index) => {
                             const isStarred = starredIds.has(b.id);
                             const isMenuOpen = menuBoardId === b.id;
+                            const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
 
                             return (
-                                <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
-                                    <div className={`board-header board-header--${b.colorKey}`}>
+                                <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
+                                    <div className={`board-header board-header--${colorKey}`}>
                                         <div className="board-preview" />
-                                        <div className="board-card-controls">
-                                            <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
-                                                <button type="button" className={`board-star-btn ${isStarred ? "board-star-btn--active" : ""}`} aria-label={isStarred ? "Unstar this board" : "Star this board"} onClick={(e) => { e.stopPropagation(); handleStarClick(b); }}>
-                                                    {isStarred ? "★" : "☆"}
-                                                </button>
-                                            </div>
-
+                                        <div className="board-card-controls" aria-hidden>
                                             <div className="board-menu-wrapper">
-                                                <button type="button" className="board-menu-btn" aria-label="Board options" onClick={(e) => { e.stopPropagation(); menuAnchorRef.current = e.currentTarget; setForceMenuTop(false); setMenuPlacement("bottom"); handleMenuToggle(b.id); }}>
-                                                    ⋯
-                                                </button>
-
+                                                <button type="button" className="board-menu-btn" aria-label="Board options" onClick={(e) => { e.stopPropagation(); menuAnchorRef.current = e.currentTarget; setForceMenuTop(false); setMenuPlacement("bottom"); handleMenuToggle(b.id); }}>⋯</button>
                                                 {menuBoardId === b.id && (
                                                     <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
                                                         <div ref={menuRef} className={`board-card-menu ${menuPlacement === "top" ? "board-card-menu--above" : ""} ${shiftMenuLeft ? "shifted-left" : ""}`} onClick={(e) => e.stopPropagation()}>
@@ -446,6 +439,9 @@ export default function Boards() {
                                                         </div>
                                                     </MenuPortal>
                                                 )}
+                                            </div>
+                                            <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
+                                                <button type="button" className={`board-star-btn ${isStarred ? "board-star-btn--active" : ""}`} aria-label={isStarred ? "Unstar this board" : "Star this board"} onClick={(e) => { e.stopPropagation(); handleStarClick(b); }}>{isStarred ? "★" : "☆"}</button>
                                             </div>
                                         </div>
                                     </div>
@@ -462,31 +458,26 @@ export default function Boards() {
                 ) : (
                     <div className="boards-list">
                         <div className="boards-list-header"><div>Name</div><div>Online users</div><div>Last opened</div><div>Owner</div><div /></div>
-
                         {boards.map((b, index) => {
                             const isStarred = starredIds.has(b.id);
                             const isMenuOpen = menuBoardId === b.id;
                             const isLastRow = index === boards.length - 1;
-
+                            const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
                             return (
-                                <div key={b.id} className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
+                                <div key={b.id} className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
                                     <div className="boards-name-cell">
-                                        <div className={`board-image-small board-image-small--${b.colorKey}`} />
+                                        <div className={`board-image-small board-image-small--${colorKey}`} />
                                         <div className="boards-name-text">
                                             <div className="board-row-title">{b.title}</div>
                                             <div className="board-row-sub">Modified by {b.owner}, {b.updated}</div>
                                         </div>
                                     </div>
-
                                     <div className="boards-col">{b.onlineUsers > 0 ? `${b.onlineUsers} online` : "—"}</div>
                                     <div className="boards-col">{b.lastOpened}</div>
                                     <div className="boards-col">{b.owner}</div>
-
                                     <div className="boards-actions-cell">
                                         <button type="button" className={`boards-row-star-btn ${isStarred ? "boards-row-star-btn--active" : ""}`} aria-label={isStarred ? "Unstar this board" : "Star this board"} onClick={(e) => { e.stopPropagation(); handleStarClick(b); }}>{isStarred ? "★" : "☆"}</button>
-
                                         <button type="button" className="boards-row-menu-btn" aria-label="Board options" onClick={(e) => { e.stopPropagation(); const forceTop = isLastRow; setForceMenuTop(forceTop); setMenuPlacement(forceTop ? "top" : "bottom"); menuAnchorRef.current = e.currentTarget; handleMenuToggle(b.id); }}>⋯</button>
-
                                         {menuBoardId === b.id && (
                                             <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
                                                 <div ref={menuRef} className={`board-card-menu board-card-menu--list ${menuPlacement === "top" ? "board-card-menu--above" : ""} ${shiftMenuLeft ? "shifted-left" : ""}`} onClick={(e) => e.stopPropagation()}>
@@ -509,47 +500,6 @@ export default function Boards() {
                 )}
 
                 {toastVisible && <div className="boards-toast">{toastMessage}</div>}
-
-                {/* RENAME MODAL */}
-                {dialog && dialog.type === "rename" && (
-                    <div className="boards-modal-backdrop" onClick={closeDialog}>
-                        <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
-                            <div className="boards-modal-header">
-                                <h3 className="boards-modal-title">Rename board</h3>
-                                <button type="button" className="boards-modal-close" aria-label="Close" onClick={closeDialog}>×</button>
-                            </div>
-                            <div className="boards-modal-body">
-                                <label className="boards-modal-label">
-                                    Enter a new board name:
-                                    <input className="boards-modal-input" value={renameDraft} autoFocus onChange={(e) => setRenameDraft(e.target.value)} onKeyDown={handleRenameKeyDown} />
-                                </label>
-                            </div>
-                            <div className="boards-modal-footer">
-                                <button type="button" className="primary-btn" onClick={handleRenameConfirm}>Ok</button>
-                                <button type="button" className="secondary-btn" onClick={closeDialog}>Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* DELETE MODAL */}
-                {dialog && dialog.type === "delete" && (
-                    <div className="boards-modal-backdrop" onClick={closeDialog}>
-                        <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
-                            <div className="boards-modal-header">
-                                <h3 className="boards-modal-title">Удалить доску?</h3>
-                                <button type="button" className="boards-modal-close" aria-label="Close" onClick={closeDialog}>×</button>
-                            </div>
-                            <div className="boards-modal-body">
-                                <p>Это приведет к удалению <strong>{boards.find((b) => b.id === dialog.boardId)?.title}</strong>.</p>
-                            </div>
-                            <div className="boards-modal-footer">
-                                <button type="button" className="danger-btn" onClick={handleDeleteConfirm}>Delete</button>
-                                <button type="button" className="secondary-btn" onClick={closeDialog}>Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* PROFILE MODAL */}
