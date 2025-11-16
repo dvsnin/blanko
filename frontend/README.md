@@ -37,3 +37,4 @@ frontend/
 │   └── main.jsx            # Entry point
 └── package.json
 ```
+
