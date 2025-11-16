@@ -30,3 +30,14 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build artifacts
+frontend/dist/
+frontend/.vite/
+
+# Lock files (keep package-lock.json but not npm cache)
+.npm/
