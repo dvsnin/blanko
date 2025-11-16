@@ -301,18 +301,17 @@ export default function Boards() {
 
     // === New explicit templates list (first is Blank, the rest are themed) ===
     const templatesForIsland = [
-        { id: "tpl-blank", title: "Blank board", variant: "template-thumb--blank", badge: "Новый" },
-        { id: "tpl-retro", title: "Ретро", variant: "thumb-retro" },
-        { id: "tpl-year", title: "Итоги года", variant: "thumb-year" },
-        { id: "tpl-brain", title: "Мозговой штурм", variant: "thumb-brain" },
-        { id: "tpl-roadmap", title: "Roadmap", variant: "thumb-roadmap" },
-        { id: "tpl-sprint", title: "План спринта", variant: "thumb-sprint" },
-        { id: "tpl-study", title: "Учебный проект", variant: "thumb-study" },
+        { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
+        { id: "tpl-retro", title: "Kanban", subtype: "Template", variant: "thumb-retro" },
+        { id: "tpl-year", title: "Sprint Planning", subtype: "Template", variant: "thumb-year" },
+        { id: "tpl-brain", title: "Brainstorm", subtype: "Template", variant: "thumb-brain" },
+        { id: "tpl-roadmap", title: "Roadmap", subtype: "Template", variant: "thumb-roadmap" },
+        { id: "tpl-sprint", title: "Study", subtype: "Template", variant: "thumb-sprint" },
     ];
 
     return (
         <div className="boards-page">
-            {/* ---------- TOP BAR ---------- */}
+            {/* ---------- TOP BAR (search removed from here) ---------- */}
             <header className="topbar">
                 <div className="topbar-left">
                     <span className="topbar-logo">Blanko</span>
@@ -358,12 +357,6 @@ export default function Boards() {
 
             {/* ---------- FILTERS + BOARDS ---------- */}
             <div className="boards-wrapper">
-                <div className="boards-header-line">
-                    <button type="button" className="primary-btn" onClick={handleCreateBoard}>
-                        + Create new
-                    </button>
-                </div>
-
                 <div className="boards-toolbar">
                     <div className="boards-filters">
                         <div className="filter-group">
@@ -380,26 +373,25 @@ export default function Boards() {
                                 <option value="me">Owned by me</option>
                             </select>
                         </div>
-
-                        <div className="filter-group">
-                            <span className="filter-label">Sort by</span>
-                            <select className="filter-select" defaultValue="last-opened">
-                                <option value="last-opened">Last opened</option>
-                                <option value="name">Name</option>
-                                <option value="updated">Last modified</option>
-                            </select>
-                        </div>
                     </div>
 
-                    <div className="boards-view-toggle">
-                        <button type="button" className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")} aria-label="Grid view" data-tooltip="Плитка">
-                            <span className="view-icon">▦</span>
-                        </button>
-                        <button type="button" className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")} aria-label="List view" data-tooltip="Список">
-                            <span className="view-icon">☰</span>
+                    <div className="boards-actions-right">
+                        <div className="boards-view-toggle">
+                            <button type="button" className={`view-btn ${view === "grid" ? "active" : ""}`} onClick={() => setView("grid")} aria-label="Grid view" data-tooltip="Плитка">
+                                <span className="view-icon">▦</span>
+                            </button>
+                            <button type="button" className={`view-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")} aria-label="List view" data-tooltip="Список">
+                                <span className="view-icon">☰</span>
+                            </button>
+                        </div>
+
+                        <button type="button" className="primary-btn small" onClick={handleCreateBoard}>
+                            + Create board
                         </button>
                     </div>
                 </div>
+
+                <h2 className="boards-section-title">Your Boards</h2>
 
                 {view === "grid" ? (
                     <div className="boards-grid">
@@ -410,11 +402,16 @@ export default function Boards() {
                             return (
                                 <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""}`} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
                                     <div className={`board-header board-header--${b.colorKey}`}>
-                                        <div className="board-preview" />
-                                        <div className="board-card-controls">
+                                        {/* gradient top bar */}
+                                    </div>
+
+                                    <div className="board-info">
+                                        <div className="board-row-top">
+                                            <div className="board-title">{b.title}</div>
+
                                             <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
                                                 <button type="button" className={`board-star-btn ${isStarred ? "board-star-btn--active" : ""}`} aria-label={isStarred ? "Unstar this board" : "Star this board"} onClick={(e) => { e.stopPropagation(); handleStarClick(b); }}>
-                                                    {isStarred ? "★" : "☆"}
+                                                    ★
                                                 </button>
                                             </div>
 
@@ -439,12 +436,9 @@ export default function Boards() {
                                                 )}
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="board-info">
-                                        <div className="board-title">{b.title}</div>
                                         <div className="line"><span className="label">Owner:</span> {b.owner}</div>
-                                        <div className="line"><span className="label">Last opened:</span> {b.lastOpened}</div>
+                                        <div className="line small">Last opened: {b.lastOpened}</div>
                                     </div>
                                 </div>
                             );
