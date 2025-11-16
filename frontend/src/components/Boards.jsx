@@ -70,7 +70,8 @@ export default function Boards() {
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
             const colorKey = colorKeys[id % colorKeys.length];
-            const newBoard = { id, title: "Untitled", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
+            const userName = window.dashData?.name || "Owner";
+            const newBoard = { id, title: "Untitled", owner: userName, updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
             return [...prev, newBoard];
         });
         showToast("Board created");

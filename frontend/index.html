@@ -9,10 +9,18 @@
 <div id="root"></div>
 
 <script>
+    // For development, use fallback values if templates are not rendered
     window.dashData = {
-        name: "{{ .Name }}",
-        email: "{{ .Email }}"
+        name: "{{ .Name }}" || "Дмитрий Васнянин",
+        email: "{{ .Email }}" || "dmitry@example.com"
     };
+    // If template variables weren't replaced (starts with {{), use fallback
+    if (window.dashData.name.startsWith("{{")) {
+        window.dashData.name = "Дмитрий Васнянин";
+    }
+    if (window.dashData.email.startsWith("{{")) {
+        window.dashData.email = "dmitry@example.com";
+    }
 </script>
 
 <script type="module" src="/src/main.jsx"></script>

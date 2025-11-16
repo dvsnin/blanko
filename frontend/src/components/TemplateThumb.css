@@ -1,0 +1,34 @@
+/* ===================================================================
+   TEMPLATE THUMB COMPONENT STYLES
+   Individual template thumbnail styling
+   Note: Main styles are in TemplatesIsland.css for cohesion
+   =================================================================== */
+
+/* Template thumb button */
+.template-thumb-button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: var(--border-radius-lg);
+    transition: transform var(--transition-base);
+}
+
+.template-thumb-button:hover .template-thumb,
+.template-thumb-button:hover .ti-thumb {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 52px rgba(6, 22, 34, 0.14);
+}
+
+.template-thumb-button:active .template-thumb,
+.template-thumb-button:active .ti-thumb {
+    transform: translateY(0);
+}
+
+/* Focus state for accessibility */
+.template-thumb-button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-lg);
+}
