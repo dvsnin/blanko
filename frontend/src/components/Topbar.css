@@ -1,0 +1,98 @@
+/* ===================================================================
+   TOPBAR COMPONENT STYLES
+   Navigation header with logo, notifications, and profile menu
+   =================================================================== */
+
+.topbar {
+    width: 100%;
+    height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--spacing-xl);
+    box-sizing: border-box;
+    background: var(--color-bg-secondary);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+}
+
+.topbar-logo {
+    font-size: 26px;
+    font-weight: var(--font-weight-extrabold);
+    letter-spacing: -0.4px;
+    color: var(--color-text-primary);
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+}
+
+.topbar-icon-btn {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity var(--transition-fast), background-color var(--transition-fast);
+}
+
+.topbar-icon-btn:hover {
+    opacity: 1;
+    background-color: var(--color-bg-tertiary);
+}
+
+.topbar-icon-btn svg {
+    color: var(--color-text-secondary);
+}
+
+.topbar-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--border-radius-full);
+    background: var(--color-primary);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-weight: var(--font-weight-bold);
+    font-size: var(--font-size-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.topbar-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-md);
+}
+
+.topbar-divider {
+    border: none;
+    border-bottom: var(--border-width) solid var(--color-border-light);
+    margin: 0;
+}
+
+/* Bell Icon Animation */
+@keyframes ring {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30% { transform: rotate(-10deg); }
+    20%, 40% { transform: rotate(10deg); }
+}
+
+.topbar-icon-btn:hover .bell-icon {
+    animation: ring 0.5s ease-in-out;
+}

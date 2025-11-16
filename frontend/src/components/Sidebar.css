@@ -1,57 +1,66 @@
+/* ===================================================================
+   SIDEBAR COMPONENT STYLES
+   Left navigation sidebar with main menu items
+   =================================================================== */
+
 .sidebar {
-    z-index: 10; /* низкий слой — под контентом */
-    position: relative; /* нужно, чтобы z-index работал */
-    width: 150px;                    /* было 240px — сделал чуть уже */
+    z-index: 10;
+    position: relative;
+    width: 150px;
     height: 100vh;
 
-    background: #fafafa;
-    border-right: 1px solid #d1d5db; /* немного темнее, выглядит четко */
+    background: var(--color-bg-tertiary);
+    border-right: var(--border-width) solid var(--color-border-medium);
 
     display: flex;
     flex-direction: column;
-    padding: 20px 16px;
+    padding: var(--spacing-lg) var(--spacing-md);
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--spacing-xs);
 }
 
 .sidebar-item {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--spacing-md);
 
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 10px var(--spacing-md);
+    border-radius: var(--border-radius-lg);
 
-    font-size: 15px;
-    color: #111827;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
     background: transparent;
 
     cursor: pointer;
     border: none;
     text-align: left;
 
-    transition: background 0.15s ease;
+    transition: background var(--transition-fast);
 }
 
 .sidebar-item:hover {
-    background: #f3f4f6;
+    background: var(--color-bg-secondary);
 }
 
 .sidebar-item--active {
-    font-weight: 600;
-    background: #f3f4f6;
+    font-weight: var(--font-weight-semibold);
+    background: var(--color-bg-secondary);
 }
 
 .sidebar-icon {
     font-size: 18px;
-    color: #4b5563;
-    stroke-width: 2.4;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .sidebar-item--active .sidebar-icon {
-    color: #111827;
+    color: var(--color-text-primary);
 }
+

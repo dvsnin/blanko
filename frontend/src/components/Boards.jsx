@@ -1,10 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect } from "react";
 import "./Boards.css";
-import ProfileMenu from "./ProfileMenu";
-import ProfileModal from "./ProfileModal";
 import MenuPortal from "./MenuPortal";
-import NotificationsPanel from "./NotificationsPanel";
-import TemplatesIsland from "./TemplatesIsland"; // <- import the external templates component
+import TemplatesIsland from "./TemplatesIsland";
 
 const rawBoards = [
     { id: 1, title: "МояПикерДоска", owner: "Дмитрий Васнянин", updated: "14 ноября", lastOpened: "14 ноября", onlineUsers: 3 },
@@ -23,19 +20,6 @@ const colorKeys = [
 const initialBoards = rawBoards.map((b, index) => ({ ...b, colorKey: colorKeys[index % colorKeys.length] }));
 
 export default function Boards() {
-    // ---------- USER / PROFILE ----------
-    const [user, setUser] = useState({ name: "", email: "" });
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-    useEffect(() => {
-        if (typeof window !== "undefined" && window.dashData) {
-            setUser({ name: window.dashData.name || "", email: window.dashData.email || "" });
-        }
-    }, []);
-
-    const userInitial = user.name ? user.name[0].toUpperCase() : "?";
-
     // ---------- BOARDS STATE ----------
     const [boards, setBoards] = useState(initialBoards);
     const [view, setView] = useState("grid");
@@ -51,15 +35,9 @@ export default function Boards() {
     const menuAnchorRef = useRef(null);
     const menuCardRef = useRef(null);
 
-    // notifications panel ref
-    const notificationsRef = useRef(null);
-
     const [menuPlacement, setMenuPlacement] = useState("bottom");
     const [forceMenuTop, setForceMenuTop] = useState(false);
     const [shiftMenuLeft, setShiftMenuLeft] = useState(false);
-
-    // Notifications panel state
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
     // диалоги: null | { type: 'rename' | 'delete', boardId: number }
     const [dialog, setDialog] = useState(null);
@@ -190,18 +168,11 @@ export default function Boards() {
                     menuCardRef.current = null;
                 }
             }
-            if (isNotificationsOpen) {
-                const notifEl = notificationsRef.current;
-                if (!(notifEl && notifEl.contains(e.target))) {
-                    setIsNotificationsOpen(false);
-                }
-            }
         }
         function handleKeydown(e) {
             if (e.key === "Escape") {
                 setMenuBoardId(null);
                 menuCardRef.current = null;
-                setIsNotificationsOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -210,7 +181,7 @@ export default function Boards() {
             document.removeEventListener("mousedown", handleClickOutside);
             document.removeEventListener("keydown", handleKeydown);
         };
-    }, [menuBoardId, isNotificationsOpen]);
+    }, [menuBoardId]);
 
     // pointer tracking (grid strict / list corridor)
     useEffect(() => {
@@ -291,14 +262,6 @@ export default function Boards() {
         }
     };
 
-    const handleProfileSave = (newName) => {
-        setUser((prev) => ({ ...prev, name: newName }));
-        if (typeof window !== "undefined" && window.dashData) {
-            window.dashData.name = newName;
-        }
-        setIsProfileModalOpen(false);
-    };
-
     // === New explicit templates list (first is Blank, the rest are themed) ===
     const templatesForIsland = [
         { id: "tpl-blank", title: "Blank board", variant: "template-thumb--blank", badge: "Новый" },
@@ -312,44 +275,6 @@ export default function Boards() {
 
     return (
         <div className="boards-page">
-            {/* ---------- TOP BAR ---------- */}
-            <header className="topbar">
-                <div className="topbar-left">
-                    <span className="topbar-logo">Blanko</span>
-                </div>
-
-                <div className="topbar-right">
-                    <button type="button" className="topbar-icon-btn" aria-label="Notifications" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsNotificationsOpen((v) => !v)}>
-                        <svg className="bell-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                        </svg>
-                    </button>
-
-                    <button type="button" className="topbar-avatar" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsProfileMenuOpen((prev) => !prev)}>
-                        {userInitial}
-                    </button>
-
-                    {isProfileMenuOpen && (
-                        <ProfileMenu
-                            name={user.name || "User"}
-                            email={user.email || "user@example.com"}
-                            onSettings={() => {
-                                setIsProfileMenuOpen(false);
-                                setIsProfileModalOpen(true);
-                            }}
-                            onLogout={() => console.log("Logout clicked")}
-                            onClose={() => setIsProfileMenuOpen(false)}
-                        />
-                    )}
-                </div>
-            </header>
-
-            {/* NotificationsPanel component */}
-            <NotificationsPanel ref={notificationsRef} isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
-
-            <div className="topbar-divider" />
-
             {/* ---------- TEMPLATE ISLAND (now rendered via TemplatesIsland component) ---------- */}
             <TemplatesIsland templates={templatesForIsland} />
 
@@ -542,9 +467,6 @@ export default function Boards() {
                     </div>
                 )}
             </div>
-
-            {/* PROFILE MODAL */}
-            {isProfileModalOpen && <ProfileModal name={user.name} email={user.email} onClose={() => setIsProfileModalOpen(false)} onSave={handleProfileSave} />}
         </div>
     );
 }
