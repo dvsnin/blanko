@@ -1,0 +1,81 @@
+/* StarButton: plain glyph visible; overlay button appears on hover/focus */
+
+/* wrapper */
+.star-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    line-height: 1;
+    color: #111827;
+    cursor: default; /* glyph itself is not clickable until overlay appears */
+}
+
+/* glyph visible by default */
+.star-glyph {
+    font-size: 16px;
+    line-height: 1;
+    display: inline-block;
+    pointer-events: none;
+    color: #39404a; /* default icon color (subtle dark) */
+}
+
+/* indicate filled glyph color (slightly stronger) */
+.star-wrap.is-starred .star-glyph {
+    color: #111827;
+}
+
+/* overlay button (hidden by default) */
+.star-action {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid rgba(15,23,42,0.06);
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(6,22,34,0.04);
+    opacity: 0;
+    transform: translateY(0);
+    transition: opacity 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    cursor: pointer;
+    padding: 0;
+    pointer-events: none;
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* reveal overlay on hover of wrapper or when overlay has focus (keyboard) */
+.star-wrap:hover .star-action,
+.star-wrap:focus-within .star-action {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* no hover lift when filled — keep subtle */
+.star-wrap.is-starred .star-action:hover {
+    transform: none;
+    box-shadow: 0 8px 20px rgba(6,22,34,0.05);
+}
+
+/* hover lift for outline state */
+.star-wrap.is-not-starred .star-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(6,22,34,0.06);
+    background: #f7f8fb;
+}
+
+/* accessibility focus */
+.star-action:focus {
+    outline: 3px solid rgba(37,100,255,0.12);
+    outline-offset: 2px;
+}
+
+/* small variant adjustments (if needed) */
+.star-wrap--list { /* can tweak size/position for list view */ }
+.star-wrap--grid { /* can tweak size/position for grid view */ }
+
+/* prevent other CSS from injecting glyphs */
+.star-wrap::before, .star-wrap::after, .star-action::before, .star-action::after { content: none !important; }

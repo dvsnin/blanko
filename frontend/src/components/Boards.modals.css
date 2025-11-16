@@ -1,0 +1,228 @@
+/* Compact centered modal styles — interactive hover states for buttons
+   Replace previous src/components/Boards.modals.css with this file.
+*/
+
+/* Backdrop: center modal both vertically and horizontally */
+.boards-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 16, 0.45);
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; /* small page padding for tiny viewports */
+    box-sizing: border-box;
+}
+
+/* Modal card: compact, nice rounded corners, constrained to viewport */
+.boards-modal {
+    background: #ffffff;
+    width: min(560px, 94%);
+    max-width: 560px;
+    border-radius: 18px;
+    padding: 28px 28px;
+    box-sizing: border-box;
+    box-shadow: 0 22px 46px rgba(6, 22, 34, 0.14);
+    border: 1px solid rgba(6,22,34,0.04);
+    position: relative;
+    color: #0f1724;
+    font-family: inherit;
+    transition: transform 180ms cubic-bezier(.2,.9,.2,1), box-shadow 180ms ease;
+}
+
+/* Header */
+.boards-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.boards-modal-title {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 800;
+    color: #0b1220;
+    flex: 1 1 auto;
+}
+
+/* Close button (subtle square) */
+.boards-modal-close {
+    background: #f7f8fb;
+    border: 1px solid rgba(6,22,34,0.04);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    color: #0f1724;
+    transition: background 120ms ease, transform 100ms ease, box-shadow 120ms ease;
+}
+.boards-modal-close:hover {
+    background: #eef2ff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79,139,255,0.08);
+}
+
+/* Body */
+.boards-modal-body {
+    margin-top: 6px;
+    margin-bottom: 16px;
+    color: #374151;
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+/* Emphasized board name inside message */
+.boards-modal-body strong {
+    color: #0b1220;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* Label + input for rename modal — compact */
+.boards-modal-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #111827;
+    flex-wrap: wrap;
+}
+.boards-modal-input {
+    display: inline-block;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #e6e9f2;
+    min-width: 260px;
+    max-width: 100%;
+    font-size: 15px;
+    color: #0f1724;
+    background: #fff;
+    box-shadow: inset 0 1px 0 rgba(2,6,23,0.02);
+    outline: none;
+    transition: box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.boards-modal-input:focus {
+    border-color: rgba(37,100,255,0.28);
+    box-shadow: 0 8px 20px rgba(37,100,255,0.06);
+    transform: translateY(-1px);
+}
+
+/* Footer (buttons) — compact square-ish buttons */
+.boards-modal-footer {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+/* Primary, secondary and danger buttons (compact) */
+.boards-modal .primary-btn {
+    background: linear-gradient(90deg,#4f8bff 0%, #7e5bff 100%);
+    color: #fff;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 8px 26px rgba(79,139,255,0.12);
+    min-width: 72px;
+    text-align: center;
+    transition: transform 150ms cubic-bezier(.2,.9,.2,1), box-shadow 150ms ease, filter 150ms ease;
+}
+
+/* Primary hover/active: brighten and lift */
+.boards-modal .primary-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(79,139,255,0.18);
+    filter: brightness(1.03);
+}
+.boards-modal .primary-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(79,139,255,0.14);
+    filter: brightness(0.98);
+}
+
+/* Secondary button baseline */
+.boards-modal .secondary-btn {
+    background: #fff;
+    border: 1px solid #e6e9f2;
+    padding: 9px 12px;
+    border-radius: 12px;
+    color: #0f1724;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 72px;
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+/* Secondary hover: subtle blue ring and soft background */
+.boards-modal .secondary-btn:hover {
+    background: #f3f6ff;
+    border-color: rgba(37,100,255,0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79,139,255,0.06);
+}
+.boards-modal .secondary-btn:active {
+    transform: translateY(0);
+}
+
+/* Danger button baseline */
+.boards-modal .danger-btn {
+    background: #fff5f6;
+    border: 1px solid rgba(191,30,46,0.08);
+    color: #bf1e2e;
+    padding: 9px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 72px;
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+/* Danger hover: stronger red background and small lift */
+.boards-modal .danger-btn:hover {
+    background: rgba(191,30,46,0.08);
+    border-color: rgba(191,30,46,0.16);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(191,30,46,0.08);
+    color: #8b1620;
+}
+.boards-modal .danger-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 12px rgba(191,30,46,0.06);
+}
+
+/* Accessibility: focus styles for modal controls */
+.boards-modal .primary-btn:focus,
+.boards-modal .secondary-btn:focus,
+.boards-modal .danger-btn:focus,
+.boards-modal-close:focus,
+.boards-modal-input:focus {
+    outline: 3px solid rgba(37,100,255,0.12);
+    outline-offset: 2px;
+}
+
+/* Small screens adjustments: keep modal compact and usable */
+@media (max-width: 480px) {
+    .boards-modal {
+        width: calc(100% - 32px);
+        padding: 18px;
+        border-radius: 14px;
+    }
+    .boards-modal-title { font-size: 20px; }
+    .boards-modal-input { min-width: 160px; width: 100%; }
+    .boards-modal-body { font-size: 14px; }
+    .boards-modal .primary-btn,
+    .boards-modal .secondary-btn,
+    .boards-modal .danger-btn { padding: 10px 12px; min-width: 64px; }
+}

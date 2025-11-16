@@ -1,0 +1,81 @@
+/* MenuButton styles: visible icon + overlay revealed on hover/focus
+   - Key fixes:
+     * overlay is hidden by default and only appears when wrapper is hovered or focused (no parent selectors)
+     * icon color uses currentColor so we can tune via wrapper (matching StarButton)
+     * ensure list variant visible (was previously hidden by other rules)
+*/
+
+/* wrapper */
+.menu-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    line-height: 1;
+    cursor: default; /* icon itself is not interactive until overlay appears */
+    color: #39404a;    /* subtle dark color same as star glyph default */
+}
+
+/* visibility fix for list mode: ensure wrapper is not collapsed */
+.menu-wrap--list {
+    display: inline-flex;
+}
+
+/* the small visible icon (SVG) */
+.menu-icon {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+    display: inline-block;
+    width: 18px;
+    height: 6px;
+    color: inherit; /* use wrapper currentColor */
+}
+
+/* overlay interactive button (rounded square), hidden by default */
+.menu-action {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(6, 22, 34, 0.04);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Reveal overlay only when the wrapper itself is hovered or focused-within.
+   This mirrors StarButton behavior: glyph shown by default, chrome appears on hover/focus. */
+.menu-wrap:hover .menu-action,
+.menu-wrap:focus-within .menu-action {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Hover lift for overlay */
+.menu-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06);
+    background: #f7f8fb;
+}
+
+/* Focus ring for accessibility */
+.menu-action:focus {
+    outline: 3px solid rgba(37, 100, 255, 0.12);
+    outline-offset: 2px;
+}
+
+/* Make sure pseudo elements from other global CSS do not inject content here */
+.menu-wrap::before,
+.menu-wrap::after,
+.menu-action::before,
+.menu-action::after {
+    content: none !important;
+}

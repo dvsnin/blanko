@@ -1,0 +1,189 @@
+/* BoardMenu.css — updated arrow rules to respect portal data-placement
+   Keep previous menu styles but add arrow placement for left/right/top/bottom.
+*/
+
+/* Base menu (kept from previous file) */
+.portal-wrapper .board-card-menu,
+.board-card-menu {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    min-width: 220px;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 18px 40px rgba(6, 22, 34, 0.12);
+    border: 1px solid rgba(6, 22, 34, 0.06);
+    z-index: 10020;
+    font-family: inherit;
+    box-sizing: border-box;
+    pointer-events: auto;
+}
+
+/* Reset UA button styles & menu items (kept) */
+.portal-wrapper .board-card-menu .board-card-menu-item,
+.board-card-menu .board-card-menu-item {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 10px 12px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    text-align: left !important;
+    cursor: pointer !important;
+    border-radius: 8px !important;
+    color: #0f1724 !important;
+    font-size: 14px !important;
+    transition: background 120ms ease, transform 120ms ease, color 120ms ease !important;
+    box-sizing: border-box !important;
+}
+
+/* icons area */
+.portal-wrapper .board-card-menu .board-card-menu-icon,
+.board-card-menu .board-card-menu-icon {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+}
+
+/* label */
+.portal-wrapper .board-card-menu .board-card-menu-label,
+.board-card-menu .board-card-menu-label {
+    flex: 1 1 auto;
+    line-height: 1;
+}
+
+/* Hover & focus */
+.portal-wrapper .board-card-menu .board-card-menu-item:hover,
+.board-card-menu .board-card-menu-item:hover,
+.portal-wrapper .board-card-menu .board-card-menu-item:focus,
+.board-card-menu .board-card-menu-item:focus {
+    background: #f3f6ff;
+    color: #0f1724;
+    outline: none;
+    transform: translateY(-1px);
+}
+
+/* keyboard focus */
+.portal-wrapper .board-card-menu .board-card-menu-item:focus-visible,
+.board-card-menu .board-card-menu-item:focus-visible {
+    box-shadow: 0 0 0 4px rgba(37, 100, 255, 0.10);
+    border-radius: 8px;
+}
+
+/* separator */
+.portal-wrapper .board-card-menu .board-card-menu-separator,
+.board-card-menu .board-card-menu-separator {
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,0,0,0.04), rgba(0,0,0,0.02));
+    margin: 6px 0;
+    border-radius: 1px;
+}
+
+/* danger */
+.portal-wrapper .board-card-menu .board-card-menu-item--danger,
+.board-card-menu .board-card-menu-item--danger {
+    color: #bf1e2e;
+}
+.portal-wrapper .board-card-menu .board-card-menu-item--danger:hover,
+.board-card-menu .board-card-menu-item--danger:hover {
+    background: rgba(191,30,46,0.06);
+}
+
+/* -----------------------------------------
+   ARROW (pointer) — positioned based on data-placement on the portal wrapper
+   ----------------------------------------- */
+
+/* Default reset: no arrow */
+.portal-wrapper .board-card-menu::before,
+.board-card-menu::before {
+    content: none;
+}
+
+/* Left placement: menu is left of anchor, arrow on the right edge centered vertically */
+.portal-wrapper[data-placement="left"] .board-card-menu::before {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-left: 1px solid rgba(6,22,34,0.06);
+    border-top: 1px solid rgba(6,22,34,0.06);
+    box-shadow: -2px -2px 6px rgba(6,22,34,0.04);
+    z-index: -1;
+}
+
+/* Right placement: menu is right of anchor, arrow on the left edge centered vertically */
+.portal-wrapper[data-placement="right"] .board-card-menu::before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-right: 1px solid rgba(6,22,34,0.06);
+    border-bottom: 1px solid rgba(6,22,34,0.06);
+    box-shadow: 2px 2px 6px rgba(6,22,34,0.04);
+    z-index: -1;
+}
+
+/* Top placement: menu above anchor — arrow at bottom edge centered */
+.portal-wrapper[data-placement="top"] .board-card-menu::before {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-left: 1px solid rgba(6,22,34,0.06);
+    border-top: 1px solid rgba(6,22,34,0.06);
+    box-shadow: 2px 2px 6px rgba(6,22,34,0.04);
+    z-index: -1;
+}
+
+/* Bottom placement: menu below anchor — arrow at top edge centered */
+.portal-wrapper[data-placement="bottom"] .board-card-menu::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border-left: 1px solid rgba(6,22,34,0.06);
+    border-top: 1px solid rgba(6,22,34,0.06);
+    box-shadow: -2px -2px 6px rgba(6,22,34,0.04);
+    z-index: -1;
+}
+
+/* small-screen adjustments */
+@media (max-width: 480px) {
+    .portal-wrapper .board-card-menu,
+    .board-card-menu {
+        min-width: 160px;
+        max-width: 100vw;
+        padding: 8px;
+    }
+    .portal-wrapper .board-card-menu::before,
+    .board-card-menu::before {
+        display: none;
+    }
+}
