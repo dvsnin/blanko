@@ -18,10 +18,8 @@ import ViewToggle from "./ViewToggle";
 
 /*
   Boards.jsx
-  - Pointer tracking in grid updated: menu now closes IMMEDIATELY when cursor leaves
-    the union of (anchor, menu, card) — no padding / hull / delayed logic.
-  - List behavior unchanged (menu closes only on click outside / Escape).
-  - Other logic (anchor ref per-click, portal positioning, cleanup) preserved.
+  - Updated logo: text wordmark + "Free" pill (miro-like)
+  - Rest of file kept as before (menu behavior, portal, grid/list logic)
 */
 
 const rawBoards = [
@@ -121,7 +119,7 @@ export default function Boards() {
     const [dialog, setDialog] = useState(null);
     const [renameDraft, setRenameDraft] = useState("");
 
-    // ensure boards have colorKey
+    // Ensure any boards loaded later without colorKey get one
     useEffect(() => {
         setBoards((prev) => {
             let changed = false;
@@ -140,7 +138,7 @@ export default function Boards() {
         });
     }, []);
 
-    // Helpers
+    // Helpers (unchanged)
     const showToast = (message) => {
         setToastMessage(message);
         setToastVisible(true);
@@ -352,9 +350,7 @@ export default function Boards() {
         };
     }, [menuBoardId, isNotificationsOpen]);
 
-    // pointer tracking for graceful close behaviour
-    // GRID: close IMMEDIATELY when pointer leaves union(anchor, menu, card)
-    // LIST: no pointer auto-close (menu closes only on click outside / Escape)
+    // pointer tracking for grid: immediate close when pointer leaves union(anchor, menu, card)
     useEffect(() => {
         if (!menuBoardId) return;
         if (view !== "grid") return; // only run for grid
@@ -373,12 +369,11 @@ export default function Boards() {
             const menuRect = menuEl?.getBoundingClientRect();
             const cardRect = cardEl?.getBoundingClientRect();
 
-            // if pointer is inside any of these rects -> keep menu open
             if (pointInRect(x, y, anchorRect) || pointInRect(x, y, menuRect) || pointInRect(x, y, cardRect)) {
                 return;
             }
 
-            // otherwise, pointer left the region -> close IMMEDIATELY (no pad, no delay)
+            // pointer left the region -> close IMMEDIATELY
             setMenuBoardId(null);
             menuCardRef.current = null;
             menuAnchorRef.current = null;
@@ -429,12 +424,39 @@ export default function Boards() {
         <div className="boards-page">
             {/* TOP BAR */}
             <header className="topbar">
-                <div className="topbar-left"><span className="topbar-logo">Blanko</span></div>
+                <div className="topbar-left">
+                    {/* Text wordmark + free badge */}
+                    <div className="topbar-logo-wrap">
+                        <span className="topbar-logo">Blanko</span>
+                        <span className="topbar-badge">Free</span>
+                    </div>
+                </div>
+
                 <div className="topbar-center" aria-hidden />
+
                 <div className="topbar-right">
-                    <NotificationButton unreadCount={unreadCount} onClick={(e) => { notificationsAnchorRef.current = e.currentTarget; setIsNotificationsOpen((v) => !v); }} />
+                    <NotificationButton
+                        unreadCount={unreadCount}
+                        onClick={(e) => {
+                            notificationsAnchorRef.current = e.currentTarget;
+                            setIsNotificationsOpen((v) => !v);
+                        }}
+                    />
+
                     <ProfileButton userInitial={userInitial} onClick={() => setIsProfileMenuOpen((prev) => !prev)} />
-                    {isProfileMenuOpen && <ProfileMenu name={user.name || "User"} email={user.email || "user@example.com"} onSettings={() => { setIsProfileMenuOpen(false); setIsProfileModalOpen(true); }} onLogout={() => console.log("Logout clicked")} onClose={() => setIsProfileMenuOpen(false)} />}
+
+                    {isProfileMenuOpen && (
+                        <ProfileMenu
+                            name={user.name || "User"}
+                            email={user.email || "user@example.com"}
+                            onSettings={() => {
+                                setIsProfileMenuOpen(false);
+                                setIsProfileModalOpen(true);
+                            }}
+                            onLogout={() => console.log("Logout clicked")}
+                            onClose={() => setIsProfileMenuOpen(false)}
+                        />
+                    )}
                 </div>
             </header>
 
