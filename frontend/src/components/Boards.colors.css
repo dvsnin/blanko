@@ -1,0 +1,150 @@
+/* Boards.colors.css
+   Gradients for board-header--<colorKey> and board-image-small--<colorKey>
+   Add or tweak colors here — each .board-header--KEY provides the colored top stripe.
+*/
+
+/* Generic header base */
+.board-header {
+    /* keep height/rounded corners already set in Boards.css */
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+/* Each colorKey => gradient background (top stripe area).
+   If your .board-header element has inner white card below, these gradients will show
+   as the colorful stripe. */
+
+/* mintBlue */
+.board-header--mintBlue {
+    background: linear-gradient(135deg, #c6f2d8 0%, #9fd8ff 100%);
+}
+
+/* peach */
+.board-header--peach {
+    background: linear-gradient(135deg, #fff2d9 0%, #ffbdbd 100%);
+}
+
+/* lilac */
+.board-header--lilac {
+    background: linear-gradient(135deg, #f6e9ff 0%, #e7d7ff 100%);
+}
+
+/* aqua */
+.board-header--aqua {
+    background: linear-gradient(135deg, #d9fbff 0%, #bfe9ff 100%);
+}
+
+/* sunset */
+.board-header--sunset {
+    background: linear-gradient(135deg, #fff0e0 0%, #ffc1c1 100%);
+}
+
+/* grass */
+.board-header--grass {
+    background: linear-gradient(135deg, #e6ffea 0%, #c6f7d3 100%);
+}
+
+/* ocean */
+.board-header--ocean {
+    background: linear-gradient(135deg, #dff3ff 0%, #b7e0ff 100%);
+}
+
+/* berry */
+.board-header--berry {
+    background: linear-gradient(135deg, #ffe7f2 0%, #ffd0e8 100%);
+}
+
+/* grape */
+.board-header--grape {
+    background: linear-gradient(135deg, #f0e7ff 0%, #e5d1ff 100%);
+}
+
+/* night */
+.board-header--night {
+    background: linear-gradient(135deg, #e8f0ff 0%, #cfe3ff 100%);
+}
+
+/* lava */
+.board-header--lava {
+    background: linear-gradient(135deg, #ffd6cf 0%, #ffb3a3 100%);
+}
+
+/* sky */
+.board-header--sky {
+    background: linear-gradient(135deg, #e6f7ff 0%, #bfe9ff 100%);
+}
+
+/* forest */
+.board-header--forest {
+    background: linear-gradient(135deg, #e9fff0 0%, #c7f3d8 100%);
+}
+
+/* lemon */
+.board-header--lemon {
+    background: linear-gradient(135deg, #fffbe6 0%, #fff2b2 100%);
+}
+
+/* rose */
+.board-header--rose {
+    background: linear-gradient(135deg, #fff0f2 0%, #ffdbe6 100%);
+}
+
+/* steel */
+.board-header--steel {
+    background: linear-gradient(135deg, #eef3ff 0%, #dbe6ff 100%);
+}
+
+/* sand */
+.board-header--sand {
+    background: linear-gradient(135deg, #fff8ef 0%, #f5e7d9 100%);
+}
+
+/* teal */
+.board-header--teal {
+    background: linear-gradient(135deg, #e6fffb 0%, #c6fff0 100%);
+}
+
+/* freshMint */
+.board-header--freshMint {
+    background: linear-gradient(135deg, #e9fff4 0%, #d0ffe7 100%);
+}
+
+/* indigo */
+.board-header--indigo {
+    background: linear-gradient(135deg, #e8ecff 0%, #d0d8ff 100%);
+}
+
+/* Small thumbnail variants (list view) */
+.board-image-small {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+/* Map thumbnail classes to same gradients */
+.board-image-small--mintBlue { background: linear-gradient(135deg, #c6f2d8 0%, #9fd8ff 100%); }
+.board-image-small--peach { background: linear-gradient(135deg, #fff2d9 0%, #ffbdbd 100%); }
+.board-image-small--lilac { background: linear-gradient(135deg, #f6e9ff 0%, #e7d7ff 100%); }
+.board-image-small--aqua { background: linear-gradient(135deg, #d9fbff 0%, #bfe9ff 100%); }
+.board-image-small--sunset { background: linear-gradient(135deg, #fff0e0 0%, #ffc1c1 100%); }
+.board-image-small--grass { background: linear-gradient(135deg, #e6ffea 0%, #c6f7d3 100%); }
+.board-image-small--ocean { background: linear-gradient(135deg, #dff3ff 0%, #b7e0ff 100%); }
+.board-image-small--berry { background: linear-gradient(135deg, #ffe7f2 0%, #ffd0e8 100%); }
+.board-image-small--grape { background: linear-gradient(135deg, #f0e7ff 0%, #e5d1ff 100%); }
+.board-image-small--night { background: linear-gradient(135deg, #e8f0ff 0%, #cfe3ff 100%); }
+.board-image-small--lava { background: linear-gradient(135deg, #ffd6cf 0%, #ffb3a3 100%); }
+.board-image-small--sky { background: linear-gradient(135deg, #e6f7ff 0%, #bfe9ff 100%); }
+.board-image-small--forest { background: linear-gradient(135deg, #e9fff0 0%, #c7f3d8 100%); }
+.board-image-small--lemon { background: linear-gradient(135deg, #fffbe6 0%, #fff2b2 100%); }
+.board-image-small--rose { background: linear-gradient(135deg, #fff0f2 0%, #ffdbe6 100%); }
+.board-image-small--steel { background: linear-gradient(135deg, #eef3ff 0%, #dbe6ff 100%); }
+.board-image-small--sand { background: linear-gradient(135deg, #fff8ef 0%, #f5e7d9 100%); }
+.board-image-small--teal { background: linear-gradient(135deg, #e6fffb 0%, #c6fff0 100%); }
+.board-image-small--freshMint { background: linear-gradient(135deg, #e9fff4 0%, #d0ffe7 100%); }
+.board-image-small--indigo { background: linear-gradient(135deg, #e8ecff 0%, #d0d8ff 100%); }
+
+/* If you want slightly darker stripe (top-only), you can override using a pseudo-element or inner element.
+   Current approach uses the whole header area — tweak in Boards.css if you render inner white card under header. */

@@ -1,0 +1,68 @@
+/* ViewToggle.css — styles for the grid/list toggle buttons */
+
+/* container */
+.view-toggle {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* base button */
+.vt-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-sizing: border-box;
+    transition: box-shadow 160ms ease, transform 120ms ease, background 160ms ease, border-color 160ms ease;
+    outline: none;
+}
+
+/* subtle hover */
+.vt-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(46,80,170,0.06);
+    border-color: rgba(37,100,255,0.10);
+}
+
+/* focus visible (keyboard) */
+.vt-btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(37,100,255,0.10), 0 10px 22px rgba(46,80,170,0.06);
+    border-color: rgba(37,100,255,0.12);
+}
+
+/* icon inside button */
+.vt-icon {
+    display: block;
+    color: #4b5563; /* muted icon color */
+    stroke: currentColor;
+}
+
+/* active state: gradient fill and white icon */
+.vt-active {
+    background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%);
+    border: none;
+    box-shadow: 0 12px 36px rgba(79,139,255,0.18);
+}
+
+/* when active, icon should be white/solid */
+.vt-active .vt-icon {
+    color: #ffffff;
+}
+
+/* slightly bigger active target for touch */
+@media (hover: none) and (pointer: coarse) {
+    .vt-btn { width: 46px; height: 46px; border-radius: 12px; }
+}
+
+/* small variant: if you want a smaller button size (optional) */
+.vt-btn.vt-small {
+    width: 34px;
+    height: 34px;
+}

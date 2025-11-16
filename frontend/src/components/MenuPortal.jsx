@@ -1,13 +1,13 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 /*
-MenuPortal
-- anchorRef: ref to the element which the menu should be positioned relative to
-- isOpen: boolean
-- placement: "bottom" | "top"
-- shiftLeft: boolean (if true, prefer aligning to anchor.left / avoid overflow)
-- children: the menu element (the menu should be rendered as normal flow element inside the host)
+MenuPortal (updated)
+- Positions menu fixed in the viewport.
+- Preferred placement: left of anchor, vertically centered to anchor.
+- If left doesn't fit, try right; if vertical overflows, fallback to top/bottom.
+- Sets data-placement attribute on the portal host for CSS arrow positioning.
+- Keeps host hidden until positioning is done to avoid flicker.
 */
 export default function MenuPortal({
                                        anchorRef,
@@ -19,94 +19,122 @@ export default function MenuPortal({
     const hostRef = useRef(null);
     const rafRef = useRef(null);
 
-    if (!hostRef.current) {
+    if (typeof document !== "undefined" && !hostRef.current) {
         hostRef.current = document.createElement("div");
         hostRef.current.className = "portal-container";
-        // host is positioned absolutely; MenuPortal will set left/top coordinates
-        hostRef.current.style.position = "absolute";
+        hostRef.current.style.position = "fixed";
         hostRef.current.style.left = "0px";
         hostRef.current.style.top = "0px";
-        hostRef.current.style.pointerEvents = "none"; // allow interactions only when positioned
-        hostRef.current.style.zIndex = "9999";
+        hostRef.current.style.pointerEvents = "none";
+        hostRef.current.style.visibility = "hidden";
+        hostRef.current.style.zIndex = "2147483000";
     }
 
     useEffect(() => {
-        document.body.appendChild(hostRef.current);
+        const host = hostRef.current;
+        if (!host) return;
+        document.body.appendChild(host);
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            if (hostRef.current && hostRef.current.parentNode) {
-                hostRef.current.parentNode.removeChild(hostRef.current);
-            }
+            if (host && host.parentNode) host.parentNode.removeChild(host);
         };
     }, []);
 
     useEffect(() => {
+        const host = hostRef.current;
+        if (!host) return;
+
         if (!isOpen) {
-            // hide pointer interactions when closed
-            hostRef.current.style.pointerEvents = "none";
+            host.style.pointerEvents = "none";
+            host.style.visibility = "hidden";
+            host.removeAttribute("data-placement");
             return;
         }
 
+        host.style.pointerEvents = "auto";
+        host.style.visibility = "hidden"; // keep hidden until positioned
+
         function updatePosition() {
-            if (!anchorRef?.current) return;
-            const anchorRect = anchorRef.current.getBoundingClientRect();
-            const host = hostRef.current;
-            const menuEl = host.firstElementChild;
-            if (!menuEl) {
-                // menu not mounted yet, try again on next frame
+            const anchor = anchorRef?.current;
+            const wrapper = host.firstElementChild; // portal wrapper
+            const menuEl = wrapper?.firstElementChild || wrapper; // menu may be direct child
+            if (!anchor || !menuEl) {
                 rafRef.current = requestAnimationFrame(updatePosition);
                 return;
             }
 
-            // measure menu as rendered (menu should be normal/static/relative inside host)
+            const anchorRect = anchor.getBoundingClientRect();
             const menuRect = menuEl.getBoundingClientRect();
             const margin = 8;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
 
-            // compute left: by default align right edges (anchor.right -> menu.right)
-            let left = anchorRect.right - menuRect.width;
-            // keep inside viewport
-            left = Math.min(left, window.innerWidth - menuRect.width - margin);
-            left = Math.max(left, margin);
+            // Preferred: left of anchor, vertically centered
+            let left = Math.round(anchorRect.left - menuRect.width - margin);
+            let top = Math.round(anchorRect.top + (anchorRect.height / 2) - (menuRect.height / 2));
+            let resolvedPlacement = "left";
 
-            if (shiftLeft) {
-                // prefer aligning to the anchor's left edge
-                left = Math.max(margin, anchorRect.left);
-                left = Math.min(left, window.innerWidth - menuRect.width - margin);
+            // If left doesn't fit, try right
+            if (left < margin) {
+                const rightLeft = Math.round(anchorRect.right + margin);
+                if (rightLeft + menuRect.width <= vw - margin) {
+                    left = rightLeft;
+                    resolvedPlacement = "right";
+                } else {
+                    // fallback to top / bottom: prefer top if enough space else bottom
+                    const topCandidate = Math.round(anchorRect.top - menuRect.height - margin);
+                    const bottomCandidate = Math.round(anchorRect.bottom + margin);
+                    if (topCandidate >= margin) {
+                        top = topCandidate;
+                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
+                        resolvedPlacement = "top";
+                    } else {
+                        top = bottomCandidate;
+                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
+                        resolvedPlacement = "bottom";
+                    }
+                }
             }
 
-            // compute top depending on placement
-            let top;
-            if (placement === "bottom") {
-                top = anchorRect.bottom + 8;
-                // if overflow bottom - flip to top
-                if (top + menuRect.height > window.innerHeight - margin) {
-                    top = anchorRect.top - menuRect.height - 8;
-                }
-            } else {
-                top = anchorRect.top - menuRect.height - 8;
-                if (top < margin) {
-                    top = anchorRect.bottom + 8;
-                }
-            }
+            // clamp so the menu never overflows viewport
+            const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+            left = clamp(left, margin, Math.max(margin, vw - menuRect.width - margin));
+            top = clamp(top, margin, Math.max(margin, vh - menuRect.height - margin));
 
             host.style.left = `${Math.round(left)}px`;
             host.style.top = `${Math.round(top)}px`;
-
-            // enable pointer events for menu now that it's positioned
+            host.style.visibility = "visible";
             host.style.pointerEvents = "auto";
+
+            host.setAttribute("data-placement", resolvedPlacement);
         }
 
         updatePosition();
-        window.addEventListener("resize", updatePosition);
-        window.addEventListener("scroll", updatePosition, true);
+        const onUpdate = () => {
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            rafRef.current = requestAnimationFrame(updatePosition);
+        };
+        window.addEventListener("resize", onUpdate);
+        window.addEventListener("scroll", onUpdate, true);
 
         return () => {
-            window.removeEventListener("resize", updatePosition);
-            window.removeEventListener("scroll", updatePosition, true);
+            window.removeEventListener("resize", onUpdate);
+            window.removeEventListener("scroll", onUpdate, true);
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
         };
     }, [isOpen, anchorRef, placement, shiftLeft]);
 
     if (!isOpen) return null;
-    return createPortal(children, hostRef.current);
+
+    const wrapper = (
+        <div
+            className="portal-wrapper"
+            style={{ pointerEvents: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            {children}
+        </div>
+    );
+
+    return createPortal(wrapper, hostRef.current);
 }

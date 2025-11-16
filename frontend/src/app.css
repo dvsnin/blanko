@@ -5,6 +5,137 @@
     font-family: "Inter", sans-serif;
 }
 
+/* Вариант для случая, если часть топбара стилизуется в app.css
+   (можете держать в одном месте — тогда удалите дубли из другого файла) */
+
+.topbar {
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 18px;
+    height: 72px;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.topbar-right {
+    margin-left: auto; /* держим правую группу слева */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* кнопки и аватар — те же стили, как в Boards.css */
+.topbar-icon-btn,
+.topbar-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    background: #ffffff;
+    cursor: pointer;
+    transition: background 150ms ease, transform 120ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    box-sizing: border-box;
+    padding: 0;
+}
+
+.topbar-icon-btn:hover,
+.topbar-avatar:hover {
+    background: #eef6ff;
+    border-color: #dbeeff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(6,22,34,0.06);
+}
+.topbar-icon-btn:active,
+.topbar-avatar:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 6px rgba(2,6,23,0.06);
+}
+.topbar-icon-btn:focus-visible,
+.topbar-avatar:focus-visible {
+    outline: 2px solid rgba(59,130,246,0.95);
+    outline-offset: 2px;
+}
+
+/* ====== SIDEBAR (обновлено: поиск перемещён сюда) ====== */
+
+.sidebar {
+    z-index: 1;
+    position: relative;
+    width: 220px;
+    padding: 20px;
+    background: #fafafa;
+    border-right: 1px solid #ddd;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sidebar-search {
+    width: 100%;
+}
+.sidebar-search input {
+    width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(15,23,42,0.06);
+    padding: 0 12px;
+    background: #f3f5f7;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.sidebar-search input::placeholder { color: #94a3b8; }
+
+/* Sidebar items */
+.sidebar-item-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+    background: transparent;
+}
+.sidebar-item.active {
+    background: #eef0f3;
+    font-weight: 600;
+}
+.sidebar-item:hover {
+    background: #f2f2f4;
+}
+
+/* small responsive */
+@media (max-width: 720px) {
+    .sidebar { width: 64px; padding: 12px; }
+    .sidebar-search { display: none; }
+    .sidebar-item .label { display: none; }
+}
+
+/* ====== TOPBAR (search removed — kept layout) ====== */
+
+.topbar-left { flex: 0 0 auto; }
+.topbar-logo {
+    font-size: 18px;
+    font-weight: 800;
+    color: #2b67ff;
+}
+
+
 /* ====== PROFILE ICON ====== */
 
 .top-bar {
@@ -354,4 +485,67 @@
 
 .board-card-menu {
     z-index: 9999 !important;
+}
+
+/* ...существующие правила остались выше... */
+
+/* Sidebar (унифицированное правило для проекта) */
+.sidebar {
+    z-index: 1; /* низкий слой — под контентом */
+    position: relative; /* нужно, чтобы z-index работал */
+    width: 220px; /* увеличил ширину чтобы меню помещалось */
+    padding: 24px;
+    background: #fafafa;
+    border-right: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+/* Подстройки для элементов */
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar-item.active {
+    background: #eef0f3;
+    font-weight: 600;
+}
+
+.sidebar-item:hover {
+    background: #f2f2f4;
+}
+
+/* icon column */
+.sidebar-item .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Content area continues to be flex:1 и будет занимать остаток */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible !important;
+    position: relative;
+    min-width: 0;
+}
+
+/* Обновление для адаптива: уменьшаем ширину сайдбара на маленьких экранах */
+@media (max-width: 900px) {
+    .sidebar { width: 200px; padding: 20px; }
+}
+@media (max-width: 720px) {
+    .sidebar { width: 64px; padding: 12px; } /* компактная версия, если нужно */
+    .sidebar-item span { display: none; } /* скрываем текст в компактном виде */
 }

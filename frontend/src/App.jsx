@@ -18,20 +18,31 @@ const api = {
 
 function Sidebar() {
     return (
-        <div className="sidebar">
-            <div className="sidebar-item active">
-                <span className="icon">⌂</span>
-                <span className="label">Home</span>
+        <div className="sidebar" aria-label="Sidebar">
+            {/* SEARCH moved into sidebar */}
+            <div className="sidebar-search">
+                <input
+                    type="search"
+                    placeholder="Search by title or topic"
+                    aria-label="Search by title or topic"
+                />
             </div>
 
-            <div className="sidebar-item">
-                <span className="icon">⏱</span>
-                <span className="label">Recent</span>
-            </div>
+            <div className="sidebar-item-group">
+                <div className="sidebar-item active">
+                    <span className="icon">⌂</span>
+                    <span className="label">Home</span>
+                </div>
 
-            <div className="sidebar-item">
-                <span className="icon">☆</span>
-                <span className="label">Starred</span>
+                <div className="sidebar-item">
+                    <span className="icon">⏱</span>
+                    <span className="label">Recent</span>
+                </div>
+
+                <div className="sidebar-item">
+                    <span className="icon">☆</span>
+                    <span className="label">Starred</span>
+                </div>
             </div>
         </div>
     );
