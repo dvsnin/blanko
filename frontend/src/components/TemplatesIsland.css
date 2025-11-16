@@ -1,0 +1,237 @@
+/* TemplatesIsland.css — updated: removed left vertical bar from Roadmap variant
+   itemWidth: 150px; gap: 22px — keep in sync with TemplatesIsland.jsx
+*/
+
+/* Container: slightly darker to make cards pop more */
+.ti-island,
+.templates-island {
+    margin: 18px 24px 12px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #c6cfd1 0%, #dce6e8 100%);
+    box-shadow: 0 20px 48px rgba(6, 22, 34, 0.11), inset 0 1px 0 rgba(255,255,255,0.6);
+    box-sizing: border-box;
+}
+
+/* inner */
+.ti-inner,
+.templates-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* row (clip extras) */
+.ti-row,
+.templates-row {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+    overflow: hidden;
+    padding: 8px 6px 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* item */
+.ti-item,
+.template-item {
+    width: 150px;
+    flex: 0 0 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+/* hide external names (we embed titles) */
+.template-name,
+.ti-name {
+    display: none;
+}
+
+/* button */
+.ti-thumb-button,
+.template-thumb-button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 14px;
+}
+
+/* thumb base */
+.ti-thumb,
+.template-thumb {
+    width: 100%;
+    height: 96px;
+    border-radius: 14px;
+    position: relative;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(12,18,26,0.06);
+    box-shadow: 0 20px 48px rgba(6, 22, 34, 0.10);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+    background: linear-gradient(180deg, #ffffff, #fbfcfe);
+}
+
+/* inner white preview (title will be inside this element) */
+.ti-thumb-inner,
+.template-thumb-inner {
+    width: 74%;
+    height: 56%;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+}
+
+/* ---------------------------
+   First template: "Новый" inside white rectangle
+   --------------------------- */
+.ti-thumb-new-inner {
+    color: #071127;
+    font-weight: 800;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.05;
+    padding: 6px 8px;
+}
+
+/* ---------------------------
+   Default caption for other templates, INSIDE white rectangle
+   --------------------------- */
+.ti-thumb-caption-inner {
+    color: #071127;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    padding: 0 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+}
+
+/* badge (top-left for first only) */
+.ti-badge,
+.template-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #ffffff;
+    padding: 6px 10px;
+    font-weight: 800;
+    font-size: 12px;
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(6,22,34,0.08);
+    pointer-events: none;
+}
+
+/* hover */
+.ti-thumb-button:hover .ti-thumb,
+.template-thumb-button:hover .template-thumb {
+    transform: translateY(-6px);
+    box-shadow: 0 34px 70px rgba(6, 22, 34, 0.14);
+}
+
+/* Variants: cleaner palettes */
+
+/* Blank */
+.template-thumb--blank,
+.thumb-blank {
+    background: linear-gradient(180deg,#ffffff,#fafbff);
+    border: 2px dashed rgba(99,102,241,0.16);
+}
+
+/* Retro */
+.thumb-retro,
+.template-thumb--retro {
+    background: linear-gradient(135deg,#ffece7 0%, #ffd4cc 100%);
+}
+
+/* Year */
+.thumb-year,
+.template-thumb--year {
+    background: linear-gradient(135deg,#fff7ea 0%, #fff1d6 100%);
+}
+.thumb-year::after,
+.template-thumb--year::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 44px;
+    height: 20px;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 46 22'%3E%3Ccircle cx='4' cy='6' r='2' fill='%23ffd05a'/%3E%3Ccircle cx='12' cy='4' r='2' fill='%23ffb86b'/%3E%3Ccircle cx='20' cy='8' r='2' fill='%23ffc857'/%3E%3Ccircle cx='30' cy='5' r='2' fill='%23ffd05a'/%3E%3Ccircle cx='38' cy='10' r='2' fill='%23ffb86b'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.96;
+}
+
+/* Brain */
+.thumb-brain,
+.template-thumb--brain {
+    background: linear-gradient(135deg,#eafff7,#e6fff4);
+}
+.thumb-brain::before,
+.template-thumb--brain::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    width: 78px;
+    height: 22px;
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 24'%3E%3Cpath d='M2 12c12-8 24 8 38 2 12-5 20-10 36-6' stroke='%230f1724' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round' opacity='0.12'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    transform: rotate(-6deg);
+}
+
+/* Roadmap - LEFT STRIPE REMOVED to match other templates */
+.thumb-roadmap,
+.template-thumb--roadmap {
+    background: linear-gradient(135deg,#eaf7ff,#def2ff);
+}
+
+/* Sprint */
+.thumb-sprint,
+.template-thumb--sprint {
+    background: linear-gradient(135deg,#fff4f2,#ffe9e4);
+}
+
+/* Study */
+.thumb-study,
+.template-thumb--study {
+    background: linear-gradient(135deg,#ecfeff,#e2f7ff);
+}
+
+/* Peach */
+.template-thumb--peach,
+.thumb-peach {
+    background: linear-gradient(135deg,#fff3f1,#ffdcd2);
+}
+
+/* responsive note: if you change widths here, update itemWidth/gap in TemplatesIsland.jsx */
+@media (max-width: 980px) {
+    .ti-item, .template-item { width: 130px; flex: 0 0 130px; }
+    .ti-thumb, .template-thumb { height: 82px; }
+    .ti-thumb-caption-inner, .ti-thumb-new-inner { font-size: 11px; }
+}
+
+@media (max-width: 720px) {
+    .ti-island, .templates-island { display: none; }
+}
+
+/* spacer */
+.templates-bottom-divider {
+    height: 22px;
+}

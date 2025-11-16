@@ -1,5 +1,5 @@
 # ---------- СТАДИЯ 1 — Сборка Go ----------
-FROM golang:1.22 AS builder
+FROM golang:1.25 AS builder
 
 WORKDIR /app
 

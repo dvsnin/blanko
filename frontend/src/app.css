@@ -1,0 +1,357 @@
+/* ====== GLOBAL PAGE ====== */
+
+.page {
+    padding: 0; /* убрали лишние отступы */
+    font-family: "Inter", sans-serif;
+}
+
+/* ====== PROFILE ICON ====== */
+
+.top-bar {
+    width: 100%;
+    height: 64px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.top-bar-left {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.top-bar-icon {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.top-bar-icon:hover {
+    opacity: 1;
+}
+
+.profile-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #4f46e5;
+    color: white;
+    font-weight: 600;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* ====== DROPDOWN MENU ====== */
+
+.profile-menu {
+    position: absolute;
+    top: 70px;        /* подчёркиваю: теперь ниже шапки */
+    right: 32px;      /* должно совпадать с padding хедера */
+    width: 200px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 8px 0;
+    animation: fadeIn 0.15s ease-out;
+    z-index: 100;
+}
+
+.profile-menu .menu-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.profile-menu .menu-item.header {
+    font-weight: 600;
+}
+
+.profile-menu .menu-item.small {
+    font-size: 12px;
+    color: #555;
+}
+
+.profile-menu .menu-item:hover {
+    background: #f5f5f5;
+}
+
+.profile-menu hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 6px 0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ====== BOARDS LIST ====== */
+
+.boards {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.board-card {
+    padding: 20px 30px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.board-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* ===== MODAL ===== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+}
+
+.modal {
+    width: 480px;
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    z-index: 800;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.close-btn:hover {
+    opacity: 1;
+}
+
+.modal-body {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.modal-body input {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+}
+
+.team-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.team-role {
+    font-size: 12px;
+    color: #666;
+    width: 50px;
+}
+
+.team-name {
+    flex: 1;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.team-arrow {
+    font-size: 18px;
+    opacity: 0.6;
+}
+
+.modal-footer {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.save-btn {
+    padding: 10px 18px;
+    background: #3f51b5;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+/* ===== TOAST ===== */
+
+.toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #222;
+    color: white;
+    padding: 14px 22px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    animation: fadeInUp 0.25s ease-out;
+    z-index: 300;
+}
+
+.toast-icon {
+    font-size: 20px;
+    color: #6ee86e;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0px);
+    }
+}
+
+/* Поле с email (disabled) */
+.input-disabled {
+    background: #f2f2f2;
+    color: #777;
+    cursor: not-allowed;
+}
+
+/* Layout */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow-x: visible;  /* меню может вылезать за контент по X */
+    overflow-y: hidden;  /* вертикальный скролл остаётся у .content */
+}
+
+/* Sidebar */
+.sidebar {
+    z-index: 1; /* низкий слой — под контентом */
+    position: relative; /* нужно, чтобы z-index работал */
+    width: 175px;
+    padding: 20px;
+    background: #fafafa;
+    border-right: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.sidebar-item.active {
+    background: #eef0f3;
+    font-weight: 600;
+}
+
+.sidebar-item:hover {
+    background: #f2f2f2;
+}
+
+.icon {
+    font-size: 18px;
+}
+
+/* Content */
+.content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible !important; /* ← обязательно */
+    position: relative;              /* чтобы меню могло позиционироваться */
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    font-size: 16px;          /* базовый размер текста в пункте меню */
+}
+
+.sidebar-item .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;              /* одинаковая «колонка» под иконку */
+    font-size: 18px;          /* размер самой иконки */
+    line-height: 1;
+}
+
+.sidebar-item .label {
+    font-size: 16px;          /* можно увеличить до 17–18, если хочешь ещё крупнее */
+}
+
+.sidebar-item.active {
+    font-weight: 600;
+}
+
+.boards-wrapper,
+.boards-grid,
+.boards-list,
+.board-card,
+.boards-list-row {
+    overflow: visible !important;
+}
+
+.board-card-menu {
+    z-index: 9999 !important;
+}

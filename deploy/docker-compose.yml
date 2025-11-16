@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      default:
+        aliases:
+          - app.localhost
+          - keycloak.localhost
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DB: keycloak
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.5
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+      KC_HOSTNAME: keycloak.localhost
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY: edge
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    depends_on:
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
+      - "traefik.http.routers.keycloak.entrypoints=web"
+      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
+    depends_on:
+      - keycloak
+      - backend
+    command:
+      - --http-address=0.0.0.0:4180
+
+      # OIDC / Keycloak
+      - --provider=oidc
+      - --oidc-issuer-url=http://keycloak.localhost/realms/syncboard
+      - --client-id=syncboard
+      - --client-secret=replace-me
+      - --scope=openid profile email
+      - --email-domain=*
+
+      # куда редиректить после логина
+      - --redirect-url=http://app.localhost/oauth2/callback
+
+      # upstream = твой backend
+      - --upstream=http://backend:8080/
+
+      # куки и режим за прокси
+      - --cookie-secret=1234567890123456abcd1234abcd5678
+      - --cookie-secure=false
+      - --cookie-refresh=1h
+      - --cookie-expire=24h
+      - --skip-jwt-bearer-tokens=true
+      - --reverse-proxy=true
+      - --skip-provider-button=true
+
+      # прокидываем заголовки в backend
+      - --pass-user-headers=true
+      #- --pass-access-token=true
+
+    labels:
+      - "traefik.enable=true"
+      # весь трафик на app.localhost идёт в oauth2-proxy
+      - "traefik.http.routers.app.rule=Host(`app.localhost`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=4180"
+      - "traefik.http.routers.app.middlewares=strip-gap-auth"
+      - "traefik.http.middlewares.strip-gap-auth.headers.customResponseHeaders.Gap-Auth="
+
+  backend:
+    build: ../backend/app
+    environment:
+      REDIS_ADDR: redis:6379
+    depends_on:
+      - redis
+    # НИКАКИХ traefik-лейблов — backend виден только из oauth2-proxy
+    # он слушает на 8080 внутри контейнера
+
+  redis:
+    image: redis:7.2
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
