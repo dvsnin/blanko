@@ -1,5 +1,5 @@
 /* Compact centered modal styles — interactive hover states for buttons
-   Replace previous src/components/Boards.modals.css with this file.
+   Updated: modal has a maximum height and the body is scrollable.
 */
 
 /* Backdrop: center modal both vertically and horizontally */
@@ -16,12 +16,13 @@
 }
 
 /* Modal card: compact, nice rounded corners, constrained to viewport */
+/* Important: we set max-height so the modal never grows beyond viewport and body becomes scrollable */
 .boards-modal {
     background: #ffffff;
-    width: min(560px, 94%);
-    max-width: 560px;
+    width: min(640px, 96%);
+    max-width: 640px;
     border-radius: 18px;
-    padding: 28px 28px;
+    padding: 0; /* internal spacing handled by header/body/footer */
     box-sizing: border-box;
     box-shadow: 0 22px 46px rgba(6, 22, 34, 0.14);
     border: 1px solid rgba(6,22,34,0.04);
@@ -29,6 +30,10 @@
     color: #0f1724;
     font-family: inherit;
     transition: transform 180ms cubic-bezier(.2,.9,.2,1), box-shadow 180ms ease;
+    max-height: calc(100vh - 80px); /* keep some offset from viewport edges */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* keep header/footer visible; body scrolls */
 }
 
 /* Header */
@@ -36,11 +41,12 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    padding: 24px;
+    border-bottom: 1px solid #eef2f7;
 }
 .boards-modal-title {
     margin: 0;
-    font-size: 28px;
+    font-size: 22px;
     line-height: 1;
     font-weight: 800;
     color: #0b1220;
@@ -70,13 +76,29 @@
 }
 
 /* Body */
+/* Body is scrollable when content is tall. We give it flexible height. */
 .boards-modal-body {
-    margin-top: 6px;
-    margin-bottom: 16px;
+    padding: 20px 24px;
     color: #374151;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.45;
+    overflow: auto;
+    /* allow body to take remaining modal height (header/footer fixed) */
+    flex: 1 1 auto;
 }
+
+/* Teams list scroll area (internal) */
+.teams-list-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: calc(100% - 40px); /* remain within modal body; body provides viewport */
+    overflow: auto;
+    padding-right: 6px; /* room for scrollbar */
+    box-sizing: border-box;
+}
+
+/* Small visual tweaks for team items are kept in existing CSS (.team-item) */
 
 /* Emphasized board name inside message */
 .boards-modal-body strong {
@@ -114,13 +136,22 @@
     transform: translateY(-1px);
 }
 
+/* Disabled (read-only) input look */
+.input-disabled {
+    background: #f3f5f8;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
 /* Footer (buttons) — compact square-ish buttons */
 .boards-modal-footer {
     display: flex;
     gap: 12px;
-    margin-top: 18px;
+    margin: 16px 24px;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
+    border-top: 1px solid #eef2f7;
+    padding-top: 12px;
 }
 
 /* Primary, secondary and danger buttons (compact) */
@@ -164,17 +195,6 @@
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-/* Secondary hover: subtle blue ring and soft background */
-.boards-modal .secondary-btn:hover {
-    background: #f3f6ff;
-    border-color: rgba(37,100,255,0.12);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(79,139,255,0.06);
-}
-.boards-modal .secondary-btn:active {
-    transform: translateY(0);
-}
-
 /* Danger button baseline */
 .boards-modal .danger-btn {
     background: #fff5f6;
@@ -187,19 +207,6 @@
     font-size: 14px;
     min-width: 72px;
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
-}
-
-/* Danger hover: stronger red background and small lift */
-.boards-modal .danger-btn:hover {
-    background: rgba(191,30,46,0.08);
-    border-color: rgba(191,30,46,0.16);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(191,30,46,0.08);
-    color: #8b1620;
-}
-.boards-modal .danger-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 6px 12px rgba(191,30,46,0.06);
 }
 
 /* Accessibility: focus styles for modal controls */
@@ -216,13 +223,18 @@
 @media (max-width: 480px) {
     .boards-modal {
         width: calc(100% - 32px);
-        padding: 18px;
+        padding: 0;
         border-radius: 14px;
     }
     .boards-modal-title { font-size: 20px; }
     .boards-modal-input { min-width: 160px; width: 100%; }
-    .boards-modal-body { font-size: 14px; }
+    .boards-modal-body { font-size: 14px; padding: 14px; }
     .boards-modal .primary-btn,
     .boards-modal .secondary-btn,
     .boards-modal .danger-btn { padding: 10px 12px; min-width: 64px; }
 }
+
+/* subtle custom scrollbar styling for teams list */
+.teams-list-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.teams-list-scroll::-webkit-scrollbar-thumb { background: rgba(12,18,26,0.06); border-radius: 999px; }
+.teams-list-scroll { scrollbar-width: thin; scrollbar-color: rgba(12,18,26,0.06) transparent; }
