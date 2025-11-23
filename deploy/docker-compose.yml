@@ -17,6 +17,17 @@ services:
           - app.localhost
           - keycloak.localhost
 
+  postgres_backend:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+    volumes:
+      - pgdata_backend:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
   postgres:
     image: postgres:16
     environment:
@@ -100,10 +111,10 @@ services:
     build: ../backend/app
     environment:
       REDIS_ADDR: redis:6379
+      POSTGRES_DSN: postgres://postgres:postgres@postgres_backend:5432/app?sslmode=disable
     depends_on:
       - redis
-    # НИКАКИХ traefik-лейблов — backend виден только из oauth2-proxy
-    # он слушает на 8080 внутри контейнера
+      - postgres_backend
 
   redis:
     image: redis:7.2
@@ -113,3 +124,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  pgdata_backend:

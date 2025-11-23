@@ -1,0 +1,219 @@
+/* TeamsPanel.css — use the provided settings-horizontal.svg (adapted to currentColor)
+   Buttons (plus / gear) are 44×44 and visually aligned with topbar controls.
+*/
+
+/* Screen-reader only helper */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Panel base */
+.teams-panel {
+    width: 240px;
+    min-height: 100vh;
+    background: #fff;
+    border-right: 1px solid rgba(15,23,42,0.04);
+    padding: 12px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* header */
+.teams-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.teams-title {
+    display: inline-flex;
+    align-items: center;
+    height: 44px;
+    margin: 0;
+    font-weight: 700;
+    font-size: 17px;
+    color: #0b1220;
+    line-height: 1;
+    letter-spacing: -0.2px;
+    padding-left: 6px;
+    box-sizing: border-box;
+}
+
+/* header control buttons: plus and gear - MATCH topbar controls (44x44) */
+.teams-plus-btn,
+.teams-header-settings {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(15,23,42,0.04);
+    background: linear-gradient(180deg,#ffffff,#f7fbff);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 6px 18px rgba(6,22,34,0.04);
+    transition: transform 120ms ease, box-shadow 150ms ease, background 120ms ease, border-color 120ms ease;
+    box-sizing: border-box;
+}
+.teams-plus-btn svg {
+    width: 18px;
+    height: 18px;
+    color: currentColor;
+}
+.teams-plus-btn .plus {
+    font-size: 20px;
+    color: #374151;
+    line-height: 1;
+}
+.teams-plus-btn:hover,
+.teams-header-settings:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(6,22,34,0.06);
+    background: linear-gradient(180deg,#ffffff,#f2f8ff);
+    border-color: rgba(37,100,255,0.08);
+}
+.teams-plus-btn:active,
+.teams-header-settings:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 6px rgba(2,6,23,0.04);
+}
+.teams-plus-btn:focus-visible,
+.teams-header-settings:focus-visible {
+    outline: 3px solid rgba(37,100,255,0.12);
+    outline-offset: 2px;
+}
+.teams-header-settings.disabled {
+    opacity: 0.45;
+    cursor: default;
+    box-shadow: none;
+}
+
+/* gear SVG sizing and color handling (we use fill with currentColor) */
+.teams-header-settings svg,
+.teams-header-gear {
+    display: block;
+    width: 20px;
+    height: 20px;
+    color: currentColor; /* path uses fill=currentColor */
+}
+.teams-header-gear path {
+    vector-effect: non-scaling-stroke;
+    fill: currentColor;
+}
+
+/* search */
+.teams-search-row { display:flex; gap:8px; align-items:center; margin-top: 8px; }
+.teams-search-row input { flex:1; padding:8px 10px; border-radius:10px; border:1px solid #eef4ff; background:#fbfdff; font-size:13px; box-sizing:border-box; }
+
+/* filters */
+.teams-filters { display:flex; gap:8px; margin-top:8px; }
+.teams-filter { padding:6px 10px; border-radius:999px; border:1px solid #eef4ff; background:#fff; color:#6b7280; cursor:pointer; font-weight:600; font-size:13px; }
+.teams-filter.active { background:#f3f7ff; color:#0b1220; border-color:transparent; }
+
+/* list container */
+.teams-list { display:flex; flex-direction:column; gap:10px; overflow:auto; padding-right:6px; margin-top:10px; }
+
+/* team item: zones and reserved icons area */
+.team-item {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    border-radius:12px;
+    cursor:pointer;
+    transition: background .12s, transform .12s;
+    background:transparent;
+    position: relative;
+    padding-right: 64px; /* more room for name */
+    box-sizing: border-box;
+}
+.team-item:hover { background:#fbfdff; transform: translateY(-2px); }
+.team-item.active { background: linear-gradient(180deg,#eef6ff,#fff); border-left:4px solid #4f63ff; font-weight:700; }
+
+/* main content area */
+.team-main { flex: 1 1 auto; min-width: 0; }
+.team-name {
+    font-weight: 800;
+    font-size: 16px;
+    color: #0b1220;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3; /* clamp to 3 lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.08;
+    margin-bottom: 6px;
+}
+.team-meta { color: #6b7280; font-size: 13px; }
+
+/* right-side icons container */
+.team-item-icons {
+    position: absolute;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* each icon slot */
+.team-icon-slot {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* star sizing handled by StarButton.css; ensure slot fits */
+.star-wrap--list { width: 36px !important; height: 36px !important; }
+
+/* empty state */
+.teams-empty { color:#6b7280; padding:12px; font-size:13px; text-align:center; }
+
+/* modal styles reused */
+.teams-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,12,16,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1400;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.teams-modal {
+    width: min(560px, 96%);
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 22px 46px rgba(6,22,34,0.14);
+    border: 1px solid rgba(6,22,34,0.04);
+    box-sizing: border-box;
+}
+.teams-modal-title { margin: 0 0 14px 0; font-size: 18px; font-weight: 700; color: #374151; }
+.teams-modal-input { width: 100%; padding: 14px 12px; border-radius: 10px; border: 1px solid #e6e9f2; font-size: 16px; color: #111827; box-sizing:border-box; margin-bottom: 16px; }
+.teams-modal-note { color: #6b7280; margin-top: 8px; margin-bottom: 20px; line-height: 1.45; }
+.teams-primary-btn { background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%); color: #fff; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 8px 30px rgba(79,139,255,0.18); }
+.teams-cancel-btn { background: #fff; border: 1px solid #e6e9f2; padding: 10px 14px; border-radius: 12px; font-size: 14px; margin-left: 12px; cursor: pointer; }
+
+/* danger */
+.danger-btn { background: #fff5f6; border: 1px solid rgba(191,30,46,0.08); color: #bf1e2e; padding: 9px 12px; border-radius: 12px; cursor: pointer; font-weight:700; }
+
+/* responsive */
+@media (max-width: 720px) {
+    .teams-panel { width: 200px; }
+    .team-item { padding-right: 88px; }
+}

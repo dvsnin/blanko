@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import ProfileMenu from "./ProfileMenu";
 import ProfileModal from "./ProfileModal";
 
-export default function HeaderWithProfile() {
+export default function HeaderWithProfile({ name = "User", email = "", teams = [], activeTeamId = null, onOpenTeam }) {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const profileWrapperRef = useRef(null);
 
-    // Закрытие меню по клику вне (по всему блоку: аватарка + меню)
+    // Закрытие меню по клику вне
     useEffect(() => {
         if (!isProfileMenuOpen) return;
 
@@ -43,7 +43,6 @@ export default function HeaderWithProfile() {
                 className="header-profile-wrapper"
                 ref={profileWrapperRef}
             >
-                {/* круглая кнопка с буквой T */}
                 <button
                     type="button"
                     className="profile-avatar-btn"
@@ -53,13 +52,13 @@ export default function HeaderWithProfile() {
                     aria-haspopup="true"
                     aria-expanded={isProfileMenuOpen}
                 >
-                    T
+                    {name ? name[0].toUpperCase() : "U"}
                 </button>
 
                 {isProfileMenuOpen && (
                     <ProfileMenu
-                        name="test"
-                        email="testuser@example.com"
+                        name={name}
+                        email={email}
                         onSettings={handleSettings}
                         onLogout={handleLogout}
                         onClose={() => setIsProfileMenuOpen(false)}
@@ -69,8 +68,14 @@ export default function HeaderWithProfile() {
 
             {isProfileModalOpen && (
                 <ProfileModal
-                    name="test"
-                    email="testuser@example.com"
+                    name={name}
+                    email={email}
+                    teams={teams}
+                    activeTeamId={activeTeamId}
+                    onOpenTeam={(id) => {
+                        if (typeof onOpenTeam === "function") onOpenTeam(id);
+                        setIsProfileModalOpen(false);
+                    }}
                     onClose={() => setIsProfileModalOpen(false)}
                     onSave={(newName) => {
                         console.log("save name", newName);

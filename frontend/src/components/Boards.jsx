@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect, useEffect } from "react";
+import React, { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
 import "./Boards.css";
 import "./Boards.colors.css";
 import "./BoardMenu.css";
@@ -17,24 +17,31 @@ import ProfileButton from "./ProfileButton";
 import ViewToggle from "./ViewToggle";
 
 /*
-  Boards.jsx
-  - Updated logo: text wordmark + "Free" pill (miro-like)
-  - Rest of file kept as before (menu behavior, portal, grid/list logic)
+  Boards.jsx — updated: removed duplicate backdrop when ProfileModal opens.
+  Also: accepts setActiveTeamId (from App) and passes teams + onOpenTeam into ProfileModal.
 */
 
-const rawBoards = [
-    { id: 1, title: "МояПикерДоска", owner: "Дмитрий Васнянин", updated: "14 ноября", lastOpened: "14 ноября", onlineUsers: 3 },
-    { id: 2, title: "Маркетинг 2025", owner: "Дмитрий Васнянин", updated: "12 ноября", lastOpened: "12 ноября", onlineUsers: 1 },
-    { id: 3, title: "Roadmap SyncBoard", owner: "Дмитрий Васнянин", updated: "10 ноября", lastOpened: "10 ноября", onlineUsers: 0 },
-    { id: 4, title: "Учебный проект", owner: "Дмитрий Васнянин", updated: "8 ноября", lastOpened: "8 ноября", onlineUsers: 2 },
-    { id: 5, title: "Личное планирование", owner: "Дмитрий Васнянин", updated: "7 ноября", lastOpened: "7 ноября", onlineUsers: 0 },
-    { id: 6, title: "Личное", owner: "Дмитрий Васнянин", updated: "12 декабря", lastOpened: "12 декабря", onlineUsers: 0 },
-    { id: 7, title: "Финансы", owner: "Дмитрий Васнянин", updated: "13 декабря", lastOpened: "13 декабря", onlineUsers: 0 },
-];
-
 const colorKeys = [
-    "mintBlue","peach","lilac","aqua","sunset","grass","ocean","berry","grape","night",
-    "lava","sky","forest","lemon","rose","steel","sand","teal","freshMint","indigo",
+    "mintBlue",
+    "peach",
+    "lilac",
+    "aqua",
+    "sunset",
+    "grass",
+    "ocean",
+    "berry",
+    "grape",
+    "night",
+    "lava",
+    "sky",
+    "forest",
+    "lemon",
+    "rose",
+    "steel",
+    "sand",
+    "teal",
+    "freshMint",
+    "indigo",
 ];
 
 function pickAvailableColorFrom(boards) {
@@ -60,19 +67,28 @@ function assignColorsToInitial(list) {
     return out;
 }
 
-const initialBoards = assignColorsToInitial(rawBoards);
-
-const templatesForIsland = [
-    { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
-    { id: "tpl-retro", title: "Kanban", subtype: "Template", variant: "thumb-retro" },
-    { id: "tpl-year", title: "Sprint Planning", subtype: "Template", variant: "thumb-year" },
-    { id: "tpl-brain", title: "Brainstorm", subtype: "Template", variant: "thumb-brain" },
-    { id: "tpl-roadmap", title: "Roadmap", subtype: "Template", variant: "thumb-roadmap" },
-    { id: "tpl-sprint", title: "Study", subtype: "Template", variant: "thumb-sprint" },
+const rawBoards = [
+    { id: 1, title: "МояПикерДоска", owner: "Дмитрий Васнянин", updated: "14 ноября", lastOpened: "14 ноября", onlineUsers: 3 },
+    { id: 2, title: "Маркетинг 2025", owner: "Дмитрий Васнянин", updated: "12 ноября", lastOpened: "12 ноября", onlineUsers: 1 },
+    { id: 3, title: "Roadmap SyncBoard", owner: "Дмитрий Васнянин", updated: "10 ноября", lastOpened: "10 ноября", onlineUsers: 0 },
+    { id: 4, title: "Учебный проект", owner: "Дмитрий Васнянин", updated: "8 ноября", lastOpened: "8 ноября", onlineUsers: 2 },
+    { id: 5, title: "Личное планирование", owner: "Дмитрий Васнянин", updated: "7 ноября", lastOpened: "7 ноября", onlineUsers: 0 },
+    { id: 6, title: "Личное", owner: "Дмитрий Васнянин", updated: "12 декабря", lastOpened: "12 декабря", onlineUsers: 0 },
+    { id: 7, title: "Финансы", owner: "Дмитрий Васнянин", updated: "13 декабря", lastOpened: "13 декабря", onlineUsers: 0 },
 ];
 
-export default function Boards() {
-    // USER / PROFILE
+const initialBoards = assignColorsToInitial(rawBoards);
+
+export default function Boards({
+                                   teams: teamsProp,
+                                   activeTeamId,
+                                   setActiveTeamId, // optional, passed from App
+                                   createBoard: createBoardFromApp,
+                                   moveBoard: moveBoardFromApp, // unused
+                                   renameBoard: renameBoardFromApp,
+                                   deleteBoard: deleteBoardFromApp,
+                               }) {
+    // PROFILE + topbar state
     const [user, setUser] = useState({ name: "", email: "" });
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -85,9 +101,10 @@ export default function Boards() {
 
     const userInitial = user.name ? user.name[0].toUpperCase() : "?";
 
-    // BOARDS STATE
-    const [boards, setBoards] = useState(initialBoards);
-    const [view, setView] = useState("grid"); // 'grid' or 'list'
+    const [localBoards, setLocalBoards] = useState(initialBoards);
+    const boardsSource = teamsProp ? [] : localBoards;
+
+    const [view, setView] = useState("grid");
     const [menuBoardId, setMenuBoardId] = useState(null);
     const [starredIds, setStarredIds] = useState(() => new Set());
 
@@ -95,78 +112,63 @@ export default function Boards() {
     const [toastVisible, setToastVisible] = useState(false);
     const toastTimeoutRef = useRef(null);
 
-    // refs for portal positioning & measuring
+    // portal/menu refs
     const menuRef = useRef(null);
-    const menuAnchorRef = useRef(null); // will hold the DOM element of the clicked menu button
+    const menuAnchorRef = useRef(null);
     const menuCardRef = useRef(null);
 
-    // computed menu inline style (fixed)
     const [menuStyle, setMenuStyle] = useState(null);
     const [menuPlacement, setMenuPlacement] = useState("left");
+    const [shiftMenuLeft, setShiftMenuLeft] = useState(false);
 
-    // notification refs: panel + anchor (bell button)
+    // Notifications
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
     const notificationsRef = useRef(null);
     const notificationsAnchorRef = useRef(null);
 
-    const [forceMenuTop, setForceMenuTop] = useState(false);
-    const [shiftMenuLeft, setShiftMenuLeft] = useState(false);
-
-    // Notifications panel
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    // dialogs
+    // Dialogs
     const [dialog, setDialog] = useState(null);
     const [renameDraft, setRenameDraft] = useState("");
 
-    // Ensure any boards loaded later without colorKey get one
-    useEffect(() => {
-        setBoards((prev) => {
-            let changed = false;
-            const used = new Set(prev.map((b) => b.colorKey).filter(Boolean));
-            const next = prev.map((b, i) => {
-                if (!b.colorKey) {
-                    const available = colorKeys.find((k) => !used.has(k));
-                    const key = available || colorKeys[i % colorKeys.length];
-                    used.add(key);
-                    changed = true;
-                    return { ...b, colorKey: key };
-                }
-                return b;
-            });
-            return changed ? next : prev;
-        });
-    }, []);
-
-    // Helpers (unchanged)
+    // Helpers
     const showToast = (message) => {
         setToastMessage(message);
         setToastVisible(true);
         if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-        toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 2000);
+        toastTimeoutRef.current = setTimeout(() => setToastVisible(false), 1800);
     };
 
     const handleStarClick = (board) => {
         setStarredIds((prev) => {
             const next = new Set(prev);
             const willStar = !next.has(board.id);
-            if (willStar) next.add(board.id); else next.delete(board.id);
+            if (willStar) next.add(board.id);
+            else next.delete(board.id);
             showToast(willStar ? "Board starred" : "Board unstarred");
             return next;
         });
     };
 
+    // create board
     const handleCreateBoard = () => {
-        setBoards((prev) => {
+        if (createBoardFromApp) {
+            const title = prompt("Название доски") || "Untitled";
+            createBoardFromApp(title);
+            showToast("Board created");
+            return;
+        }
+        setLocalBoards((prev) => {
             const colorKey = pickAvailableColorFrom(prev);
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
             const newBoard = { id, title: "Untitled", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
-            return [...prev, newBoard];
+            return [newBoard, ...prev];
         });
         showToast("Board created");
     };
 
+    // rename/delete dialogs
     const openRenameDialog = (board) => {
         setRenameDraft(board.title);
         setDialog({ type: "rename", boardId: board.id });
@@ -184,37 +186,62 @@ export default function Boards() {
         menuAnchorRef.current = null;
     };
 
-    const closeDialog = () => { setDialog(null); setRenameDraft(""); };
+    const closeDialog = () => {
+        setDialog(null);
+        setRenameDraft("");
+    };
 
     const handleRenameConfirm = () => {
         if (!dialog || dialog.type !== "rename") return;
         const value = renameDraft.trim();
-        if (!value) { closeDialog(); return; }
-        setBoards((prev) => prev.map((b) => (b.id === dialog.boardId ? { ...b, title: value } : b)));
+        if (!value) {
+            closeDialog();
+            return;
+        }
+
+        if (teamsProp) {
+            if (typeof renameBoardFromApp === "function") {
+                renameBoardFromApp(dialog.boardId, value);
+                showToast("Board renamed");
+            } else {
+                console.log("Rename requested for board id:", dialog.boardId, "new name:", value);
+                showToast("Board renamed (request logged)");
+            }
+        } else {
+            setLocalBoards((prev) => prev.map((b) => (b.id === dialog.boardId ? { ...b, title: value } : b)));
+            showToast("Board renamed");
+        }
         closeDialog();
-        showToast("Board renamed");
     };
 
     const handleDeleteConfirm = () => {
         if (!dialog || dialog.type !== "delete") return;
         const id = dialog.boardId;
-        setBoards((prev) => prev.filter((b) => b.id !== id));
-        setStarredIds((prev) => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-        });
-        try {
-            if (menuAnchorRef.current && Number(menuAnchorRef.current.dataset.boardId) === id) {
-                menuAnchorRef.current = null;
+
+        if (teamsProp) {
+            if (typeof deleteBoardFromApp === "function") {
+                deleteBoardFromApp(id);
+                showToast("Board deleted");
+            } else {
+                console.log("Delete requested for board id:", id);
+                showToast("Board deleted (request logged)");
             }
-        } catch (err) {}
+        } else {
+            setLocalBoards((prev) => prev.filter((b) => b.id !== id));
+            setStarredIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+            showToast("Board deleted");
+        }
+
         setMenuBoardId(null);
         setMenuStyle(null);
         closeDialog();
-        showToast("Board deleted");
     };
 
+    // menu toggle logic
     const handleMenuToggle = (id) => {
         setMenuBoardId((prev) => {
             const next = prev === id ? null : id;
@@ -228,9 +255,12 @@ export default function Boards() {
         });
     };
 
-    // compute placement & menuStyle after menuBoardId set
+    // compute menu placement & style
     useLayoutEffect(() => {
-        if (!menuBoardId) { setMenuStyle(null); return; }
+        if (!menuBoardId) {
+            setMenuStyle(null);
+            return;
+        }
         let raf = 0;
         function update() {
             const anchor = menuAnchorRef.current;
@@ -246,9 +276,8 @@ export default function Boards() {
             const vw = window.innerWidth;
             const vh = window.innerHeight;
 
-            // Preferred: left of anchor, vertically centered to anchor
             let left = Math.round(anchorRect.left - menuRect.width - margin);
-            let top = Math.round(anchorRect.top + (anchorRect.height / 2) - (menuRect.height / 2));
+            let top = Math.round(anchorRect.top + anchorRect.height / 2 - menuRect.height / 2);
             let placement = "left";
 
             if (left < margin) {
@@ -261,11 +290,11 @@ export default function Boards() {
                     const bottomCandidate = Math.round(anchorRect.bottom + margin);
                     if (topCandidate >= margin) {
                         top = topCandidate;
-                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
+                        left = Math.round(anchorRect.left + anchorRect.width / 2 - menuRect.width / 2);
                         placement = "top";
                     } else {
                         top = bottomCandidate;
-                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
+                        left = Math.round(anchorRect.left + anchorRect.width / 2 - menuRect.width / 2);
                         placement = "bottom";
                     }
                 }
@@ -278,13 +307,15 @@ export default function Boards() {
             setMenuPlacement(placement);
             setMenuStyle({
                 position: "fixed",
-                left: `${left}px`,
-                top: `${top}px`,
+                left: `${Math.round(left)}px`,
+                top: `${Math.round(top)}px`,
                 zIndex: 2147483000,
             });
         }
         raf = requestAnimationFrame(update);
-        function onResize() { requestAnimationFrame(update); }
+        function onResize() {
+            requestAnimationFrame(update);
+        }
         window.addEventListener("resize", onResize);
         window.addEventListener("scroll", onResize, true);
         return () => {
@@ -294,7 +325,7 @@ export default function Boards() {
         };
     }, [menuBoardId]);
 
-    // document click: close menu unless clicking inside menu or on its anchor.
+    // click outside & escape handling
     useEffect(() => {
         function isEventInside(event, element) {
             if (!event || !element) return false;
@@ -350,82 +381,20 @@ export default function Boards() {
         };
     }, [menuBoardId, isNotificationsOpen]);
 
-    // pointer tracking for grid: immediate close when pointer leaves union(anchor, menu, card)
-    useEffect(() => {
-        if (!menuBoardId) return;
-        if (view !== "grid") return; // only run for grid
-
-        function pointInRect(x, y, rect) {
-            return rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    // boards to render
+    const renderContext = useMemo(() => {
+        if (teamsProp && activeTeamId) {
+            const team = teamsProp.find((t) => t.id === activeTeamId);
+            return { team: team || null, boards: team ? assignColorsToInitial(team.boards || []) : [] };
         }
+        return { team: null, boards: assignColorsToInitial(localBoards) };
+    }, [teamsProp, activeTeamId, localBoards]);
 
-        function onMouseMove(e) {
-            const x = e.clientX, y = e.clientY;
-            const anchorEl = menuAnchorRef.current;
-            const menuEl = menuRef.current;
-            const cardEl = menuCardRef.current || document.querySelector(`[data-board-id="${menuBoardId}"]`);
-
-            const anchorRect = anchorEl?.getBoundingClientRect();
-            const menuRect = menuEl?.getBoundingClientRect();
-            const cardRect = cardEl?.getBoundingClientRect();
-
-            if (pointInRect(x, y, anchorRect) || pointInRect(x, y, menuRect) || pointInRect(x, y, cardRect)) {
-                return;
-            }
-
-            // pointer left the region -> close IMMEDIATELY
-            setMenuBoardId(null);
-            menuCardRef.current = null;
-            menuAnchorRef.current = null;
-            setMenuStyle(null);
-        }
-
-        document.addEventListener("mousemove", onMouseMove, { passive: true });
-        return () => document.removeEventListener("mousemove", onMouseMove);
-    }, [menuBoardId, view]);
-
-    // blur filter-select when clicking outside (capture)
-    useEffect(() => {
-        function handleDocMouseDown(e) {
-            const active = document.activeElement;
-            if (!active) return;
-            if (active.classList && active.classList.contains("filter-select")) {
-                const clickedInsideSelect = e.target.closest && e.target.closest(".filter-select");
-                if (!clickedInsideSelect) {
-                    try {
-                        active.blur();
-                        setTimeout(() => {
-                            if (document.activeElement === active) {
-                                try { active.blur(); } catch (err) {}
-                            }
-                        }, 0);
-                    } catch (err) {}
-                }
-            }
-        }
-        document.addEventListener("mousedown", handleDocMouseDown, true);
-        return () => document.removeEventListener("mousedown", handleDocMouseDown, true);
-    }, []);
-
-    const handleRenameKeyDown = (e) => {
-        if (e.key === "Enter") { e.preventDefault(); handleRenameConfirm(); }
-        if (e.key === "Escape") { e.preventDefault(); closeDialog(); }
-    };
-
-    const handleProfileSave = (newName) => {
-        setUser((prev) => ({ ...prev, name: newName }));
-        if (typeof window !== "undefined" && window.dashData) {
-            window.dashData.name = newName;
-        }
-        setIsProfileModalOpen(false);
-    };
-
+    // render
     return (
         <div className="boards-page">
-            {/* TOP BAR */}
             <header className="topbar">
                 <div className="topbar-left">
-                    {/* Text wordmark + free badge */}
                     <div className="topbar-logo-wrap">
                         <span className="topbar-logo">Blanko</span>
                         <span className="topbar-badge">Free</span>
@@ -464,14 +433,13 @@ export default function Boards() {
 
             <div className="topbar-divider" />
 
-            {/* TEMPLATE ISLAND */}
-            <TemplatesIsland templates={templatesForIsland} />
+            <TemplatesIsland />
 
             <div className="templates-bottom-divider" />
 
             <div className="boards-wrapper">
                 <div className="boards-header-line">
-                    <button type="button" className="primary-btn create-btn" onClick={handleCreateBoard}>+ Create board</button>
+                    <button type="button" className="primary-btn create-btn" onClick={() => createBoardFromApp ? createBoardFromApp() : handleCreateBoard()}>+ Create board</button>
                 </div>
 
                 <div className="boards-toolbar">
@@ -486,11 +454,10 @@ export default function Boards() {
 
                 {view === "grid" ? (
                     <div className="boards-grid">
-                        {boards.map((b, index) => {
+                        {renderContext.boards.map((b, index) => {
                             const isStarred = starredIds.has(b.id);
                             const isMenuOpen = menuBoardId === b.id;
                             const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
-
                             return (
                                 <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`} data-board-id={b.id} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
                                     <div className={`board-header board-header--${colorKey}`}>
@@ -502,20 +469,19 @@ export default function Boards() {
                                                     onClick={(e) => {
                                                         try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
                                                         menuAnchorRef.current = e.currentTarget;
-                                                        setForceMenuTop(false);
                                                         setMenuPlacement("left");
+                                                        setShiftMenuLeft(false);
                                                         handleMenuToggle(b.id);
                                                     }}
                                                 />
-
                                                 {menuBoardId === b.id && (
                                                     <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
-                                                        <div ref={menuRef} className={`board-card-menu ${menuPlacement === "top" ? "board-card-menu--above" : ""} ${shiftMenuLeft ? "shifted-left" : ""}`} style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => console.log("Share", b.id)}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => console.log("Copy link", b.id)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => console.log("Open in new tab", b.id)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
+                                                        <div ref={menuRef} className="board-card-menu" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
+                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
+                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Open in new tab", b.id); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
                                                             <div className="board-card-menu-separator" />
-                                                            <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
+                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Info", b.id); }}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
                                                             <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
                                                             <div className="board-card-menu-separator" />
                                                             <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
@@ -543,18 +509,17 @@ export default function Boards() {
                     <div className="boards-list">
                         <div className="boards-list-header" role="row">
                             <div>Name</div>
-                            <div style={{textAlign: "center"}}>Online users</div>
-                            <div style={{textAlign: "center"}}>Last opened</div>
-                            <div style={{textAlign: "left"}}>Owner</div>
-                            <div style={{textAlign: "right"}} aria-hidden> </div>
+                            <div style={{ textAlign: "center" }}>Online users</div>
+                            <div style={{ textAlign: "center" }}>Last opened</div>
+                            <div style={{ textAlign: "left" }}>Owner</div>
+                            <div style={{ textAlign: "right" }} aria-hidden> </div>
                         </div>
 
-                        {boards.map((b, index) => {
+                        {renderContext.boards.map((b, index) => {
                             const isStarred = starredIds.has(b.id);
                             const isMenuOpen = menuBoardId === b.id;
-                            const isLastRow = index === boards.length - 1;
+                            const isLastRow = index === renderContext.boards.length - 1;
                             const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
-
                             return (
                                 <div key={b.id} data-board-id={b.id} className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}>
                                     <div className="boards-name-cell">
@@ -565,31 +530,30 @@ export default function Boards() {
                                         </div>
                                     </div>
 
-                                    <div className="boards-col" style={{textAlign: "center"}}>{b.onlineUsers > 0 ? `${b.onlineUsers} online` : "—"}</div>
+                                    <div className="boards-col" style={{ textAlign: "center" }}>{b.onlineUsers > 0 ? `${b.onlineUsers} online` : "—"}</div>
 
-                                    <div className="boards-col" style={{textAlign: "center"}}>{b.lastOpened}</div>
+                                    <div className="boards-col" style={{ textAlign: "center" }}>{b.lastOpened}</div>
 
-                                    <div className="boards-col owner" style={{textAlign: "left"}}>{b.owner}</div>
+                                    <div className="boards-col owner" style={{ textAlign: "left" }}>{b.owner}</div>
 
                                     <div className="boards-actions-cell">
                                         <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
 
-                                        <div style={{position: "relative"}} className="board-menu-wrapper">
+                                        <div style={{ position: "relative" }} className="board-menu-wrapper">
                                             <MenuButton
                                                 variant="list"
                                                 onClick={(e) => {
                                                     try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
                                                     menuAnchorRef.current = e.currentTarget;
                                                     const forceTop = isLastRow;
-                                                    setForceMenuTop(forceTop);
-                                                    setMenuPlacement("left");
+                                                    setMenuPlacement(forceTop ? "top" : "left");
                                                     handleMenuToggle(b.id);
                                                 }}
                                             />
 
                                             {menuBoardId === b.id && (
                                                 <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
-                                                    <div ref={menuRef} className={`board-card-menu board-card-menu--list ${menuPlacement === "top" ? "board-card-menu--above" : ""} ${shiftMenuLeft ? "shifted-left" : ""}`} style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                                                    <div ref={menuRef} className="board-card-menu board-card-menu--list" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                                                         <button type="button" className="board-card-menu-item" onClick={() => console.log("Share", b.id)}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
                                                         <button type="button" className="board-card-menu-item" onClick={() => console.log("Copy link", b.id)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
                                                         <button type="button" className="board-card-menu-item" onClick={() => console.log("Open in new tab", b.id)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
@@ -612,7 +576,7 @@ export default function Boards() {
                 {toastVisible && <div className="boards-toast">{toastMessage}</div>}
             </div>
 
-            {/* RENAME & DELETE modals */}
+            {/* Rename/Delete modals */}
             {dialog && dialog.type === "rename" && (
                 <div className="boards-modal-backdrop" onClick={closeDialog}>
                     <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
@@ -623,7 +587,7 @@ export default function Boards() {
                         <div className="boards-modal-body">
                             <label className="boards-modal-label">
                                 Введите новое имя доски:
-                                <input className="boards-modal-input" value={renameDraft} autoFocus onChange={(e) => setRenameDraft(e.target.value)} onKeyDown={handleRenameKeyDown} />
+                                <input className="boards-modal-input" value={renameDraft} autoFocus onChange={(e) => setRenameDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleRenameConfirm(); if (e.key === "Escape") closeDialog(); }} />
                             </label>
                         </div>
                         <div className="boards-modal-footer">
@@ -642,7 +606,7 @@ export default function Boards() {
                             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={closeDialog}>×</button>
                         </div>
                         <div className="boards-modal-body">
-                            <p>Это приведет к удалению <strong>{boards.find((x) => x.id === dialog.boardId)?.title}</strong>.</p>
+                            <p>Это приведет к удалению <strong>{(teamsProp ? renderContext.boards : localBoards).find((x) => x.id === dialog.boardId)?.title}</strong>.</p>
                         </div>
                         <div className="boards-modal-footer">
                             <button type="button" className="danger-btn" onClick={handleDeleteConfirm}>Удалить</button>
@@ -652,7 +616,25 @@ export default function Boards() {
                 </div>
             )}
 
-            {isProfileModalOpen && <ProfileModal name={user.name} email={user.email} onClose={() => setIsProfileModalOpen(false)} onSave={handleProfileSave} />}
+            {/* Profile modal (synchronized teams list via props) */}
+            {isProfileModalOpen && (
+                <ProfileModal
+                    name={user.name}
+                    email={user.email}
+                    teams={teamsProp || []}
+                    activeTeamId={activeTeamId}
+                    onOpenTeam={(teamId) => {
+                        if (typeof setActiveTeamId === "function") setActiveTeamId(teamId);
+                        setIsProfileModalOpen(false);
+                    }}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    onSave={(newName) => {
+                        setUser((p) => ({ ...p, name: newName }));
+                        setIsProfileModalOpen(false);
+                    }}
+                />
+            )}
+            {/* NOTE: removed duplicate backdrop here — ProfileModal renders its own backdrop */}
         </div>
     );
 }
