@@ -1,5 +1,5 @@
 /* Compact centered modal styles — interactive hover states for buttons
-   Updated: modal has a maximum height and the body is scrollable.
+   Updated: modal footer buttons are left-aligned (primary/danger first, secondary to their right).
 */
 
 /* Backdrop: center modal both vertically and horizontally */
@@ -98,8 +98,6 @@
     box-sizing: border-box;
 }
 
-/* Small visual tweaks for team items are kept in existing CSS (.team-item) */
-
 /* Emphasized board name inside message */
 .boards-modal-body strong {
     color: #0b1220;
@@ -143,13 +141,13 @@
     cursor: not-allowed;
 }
 
-/* Footer (buttons) — compact square-ish buttons */
+/* Footer (buttons) — LEFT-ALIGNED now */
 .boards-modal-footer {
     display: flex;
     gap: 12px;
     margin: 16px 24px;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start; /* <-- moved buttons to the LEFT */
     border-top: 1px solid #eef2f7;
     padding-top: 12px;
 }
@@ -195,6 +193,17 @@
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
+/* Secondary hover: subtle blue ring and soft background */
+.boards-modal .secondary-btn:hover {
+    background: #f3f6ff;
+    border-color: rgba(37,100,255,0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(79,139,255,0.06);
+}
+.boards-modal .secondary-btn:active {
+    transform: translateY(0);
+}
+
 /* Danger button baseline */
 .boards-modal .danger-btn {
     background: #fff5f6;
@@ -207,6 +216,19 @@
     font-size: 14px;
     min-width: 72px;
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+
+/* Danger hover: stronger red background and small lift */
+.boards-modal .danger-btn:hover {
+    background: rgba(191,30,46,0.08);
+    border-color: rgba(191,30,46,0.16);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(191,30,46,0.08);
+    color: #8b1620;
+}
+.boards-modal .danger-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 12px rgba(191,30,46,0.06);
 }
 
 /* Accessibility: focus styles for modal controls */

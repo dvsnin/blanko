@@ -17,31 +17,13 @@ import ProfileButton from "./ProfileButton";
 import ViewToggle from "./ViewToggle";
 
 /*
-  Boards.jsx — updated: removed duplicate backdrop when ProfileModal opens.
-  Also: accepts setActiveTeamId (from App) and passes teams + onOpenTeam into ProfileModal.
+  Boards.jsx — updated: removed duplicate backdrop for ProfileModal (only ProfileModal
+  should render its own backdrop). Also centralised closeMenu() usage.
 */
 
 const colorKeys = [
-    "mintBlue",
-    "peach",
-    "lilac",
-    "aqua",
-    "sunset",
-    "grass",
-    "ocean",
-    "berry",
-    "grape",
-    "night",
-    "lava",
-    "sky",
-    "forest",
-    "lemon",
-    "rose",
-    "steel",
-    "sand",
-    "teal",
-    "freshMint",
-    "indigo",
+    "mintBlue","peach","lilac","aqua","sunset","grass","ocean","berry","grape","night",
+    "lava","sky","forest","lemon","rose","steel","sand","teal","freshMint","indigo",
 ];
 
 function pickAvailableColorFrom(boards) {
@@ -82,13 +64,13 @@ const initialBoards = assignColorsToInitial(rawBoards);
 export default function Boards({
                                    teams: teamsProp,
                                    activeTeamId,
-                                   setActiveTeamId, // optional, passed from App
+                                   setActiveTeamId,
                                    createBoard: createBoardFromApp,
-                                   moveBoard: moveBoardFromApp, // unused
+                                   moveBoard: moveBoardFromApp,
                                    renameBoard: renameBoardFromApp,
                                    deleteBoard: deleteBoardFromApp,
                                }) {
-    // PROFILE + topbar state
+    // PROFILE + topbar state (unchanged)
     const [user, setUser] = useState({ name: "", email: "" });
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -101,6 +83,7 @@ export default function Boards({
 
     const userInitial = user.name ? user.name[0].toUpperCase() : "?";
 
+    // BOARDS state
     const [localBoards, setLocalBoards] = useState(initialBoards);
     const boardsSource = teamsProp ? [] : localBoards;
 
@@ -116,6 +99,7 @@ export default function Boards({
     const menuRef = useRef(null);
     const menuAnchorRef = useRef(null);
     const menuCardRef = useRef(null);
+    const menuStyleRef = useRef(null);
 
     const [menuStyle, setMenuStyle] = useState(null);
     const [menuPlacement, setMenuPlacement] = useState("left");
@@ -143,8 +127,7 @@ export default function Boards({
         setStarredIds((prev) => {
             const next = new Set(prev);
             const willStar = !next.has(board.id);
-            if (willStar) next.add(board.id);
-            else next.delete(board.id);
+            if (willStar) next.add(board.id); else next.delete(board.id);
             showToast(willStar ? "Board starred" : "Board unstarred");
             return next;
         });
@@ -163,7 +146,7 @@ export default function Boards({
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
             const newBoard = { id, title: "Untitled", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
-            return [newBoard, ...prev];
+            return [...prev, newBoard];
         });
         showToast("Board created");
     };
@@ -172,32 +155,20 @@ export default function Boards({
     const openRenameDialog = (board) => {
         setRenameDraft(board.title);
         setDialog({ type: "rename", boardId: board.id });
-        setMenuBoardId(null);
-        menuCardRef.current = null;
-        setMenuStyle(null);
-        menuAnchorRef.current = null;
+        closeMenu();
     };
 
     const openDeleteDialog = (board) => {
         setDialog({ type: "delete", boardId: board.id });
-        setMenuBoardId(null);
-        menuCardRef.current = null;
-        setMenuStyle(null);
-        menuAnchorRef.current = null;
+        closeMenu();
     };
 
-    const closeDialog = () => {
-        setDialog(null);
-        setRenameDraft("");
-    };
+    const closeDialog = () => { setDialog(null); setRenameDraft(""); };
 
     const handleRenameConfirm = () => {
         if (!dialog || dialog.type !== "rename") return;
         const value = renameDraft.trim();
-        if (!value) {
-            closeDialog();
-            return;
-        }
+        if (!value) { closeDialog(); return; }
 
         if (teamsProp) {
             if (typeof renameBoardFromApp === "function") {
@@ -236,10 +207,22 @@ export default function Boards({
             showToast("Board deleted");
         }
 
-        setMenuBoardId(null);
-        setMenuStyle(null);
+        try {
+            if (menuAnchorRef.current && Number(menuAnchorRef.current.dataset.boardId) === id) {
+                menuAnchorRef.current = null;
+            }
+        } catch (err) {}
+        closeMenu();
         closeDialog();
     };
+
+    // centralize menu close logic so all codepaths behave same
+    function closeMenu() {
+        setMenuBoardId(null);
+        menuCardRef.current = null;
+        setMenuStyle(null);
+        menuAnchorRef.current = null;
+    }
 
     // menu toggle logic
     const handleMenuToggle = (id) => {
@@ -257,10 +240,7 @@ export default function Boards({
 
     // compute menu placement & style
     useLayoutEffect(() => {
-        if (!menuBoardId) {
-            setMenuStyle(null);
-            return;
-        }
+        if (!menuBoardId) { setMenuStyle(null); return; }
         let raf = 0;
         function update() {
             const anchor = menuAnchorRef.current;
@@ -277,7 +257,7 @@ export default function Boards({
             const vh = window.innerHeight;
 
             let left = Math.round(anchorRect.left - menuRect.width - margin);
-            let top = Math.round(anchorRect.top + anchorRect.height / 2 - menuRect.height / 2);
+            let top = Math.round(anchorRect.top + (anchorRect.height / 2) - (menuRect.height / 2));
             let placement = "left";
 
             if (left < margin) {
@@ -290,11 +270,11 @@ export default function Boards({
                     const bottomCandidate = Math.round(anchorRect.bottom + margin);
                     if (topCandidate >= margin) {
                         top = topCandidate;
-                        left = Math.round(anchorRect.left + anchorRect.width / 2 - menuRect.width / 2);
+                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
                         placement = "top";
                     } else {
                         top = bottomCandidate;
-                        left = Math.round(anchorRect.left + anchorRect.width / 2 - menuRect.width / 2);
+                        left = Math.round(anchorRect.left + (anchorRect.width / 2) - (menuRect.width / 2));
                         placement = "bottom";
                     }
                 }
@@ -307,15 +287,13 @@ export default function Boards({
             setMenuPlacement(placement);
             setMenuStyle({
                 position: "fixed",
-                left: `${Math.round(left)}px`,
-                top: `${Math.round(top)}px`,
+                left: `${left}px`,
+                top: `${top}px`,
                 zIndex: 2147483000,
             });
         }
         raf = requestAnimationFrame(update);
-        function onResize() {
-            requestAnimationFrame(update);
-        }
+        function onResize() { requestAnimationFrame(update); }
         window.addEventListener("resize", onResize);
         window.addEventListener("scroll", onResize, true);
         return () => {
@@ -346,10 +324,7 @@ export default function Boards({
                 const insideMenu = isEventInside(e, menuEl);
                 const onAnchor = isEventInside(e, anchorEl);
                 if (!insideMenu && !onAnchor) {
-                    setMenuBoardId(null);
-                    menuCardRef.current = null;
-                    setMenuStyle(null);
-                    menuAnchorRef.current = null;
+                    closeMenu();
                 }
             }
             if (isNotificationsOpen) {
@@ -365,10 +340,7 @@ export default function Boards({
 
         function handleKeydown(e) {
             if (e.key === "Escape") {
-                setMenuBoardId(null);
-                menuCardRef.current = null;
-                setMenuStyle(null);
-                menuAnchorRef.current = null;
+                closeMenu();
                 setIsNotificationsOpen(false);
             }
         }
@@ -381,18 +353,20 @@ export default function Boards({
         };
     }, [menuBoardId, isNotificationsOpen]);
 
-    // boards to render
+    // board list/array to render — chosen by activeTeamId if teamsProp given
     const renderContext = useMemo(() => {
         if (teamsProp && activeTeamId) {
             const team = teamsProp.find((t) => t.id === activeTeamId);
             return { team: team || null, boards: team ? assignColorsToInitial(team.boards || []) : [] };
         }
+        // legacy fallback
         return { team: null, boards: assignColorsToInitial(localBoards) };
     }, [teamsProp, activeTeamId, localBoards]);
 
-    // render
+    // UI render (lots is unchanged)
     return (
         <div className="boards-page">
+            {/* TOP BAR */}
             <header className="topbar">
                 <div className="topbar-left">
                     <div className="topbar-logo-wrap">
@@ -433,6 +407,7 @@ export default function Boards({
 
             <div className="topbar-divider" />
 
+            {/* TEMPLATE ISLAND */}
             <TemplatesIsland />
 
             <div className="templates-bottom-divider" />
@@ -459,7 +434,13 @@ export default function Boards({
                             const isMenuOpen = menuBoardId === b.id;
                             const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
                             return (
-                                <div key={b.id} className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`} data-board-id={b.id} ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}>
+                                <div
+                                    key={b.id}
+                                    className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
+                                    data-board-id={b.id}
+                                    ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
+                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // <-- close menu as soon as cursor leaves card
+                                >
                                     <div className={`board-header board-header--${colorKey}`}>
                                         <div className="board-preview" />
                                         <div className="board-card-controls" aria-hidden>
@@ -521,7 +502,12 @@ export default function Boards({
                             const isLastRow = index === renderContext.boards.length - 1;
                             const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
                             return (
-                                <div key={b.id} data-board-id={b.id} className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}>
+                                <div
+                                    key={b.id}
+                                    data-board-id={b.id}
+                                    className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
+                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // <-- close when cursor leaves row
+                                >
                                     <div className="boards-name-cell">
                                         <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
                                         <div className="boards-name-text">
@@ -576,7 +562,7 @@ export default function Boards({
                 {toastVisible && <div className="boards-toast">{toastMessage}</div>}
             </div>
 
-            {/* Rename/Delete modals */}
+            {/* Rename/Delete modals (same as before) */}
             {dialog && dialog.type === "rename" && (
                 <div className="boards-modal-backdrop" onClick={closeDialog}>
                     <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
@@ -634,7 +620,7 @@ export default function Boards({
                     }}
                 />
             )}
-            {/* NOTE: removed duplicate backdrop here — ProfileModal renders its own backdrop */}
+
         </div>
     );
 }
