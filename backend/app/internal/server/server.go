@@ -92,7 +92,7 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		Name:          userProfile.Name,
 		Email:         userProfile.Email,
 		IndexHTML:     template.HTML(indexHTML),
-		WorkspaceName: "Dmitrii Vasianin",
+		WorkspaceName: "Дмитрий Васянин",
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
