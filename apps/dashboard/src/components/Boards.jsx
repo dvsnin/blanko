@@ -17,8 +17,10 @@ import ProfileButton from "./ProfileButton";
 import ViewToggle from "./ViewToggle";
 
 /*
-  Boards.jsx — updated: removed duplicate backdrop for ProfileModal (only ProfileModal
-  should render its own backdrop). Also centralised closeMenu() usage.
+  Boards.jsx — application boards page
+  - manages topbar/profile state, notifications, boards list and menus
+  - uses MenuPortal with onClose to auto-close when mouse leaves anchor+menu area
+  - ensures menu anchor is blurred on close to remove visual focus state
 */
 
 const colorKeys = [
@@ -70,7 +72,7 @@ export default function Boards({
                                    renameBoard: renameBoardFromApp,
                                    deleteBoard: deleteBoardFromApp,
                                }) {
-    // PROFILE + topbar state (unchanged)
+    // PROFILE + topbar state
     const [user, setUser] = useState({ name: "", email: "" });
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -221,6 +223,12 @@ export default function Boards({
         setMenuBoardId(null);
         menuCardRef.current = null;
         setMenuStyle(null);
+        try {
+            // ensure anchor blur so the overlay/focus state is removed visually
+            if (menuAnchorRef.current && typeof menuAnchorRef.current.blur === "function") {
+                menuAnchorRef.current.blur();
+            }
+        } catch (err) {}
         menuAnchorRef.current = null;
     }
 
@@ -232,6 +240,9 @@ export default function Boards({
                 setMenuPlacement("left");
                 menuCardRef.current = null;
                 setMenuStyle(null);
+                if (menuAnchorRef.current && typeof menuAnchorRef.current.blur === "function") {
+                    try { menuAnchorRef.current.blur(); } catch {}
+                }
                 menuAnchorRef.current = null;
             }
             return next;
@@ -363,7 +374,7 @@ export default function Boards({
         return { team: null, boards: assignColorsToInitial(localBoards) };
     }, [teamsProp, activeTeamId, localBoards]);
 
-    // UI render (lots is unchanged)
+    // UI render
     return (
         <div className="boards-page">
             {/* TOP BAR */}
@@ -414,7 +425,9 @@ export default function Boards({
 
             <div className="boards-wrapper">
                 <div className="boards-header-line">
-                    <button type="button" className="primary-btn create-btn" onClick={() => createBoardFromApp ? createBoardFromApp() : handleCreateBoard()}>+ Create board</button>
+                    <button type="button" className="primary-btn create-btn" onClick={() => (createBoardFromApp ? createBoardFromApp() : handleCreateBoard())}>
+                        + Create board
+                    </button>
                 </div>
 
                 <div className="boards-toolbar">
@@ -439,7 +452,7 @@ export default function Boards({
                                     className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
                                     data-board-id={b.id}
                                     ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
-                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // <-- close menu as soon as cursor leaves card
+                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // close menu as cursor leaves card
                                 >
                                     <div className={`board-header board-header--${colorKey}`}>
                                         <div className="board-preview" />
@@ -456,7 +469,7 @@ export default function Boards({
                                                     }}
                                                 />
                                                 {menuBoardId === b.id && (
-                                                    <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
+                                                    <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
                                                         <div ref={menuRef} className="board-card-menu" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                                                             <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
                                                             <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
@@ -506,7 +519,7 @@ export default function Boards({
                                     key={b.id}
                                     data-board-id={b.id}
                                     className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
-                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // <-- close when cursor leaves row
+                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                                 >
                                     <div className="boards-name-cell">
                                         <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
@@ -538,7 +551,7 @@ export default function Boards({
                                             />
 
                                             {menuBoardId === b.id && (
-                                                <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft}>
+                                                <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
                                                     <div ref={menuRef} className="board-card-menu board-card-menu--list" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
                                                         <button type="button" className="board-card-menu-item" onClick={() => console.log("Share", b.id)}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
                                                         <button type="button" className="board-card-menu-item" onClick={() => console.log("Copy link", b.id)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
@@ -562,22 +575,41 @@ export default function Boards({
                 {toastVisible && <div className="boards-toast">{toastMessage}</div>}
             </div>
 
-            {/* Rename/Delete modals (same as before) */}
+            {/* Rename/Delete modals */}
             {dialog && dialog.type === "rename" && (
-                <div className="boards-modal-backdrop" onClick={closeDialog}>
-                    <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
+                <div
+                    className="boards-modal-backdrop"
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) closeDialog(); }}
+                >
+                    <div className="boards-modal" onMouseDown={(e) => e.stopPropagation()}>
                         <div className="boards-modal-header">
                             <h3 className="boards-modal-title">Переименовать доску</h3>
                             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={closeDialog}>×</button>
                         </div>
                         <div className="boards-modal-body">
-                            <label className="boards-modal-label">
-                                Введите новое имя доски:
-                                <input className="boards-modal-input" value={renameDraft} autoFocus onChange={(e) => setRenameDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleRenameConfirm(); if (e.key === "Escape") closeDialog(); }} />
-                            </label>
+                            {/* Only the input remains — prefilled with renameDraft.
+                                If the input is empty, apply a visual "empty" state and disable Save. */}
+                            <input
+                                className={`boards-modal-input ${renameDraft.trim() === "" ? "boards-modal-input--empty" : ""}`}
+                                value={renameDraft}
+                                autoFocus
+                                onChange={(e) => setRenameDraft(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleRenameConfirm(); if (e.key === "Escape") closeDialog(); }}
+                                aria-label="Новое имя доски"
+                                aria-invalid={renameDraft.trim() === ""}
+                                placeholder="Название доски"
+                            />
                         </div>
                         <div className="boards-modal-footer">
-                            <button type="button" className="primary-btn" onClick={handleRenameConfirm}>Сохранить</button>
+                            <button
+                                type="button"
+                                className="primary-btn"
+                                onClick={handleRenameConfirm}
+                                disabled={renameDraft.trim() === ""}
+                                aria-disabled={renameDraft.trim() === ""}
+                            >
+                                Сохранить
+                            </button>
                             <button type="button" className="secondary-btn" onClick={closeDialog}>Отмена</button>
                         </div>
                     </div>
@@ -585,8 +617,11 @@ export default function Boards({
             )}
 
             {dialog && dialog.type === "delete" && (
-                <div className="boards-modal-backdrop" onClick={closeDialog}>
-                    <div className="boards-modal" onClick={(e) => e.stopPropagation()}>
+                <div
+                    className="boards-modal-backdrop"
+                    onMouseDown={(e) => { if (e.target === e.currentTarget) closeDialog(); }}
+                >
+                    <div className="boards-modal" onMouseDown={(e) => e.stopPropagation()}>
                         <div className="boards-modal-header">
                             <h3 className="boards-modal-title">Удалить доску?</h3>
                             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={closeDialog}>×</button>
@@ -602,7 +637,7 @@ export default function Boards({
                 </div>
             )}
 
-            {/* Profile modal (synchronized teams list via props) */}
+            {/* Profile modal */}
             {isProfileModalOpen && (
                 <ProfileModal
                     name={user.name}
@@ -620,7 +655,6 @@ export default function Boards({
                     }}
                 />
             )}
-
         </div>
     );
 }
