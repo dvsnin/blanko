@@ -45,10 +45,10 @@ node_modules/
 # pnpm store / workspace files (pnpm creates a root store)
 .pnpm-store/
 .pnpmfile.cjs
-pnpm-lock.yaml
 
-# npm / yarn lockfiles if you use pnpm exclusively (keep whichever lockfile you use)
-# If you use pnpm, you can ignore package-lock.json / yarn.lock
+# Keep pnpm lockfile committed; ignore npm/yarn lockfiles
+pnpm-lock.yaml
+pnpm-workspace.yaml
 package-lock.json
 yarn.lock
 
