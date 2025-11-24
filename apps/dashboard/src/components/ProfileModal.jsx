@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "./Boards.modals.css";
 
 /*
-  ProfileModal — synchronized with app teams:
-  - Modal layout updated to keep modal height fixed and make the teams area scrollable
-  - Name is editable, email is readOnly and uses input-disabled class
-  - Backdrop handled by the modal itself
-  - Clicking a team calls onOpenTeam(teamId)
+  ProfileModal — simplified:
+  - оставлены поля для редактирования имени и просмотра email
+  - полностью удалён блок "Команды, в которых вы состоите"
+  - кнопка "Сохранить" вызывает onSave с новым именем
+  - onClose закрывает модалку
 */
 
-export default function ProfileModal({ name, email, teams = [], activeTeamId, onOpenTeam, onClose, onSave }) {
+export default function ProfileModal({ name = "", email = "", onClose, onSave }) {
     const [editedName, setEditedName] = useState(name || "");
 
     useEffect(() => {
@@ -25,7 +25,8 @@ export default function ProfileModal({ name, email, teams = [], activeTeamId, on
     }, [onClose]);
 
     function handleSave() {
-        onSave && onSave(editedName);
+        if (typeof onSave === "function") onSave(editedName.trim());
+        if (typeof onClose === "function") onClose();
     }
 
     return (
@@ -35,7 +36,7 @@ export default function ProfileModal({ name, email, teams = [], activeTeamId, on
                 if (e.target === e.currentTarget) onClose && onClose();
             }}
         >
-            <div className="boards-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="boards-modal" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-label="Настройки профиля">
                 <div className="boards-modal-header">
                     <h2 className="boards-modal-title">Настройки профиля</h2>
                     <button
@@ -64,57 +65,12 @@ export default function ProfileModal({ name, email, teams = [], activeTeamId, on
                         readOnly
                     />
 
-                    <div style={{ marginTop: 18 }}>
-                        <div style={{ fontWeight: 700, marginBottom: 10 }}>Команды, в которых вы состоите</div>
-
-                        {/* Scrollable container for teams — fixed height via CSS */}
-                        <div className="teams-list-scroll" role="list">
-                            {teams.length === 0 && <div style={{ color: "#6b7280" }}>Вы ещё не состоите ни в одной команде</div>}
-
-                            {teams.map((t) => {
-                                const isActive = t.id === activeTeamId;
-                                return (
-                                    <div
-                                        key={t.id}
-                                        className="team-item"
-                                        role="listitem"
-                                        style={{
-                                            border: isActive ? "1px solid rgba(79,139,255,0.18)" : "1px solid #eef0f3",
-                                            borderRadius: 10,
-                                            alignItems: "center",
-                                            display: "flex",
-                                            gap: 12,
-                                            padding: "12px",
-                                            background: isActive ? "linear-gradient(180deg,#fbfdff,#fff)" : "#fff",
-                                        }}
-                                    >
-                                        <div style={{ width: 56, textAlign: "center", color: "#6b7280", fontSize: 13 }}>{t.role}</div>
-                                        <div style={{ flex: 1, fontWeight: 700 }}>{t.name}</div>
-                                        <div style={{ width: 40, textAlign: "center" }}>
-                                            <button
-                                                type="button"
-                                                aria-label={`Открыть команду ${t.name}`}
-                                                onClick={() => onOpenTeam && onOpenTeam(t.id)}
-                                                style={{
-                                                    background: "transparent",
-                                                    border: "none",
-                                                    cursor: "pointer",
-                                                    fontSize: 18,
-                                                    color: "#6b7280",
-                                                }}
-                                            >
-                                                ➜
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    {/* Removed teams list — intentionally left out to avoid duplication */}
                 </div>
 
                 <div className="boards-modal-footer">
                     <button type="button" className="primary-btn" onClick={handleSave}>Сохранить</button>
+                    <button type="button" className="secondary-btn" onClick={() => onClose && onClose()}>Отмена</button>
                 </div>
             </div>
         </div>

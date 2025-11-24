@@ -84,13 +84,15 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	userProfile := extractUser(r)
 
 	data := struct {
-		Name      string
-		Email     string
-		IndexHTML template.HTML
+		Name          string
+		Email         string
+		IndexHTML     template.HTML
+		WorkspaceName string
 	}{
-		Name:      userProfile.Name,
-		Email:     userProfile.Email,
-		IndexHTML: template.HTML(indexHTML),
+		Name:          userProfile.Name,
+		Email:         userProfile.Email,
+		IndexHTML:     template.HTML(indexHTML),
+		WorkspaceName: "Dmitrii Vasianin",
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

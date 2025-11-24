@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./TeamsPanel.css";
+import "./Boards.modals.css";
 
 /*
-  TeamSettingsModal — role-aware modal:
-  - If creating: editable name + Create.
-  - If editing as owner or admin: editable name, Save, and Delete (owner/admin can delete).
-  - If editing as member (not admin/owner): read-only name and Leave button.
-  - Owner cannot see Leave (can't leave) — only delete. Admin can both leave and delete (per request admin can delete).
+ TeamSettingsModal — now 1:1 behaviour with "rename board" modal:
+ - Uses the same modal structure (.boards-modal-header / .boards-modal-body / .boards-modal-footer)
+ - Input gets .boards-modal-input--empty whenever the value is empty (so red tint is shown immediately)
+ - Primary button is disabled when input is empty (same as rename modal)
+ - Backdrop closing uses onMouseDown check (e.target === e.currentTarget) to avoid accidental close during selection/drags
+ - Close button matches other modals
 */
 
-export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onLeave }) {
+export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete, onLeave }) {
     const [name, setName] = useState(team?.name || "");
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const ref = useRef(null);
@@ -31,15 +33,16 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
         if (e.target === e.currentTarget) onClose && onClose();
     }
 
-    const isCreate = !team?.id;
+    const isCreate = !!team?.create || !team?.id;
     const isOwner = team?.role === "owner";
     const isAdmin = team?.role === "admin" || isOwner;
+    const isEmpty = (name || "").trim() === "";
 
     function handleSave() {
         const trimmed = (name || "").trim();
-        if (!trimmed) return;
-        onSave && onSave(team.id, trimmed);
-        onClose && onClose();
+        if (!trimmed) return; // button is disabled when empty, but keep guard
+        if (typeof onSave === "function") onSave(team?.id, trimmed);
+        if (typeof onClose === "function") onClose();
     }
 
     function handleDeleteConfirmed() {
@@ -55,29 +58,36 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     }
 
     return (
-        <div className="teams-modal-backdrop" onMouseDown={handleBackdrop}>
-            <div className="teams-modal" ref={ref} onMouseDown={(e) => e.stopPropagation()}>
-                <h3 className="teams-modal-title">{isCreate ? "Новая команда" : "Настройки команды"}</h3>
+        <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
+            <div className="boards-modal" ref={ref} onMouseDown={(e) => e.stopPropagation()}>
+                <div className="boards-modal-header">
+                    <h3 className="boards-modal-title">{isCreate ? "Новая команда" : "Настройки команды"}</h3>
+                    <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={() => onClose && onClose()}>
+                        ×
+                    </button>
+                </div>
 
-                <label style={{ fontSize: 13, color: "#6b7280", display: "block", marginBottom: 8 }}>Название команды</label>
-
-                {isAdmin || isCreate ? (
-                    <input
-                        className="teams-modal-input"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Название команды"
-                        autoFocus
-                    />
-                ) : (
-                    <div style={{ marginBottom: 12 }}>
-                        <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid #eef2f7", background: "#fbfdff" }}>{name}</div>
-                    </div>
-                )}
-
-                {!isAdmin && !isCreate && (
-                    <p className="teams-modal-note">Вы не можете изменять настройки команды — у вас нет прав администратора.</p>
-                )}
+                <div className="boards-modal-body">
+                    {isAdmin || isCreate ? (
+                        <input
+                            className={`boards-modal-input ${isEmpty ? "boards-modal-input--empty" : ""}`}
+                            value={name}
+                            autoFocus
+                            onChange={(e) => setName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSave();
+                                if (e.key === "Escape") onClose && onClose();
+                            }}
+                            aria-label={isCreate ? "Название новой команды" : "Название команды для редактирования"}
+                            aria-invalid={isEmpty}
+                            placeholder="Название команды"
+                        />
+                    ) : (
+                        <div style={{ marginBottom: 12 }}>
+                            <div style={{ padding: "12px 14px", borderRadius: 8, border: "1px solid #eef2f7", background: "#fbfdff" }}>{name}</div>
+                        </div>
+                    )}
+                </div>
 
                 {isAdmin && !isCreate && !showDeleteConfirm && (
                     <>
@@ -97,19 +107,14 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                         </p>
 
                         <div style={{ marginTop: 12, display: "flex", gap: 12 }}>
-                            <button
-                                className="danger-btn"
-                                onClick={handleDeleteConfirmed}
-                                style={{ background: "#fff5f6", border: "1px solid rgba(191,30,46,0.12)", color: "#bf1e2e" }}
-                            >
+                            <button className="danger-btn" onClick={handleDeleteConfirmed} style={{ background: "#fff5f6", border: "1px solid rgba(191,30,46,0.12)", color: "#bf1e2e" }}>
                                 Удалить
                             </button>
-                            <button className="teams-cancel-btn" onClick={() => setShowDeleteConfirm(false)}>Отмена</button>
+                            <button className="secondary-btn" onClick={() => setShowDeleteConfirm(false)}>Отмена</button>
                         </div>
                     </div>
                 )}
 
-                {/* Non-owner leave action */}
                 {!isAdmin && !isCreate && (
                     <div style={{ marginTop: 16 }}>
                         <button className="danger-btn" onClick={() => { if (confirm("Покинуть команду?")) handleLeave(); }}>
@@ -118,7 +123,6 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                     </div>
                 )}
 
-                {/* Admins who are not owners AND admins who are owners: show leave option for admins (admin can leave) but owner cannot */}
                 {isAdmin && !isOwner && !showDeleteConfirm && (
                     <div style={{ marginTop: 12 }}>
                         <button className="danger-btn" onClick={() => { if (confirm("Покинуть команду?")) handleLeave(); }}>
@@ -127,10 +131,13 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                     </div>
                 )}
 
-                {/* Footer actions */}
-                <div style={{ marginTop: 18, display: "flex", gap: 8 }}>
-                    {(isAdmin || isCreate) && <button className="teams-primary-btn" onClick={handleSave}>{isCreate ? "Создать команду" : "Сохранить"}</button>}
-                    <button className="teams-cancel-btn" onClick={() => onClose && onClose()}>Отмена</button>
+                <div className="boards-modal-footer">
+                    {(isAdmin || isCreate) && (
+                        <button type="button" className="primary-btn" onClick={handleSave} disabled={isEmpty} aria-disabled={isEmpty}>
+                            {isCreate ? "Создать команду" : "Сохранить"}
+                        </button>
+                    )}
+                    <button type="button" className="secondary-btn" onClick={() => onClose && onClose()}>Отмена</button>
                 </div>
             </div>
         </div>

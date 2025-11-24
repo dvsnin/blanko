@@ -1,4 +1,11 @@
-/* StarButton: plain glyph visible; overlay button appears on hover/focus */
+/* StarButton — normalized overlay sizing & visuals to match MenuButton.
+   Ensures hover/focus produce identical lift/tint so sibling overlays don't "grow".
+*/
+
+.star-wrap,
+.star-action {
+    box-sizing: border-box;
+}
 
 /* wrapper */
 .star-wrap {
@@ -9,7 +16,7 @@
     user-select: none;
     line-height: 1;
     color: #111827;
-    cursor: default; /* glyph itself is not clickable until overlay appears */
+    cursor: default;
 }
 
 /* glyph visible by default */
@@ -18,18 +25,21 @@
     line-height: 1;
     display: inline-block;
     pointer-events: none;
-    color: #39404a; /* default icon color (subtle dark) */
+    color: #39404a;
 }
 
-/* indicate filled glyph color (slightly stronger) */
+/* filled glyph color */
 .star-wrap.is-starred .star-glyph {
     color: #111827;
 }
 
-/* overlay button (hidden by default) */
+/* overlay button (hidden by default), fills wrapper */
 .star-action {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -47,35 +57,30 @@
     line-height: 1;
 }
 
-/* reveal overlay on hover of wrapper or when overlay has focus (keyboard) */
+/* reveal overlay on hover/focus-within or when overlay itself focused */
 .star-wrap:hover .star-action,
-.star-wrap:focus-within .star-action {
+.star-wrap:focus-within .star-action,
+.star-action:focus {
     opacity: 1;
     pointer-events: auto;
 }
 
-/* no hover lift when filled — keep subtle */
-.star-wrap.is-starred .star-action:hover {
-    transform: none;
-    box-shadow: 0 8px 20px rgba(6,22,34,0.05);
-}
-
-/* hover lift for outline state */
-.star-wrap.is-not-starred .star-action:hover {
+/* unified hover/focus visuals identical to menu-action */
+.star-action:hover,
+.star-action:focus,
+.star-wrap:hover .star-action,
+.star-wrap:focus-within .star-action {
     transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(6,22,34,0.06);
+    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06);
     background: #f7f8fb;
 }
 
-/* accessibility focus */
 .star-action:focus {
-    outline: 3px solid rgba(37,100,255,0.12);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06), 0 0 0 3px rgba(37,100,255,0.08);
 }
 
-/* small variant adjustments (if needed) */
-.star-wrap--list { /* can tweak size/position for list view */ }
-.star-wrap--grid { /* can tweak size/position for grid view */ }
-
-/* prevent other CSS from injecting glyphs */
-.star-wrap::before, .star-wrap::after, .star-action::before, .star-action::after { content: none !important; }
+/* prevent injected pseudo content */
+.star-wrap::before, .star-wrap::after, .star-action::before, .star-action::after {
+    content: none !important;
+}

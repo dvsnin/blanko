@@ -1,5 +1,8 @@
 /* Compact centered modal styles — interactive hover states for buttons
-   Updated: modal footer buttons are left-aligned (primary/danger first, secondary to their right).
+   Updated & harmonized:
+   - unified input sizing/typography across modals
+   - minimal height for consistent visual weight
+   - empty-input highlight (soft red) and disabled primary button styling
 */
 
 /* Backdrop: center modal both vertically and horizontally */
@@ -16,7 +19,6 @@
 }
 
 /* Modal card: compact, nice rounded corners, constrained to viewport */
-/* Important: we set max-height so the modal never grows beyond viewport and body becomes scrollable */
 .boards-modal {
     background: #ffffff;
     width: min(640px, 96%);
@@ -34,6 +36,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden; /* keep header/footer visible; body scrolls */
+    min-height: 220px; /* ensure consistent visual weight for short modals */
 }
 
 /* Header */
@@ -76,7 +79,6 @@
 }
 
 /* Body */
-/* Body is scrollable when content is tall. We give it flexible height. */
 .boards-modal-body {
     padding: 20px 24px;
     color: #374151;
@@ -87,54 +89,70 @@
     flex: 1 1 auto;
 }
 
-/* Teams list scroll area (internal) */
-.teams-list-scroll {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-height: calc(100% - 40px); /* remain within modal body; body provides viewport */
-    overflow: auto;
-    padding-right: 6px; /* room for scrollbar */
+/* Harmonized input styles for modal text fields */
+.boards-modal-input,
+.teams-modal-input {
+    display: block;
+    width: 100%;
     box-sizing: border-box;
-}
-
-/* Emphasized board name inside message */
-.boards-modal-body strong {
-    color: #0b1220;
-    font-weight: 700;
-    font-size: 16px;
-}
-
-/* Label + input for rename modal — compact */
-.boards-modal-label {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 15px;
-    color: #111827;
-    flex-wrap: wrap;
-}
-.boards-modal-input {
-    display: inline-block;
-    padding: 10px 12px;
+    padding: 12px 16px;
+    height: 48px;
     border-radius: 10px;
     border: 1px solid #e6e9f2;
-    min-width: 260px;
-    max-width: 100%;
-    font-size: 15px;
-    color: #0f1724;
     background: #fff;
-    box-shadow: inset 0 1px 0 rgba(2,6,23,0.02);
+    color: #0f1724;
+    font-size: 16px;
+    line-height: 1.25;
+    font-weight: 500;
     outline: none;
-    transition: box-shadow 120ms ease, border-color 120ms ease, transform 120ms ease;
-}
-.boards-modal-input:focus {
-    border-color: rgba(37,100,255,0.28);
-    box-shadow: 0 8px 20px rgba(37,100,255,0.06);
-    transform: translateY(-1px);
+    transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+    margin: 4px 0 0 0; /* small gap from heading/title above */
+    box-shadow: inset 0 1px 0 rgba(2,6,23,0.02);
 }
 
-/* Disabled (read-only) input look */
+/* placeholder */
+.boards-modal-input::placeholder,
+.teams-modal-input::placeholder {
+    color: #8b949e;
+    opacity: 1;
+    font-weight: 500;
+}
+
+/* Focus visuals (subtle, consistent) */
+.boards-modal-input:focus,
+.teams-modal-input:focus {
+    border-color: rgba(37,100,255,0.22);
+    box-shadow: 0 6px 18px rgba(37,100,255,0.06);
+}
+
+/* stronger visible focus for keyboard users */
+.boards-modal-input:focus-visible,
+.teams-modal-input:focus-visible {
+    box-shadow: 0 8px 22px rgba(37,100,255,0.08), 0 0 0 4px rgba(37,100,255,0.06);
+}
+
+/* Empty input visual state (used when rename input is empty) */
+.boards-modal-input--empty {
+    border-color: rgba(191,30,46,0.20); /* soft red tint */
+    box-shadow: 0 8px 24px rgba(191,30,46,0.06); /* soft red glow */
+}
+
+/* Disabled primary button visual parity */
+.boards-modal .primary-btn[disabled],
+.primary-btn[aria-disabled="true"] {
+    opacity: 0.56;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Disabled primary focus override */
+.boards-modal .primary-btn[disabled]:focus,
+.primary-btn[aria-disabled="true"]:focus {
+    outline: none;
+}
+
+/* Disabled input look (read-only) */
 .input-disabled {
     background: #f3f5f8;
     color: #6b7280;
@@ -193,17 +211,6 @@
     transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
 
-/* Secondary hover: subtle blue ring and soft background */
-.boards-modal .secondary-btn:hover {
-    background: #f3f6ff;
-    border-color: rgba(37,100,255,0.12);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(79,139,255,0.06);
-}
-.boards-modal .secondary-btn:active {
-    transform: translateY(0);
-}
-
 /* Danger button baseline */
 .boards-modal .danger-btn {
     background: #fff5f6;
@@ -237,8 +244,7 @@
 .boards-modal .danger-btn:focus,
 .boards-modal-close:focus,
 .boards-modal-input:focus {
-    outline: 3px solid rgba(37,100,255,0.12);
-    outline-offset: 2px;
+    outline: none; /* we use box-shadow for visual focus instead of native outline here */
 }
 
 /* Small screens adjustments: keep modal compact and usable */
@@ -249,14 +255,10 @@
         border-radius: 14px;
     }
     .boards-modal-title { font-size: 20px; }
-    .boards-modal-input { min-width: 160px; width: 100%; }
+    .boards-modal-input,
+    .teams-modal-input { height: 44px; padding: 10px 12px; font-size: 15px; }
     .boards-modal-body { font-size: 14px; padding: 14px; }
     .boards-modal .primary-btn,
     .boards-modal .secondary-btn,
     .boards-modal .danger-btn { padding: 10px 12px; min-width: 64px; }
 }
-
-/* subtle custom scrollbar styling for teams list */
-.teams-list-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
-.teams-list-scroll::-webkit-scrollbar-thumb { background: rgba(12,18,26,0.06); border-radius: 999px; }
-.teams-list-scroll { scrollbar-width: thin; scrollbar-color: rgba(12,18,26,0.06) transparent; }

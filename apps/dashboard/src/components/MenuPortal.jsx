@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 
 /*
 MenuPortal (updated)
-- Positions menu fixed in the viewport.
-- Preferred placement: left of anchor, vertically centered to anchor.
-- If left doesn't fit, try right; if vertical overflows, fallback to top/bottom.
-- Sets data-placement attribute on the portal host for CSS arrow positioning.
-- Keeps host hidden until positioning is done to avoid flicker.
+- Positions menu fixed in the viewport (same as before).
+- Adds "auto-close on mouseleave" behaviour:
+  when isOpen === true, we watch hover state of both the anchor (anchorRef.current)
+  and the portal host (hostRef.current). If the pointer leaves BOTH and stays out
+  for a short timeout, we call onClose() to request closing the menu.
+- Exposes onClose prop (optional) so parent can close menu and also blur the anchor.
 */
 export default function MenuPortal({
                                        anchorRef,
@@ -15,9 +16,11 @@ export default function MenuPortal({
                                        placement = "bottom",
                                        shiftLeft = false,
                                        children,
+                                       onClose, // new
                                    }) {
     const hostRef = useRef(null);
     const rafRef = useRef(null);
+    const leaveTimerRef = useRef(null);
 
     if (typeof document !== "undefined" && !hostRef.current) {
         hostRef.current = document.createElement("div");
@@ -36,6 +39,7 @@ export default function MenuPortal({
         document.body.appendChild(host);
         return () => {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
             if (host && host.parentNode) host.parentNode.removeChild(host);
         };
     }, []);
@@ -117,12 +121,66 @@ export default function MenuPortal({
         window.addEventListener("resize", onUpdate);
         window.addEventListener("scroll", onUpdate, true);
 
+        // --- auto-close on mouseleave logic ---
+        let anchorHovered = false;
+        let hostHovered = false;
+
+        function tryScheduleClose() {
+            if (leaveTimerRef.current) {
+                clearTimeout(leaveTimerRef.current);
+                leaveTimerRef.current = null;
+            }
+            // if neither hovered, schedule close
+            if (!anchorHovered && !hostHovered) {
+                leaveTimerRef.current = setTimeout(() => {
+                    // if still not hovered, request close
+                    if (!anchorHovered && !hostHovered) {
+                        if (typeof onClose === "function") onClose();
+                    }
+                }, 180); // short delay to allow small pointer moves
+            }
+        }
+
+        function onAnchorEnter() {
+            anchorHovered = true;
+            if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null; }
+        }
+        function onAnchorLeave() {
+            anchorHovered = false;
+            tryScheduleClose();
+        }
+
+        function onHostEnter() {
+            hostHovered = true;
+            if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null; }
+        }
+        function onHostLeave() {
+            hostHovered = false;
+            tryScheduleClose();
+        }
+
+        const anchorEl = anchorRef?.current;
+        if (anchorEl) {
+            anchorEl.addEventListener("mouseenter", onAnchorEnter);
+            anchorEl.addEventListener("mouseleave", onAnchorLeave);
+        }
+        host.addEventListener("mouseenter", onHostEnter);
+        host.addEventListener("mouseleave", onHostLeave);
+
         return () => {
             window.removeEventListener("resize", onUpdate);
             window.removeEventListener("scroll", onUpdate, true);
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
+            if (leaveTimerRef.current) { clearTimeout(leaveTimerRef.current); leaveTimerRef.current = null; }
+            if (anchorEl) {
+                anchorEl.removeEventListener("mouseenter", onAnchorEnter);
+                anchorEl.removeEventListener("mouseleave", onAnchorLeave);
+            }
+            host.removeEventListener("mouseenter", onHostEnter);
+            host.removeEventListener("mouseleave", onHostLeave);
         };
-    }, [isOpen, anchorRef, placement, shiftLeft]);
+        // --- end auto-close logic ---
+    }, [isOpen, anchorRef, placement, shiftLeft, onClose]);
 
     if (!isOpen) return null;
 

@@ -1,9 +1,11 @@
-/* MenuButton styles: visible icon + overlay revealed on hover/focus
-   - Key fixes:
-     * overlay is hidden by default and only appears when wrapper is hovered or focused (no parent selectors)
-     * icon color uses currentColor so we can tune via wrapper (matching StarButton)
-     * ensure list variant visible (was previously hidden by other rules)
+/* MenuButton — normalized overlay behavior to match StarButton.
+   Overlay is fixed-size, same hover/focus visuals, no large focus outline.
 */
+
+.menu-wrap,
+.menu-action {
+    box-sizing: border-box;
+}
 
 /* wrapper */
 .menu-wrap {
@@ -13,16 +15,15 @@
     justify-content: center;
     user-select: none;
     line-height: 1;
-    cursor: default; /* icon itself is not interactive until overlay appears */
-    color: #39404a;    /* subtle dark color same as star glyph default */
+    cursor: default;
+    color: #39404a;
 }
 
-/* visibility fix for list mode: ensure wrapper is not collapsed */
-.menu-wrap--list {
-    display: inline-flex;
-}
+/* ensure consistent wrapper sizing in list/grid variants */
+.menu-wrap--list { display: inline-flex; }
+.menu-wrap--grid { display: inline-flex; }
 
-/* the small visible icon (SVG) */
+/* visible minimal SVG icon */
 .menu-icon {
     position: relative;
     z-index: 1;
@@ -30,13 +31,18 @@
     display: inline-block;
     width: 18px;
     height: 6px;
-    color: inherit; /* use wrapper currentColor */
+    color: inherit;
 }
 
-/* overlay interactive button (rounded square), hidden by default */
+/* overlay interactive button (rounded square), hidden by default.
+   Occupies full wrapper area and uses identical visual rules as StarButton overlay.
+*/
 .menu-action {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
     border-radius: 10px;
     border: 1px solid rgba(15, 23, 42, 0.06);
     background: #fff;
@@ -51,28 +57,33 @@
     justify-content: center;
 }
 
-/* Reveal overlay only when the wrapper itself is hovered or focused-within.
-   This mirrors StarButton behavior: glyph shown by default, chrome appears on hover/focus. */
+/* Reveal overlay when wrapper hovered or focused-within (keyboard).
+   Also allow overlay to be visible when it itself has focus (keyboard activation).
+*/
 .menu-wrap:hover .menu-action,
-.menu-wrap:focus-within .menu-action {
+.menu-wrap:focus-within .menu-action,
+.menu-action:focus {
     opacity: 1;
     pointer-events: auto;
 }
 
-/* Hover lift for overlay */
-.menu-action:hover {
+/* hover/focus visual — keep identical for both states and both controls */
+.menu-action:hover,
+.menu-action:focus,
+.menu-wrap:hover .menu-action,
+.menu-wrap:focus-within .menu-action {
     transform: translateY(-2px);
     box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06);
     background: #f7f8fb;
 }
 
-/* Focus ring for accessibility */
+/* use subtle focus ring only (no outline that enlarges) */
 .menu-action:focus {
-    outline: 3px solid rgba(37, 100, 255, 0.12);
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06), 0 0 0 3px rgba(37,100,255,0.08);
 }
 
-/* Make sure pseudo elements from other global CSS do not inject content here */
+/* Prevent other CSS from injecting content */
 .menu-wrap::before,
 .menu-wrap::after,
 .menu-action::before,

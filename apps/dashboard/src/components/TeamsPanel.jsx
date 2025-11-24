@@ -3,6 +3,7 @@ import "./TeamsPanel.css";
 import initialTeams from "./teamsData";
 import StarButton from "./StarButton";
 import TeamSettingsModal from "./TeamSettingsModal";
+import WorkspaceHeader from "./WorkspaceHeader";
 
 export default function TeamsPanel({
                                        teams: teamsProp,
@@ -51,6 +52,8 @@ export default function TeamsPanel({
     return (
         <>
             <aside className="teams-panel" aria-label="Teams">
+                <WorkspaceHeader />
+
                 <div className="teams-panel-header">
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div className="teams-title">Команды</div>
@@ -79,7 +82,6 @@ export default function TeamsPanel({
                             aria-label="Настройки выбранной команды"
                             disabled={!activeTeamId}
                         >
-                            {/* Inlined user-provided settings-horizontal.svg adapted to currentColor */}
                             <svg className="teams-header-gear" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden>
                                 <path fillRule="evenodd" clipRule="evenodd" d="M.969 12.016v2H3.03v1h3v-1h8.938v-2H6.03v-1h-3v1H.97zm0-3v-2h9.062v-1h3v1h1.938v2H13.03v1h-3v-1H.97zm0-5v-2H5.03v-1h3v1h6.938v2H8.03v1h-3v-1H.97z" fill="currentColor"></path>
                             </svg>
@@ -140,9 +142,7 @@ export default function TeamsPanel({
                         );
                     })}
 
-                    {visibleTeams.length === 0 && (
-                        <div className="teams-empty muted">Команд не найдено - измените фильтр или создайте новую команду</div>
-                    )}
+                    {visibleTeams.length === 0 && <div className="teams-empty muted">Команд не найдено - измените фильтр или создайте новую команду</div>}
                 </div>
             </aside>
 
