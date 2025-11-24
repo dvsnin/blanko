@@ -141,7 +141,7 @@ export default function TeamsPanel({
                     })}
 
                     {visibleTeams.length === 0 && (
-                        <div className="teams-empty muted">Команд не найдено — измените фильтр или создайте новую команду</div>
+                        <div className="teams-empty muted">Команд не найдено - измените фильтр или создайте новую команду</div>
                     )}
                 </div>
             </aside>
