@@ -16,16 +16,6 @@ import NotificationButton from "./NotificationButton";
 import ProfileButton from "./ProfileButton";
 import ViewToggle from "./ViewToggle";
 
-/*
-  Boards.jsx — application boards page
-  - manages topbar/profile state, notifications, boards list and menus
-  - when the app is team-enabled (teamsProp provided):
-      * if user has NO teams -> show global hint (already implemented)
-      * if user has teams but selected team has NO boards -> hide filters + list
-        and show a calm centered hint encouraging to create the first board
-  - "Create board" remains visible. It's enabled only when there is an active team.
-*/
-
 const colorKeys = [
     "mintBlue","peach","lilac","aqua","sunset","grass","ocean","berry","grape","night",
     "lava","sky","forest","lemon","rose","steel","sand","teal","freshMint","indigo",
@@ -66,6 +56,239 @@ const rawBoards = [
 
 const initialBoards = assignColorsToInitial(rawBoards);
 
+/* ---------- openBoardWindow helper (mock board in new tab) ----------
+   - loads /realtime/mockSocketClient.js
+*/
+function openBoardWindow(board) {
+    const w = window.open("", "_blank");
+    if (!w) {
+        alert("Пожалуйста, разрешите всплывающие окна для этого сайта.");
+        return;
+    }
+
+    const openerName = (typeof window !== "undefined" && window.dashData && window.dashData.name) ? String(window.dashData.name) : "";
+    const initialCharRaw = openerName ? openerName.trim().charAt(0) : "U";
+    const initialChar = initialCharRaw ? initialCharRaw.toUpperCase() : "U";
+
+    const safeTitle = String(board.title || "Доска").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const safeInitial = String(initialChar).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const socketScriptUrl = "/realtime/mockSocketClient.js";
+
+    const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${safeTitle}</title>
+<style>
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;}
+  body{background:#f3f6f9;overflow:hidden}
+  .thin-top{height:8px;background:linear-gradient(90deg,#1f8a3f,#0d6b2c);box-shadow:0 2px 0 rgba(0,0,0,0.06)}
+  .topbar{height:56px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;box-shadow:0 1px 0 rgba(15,23,42,0.04);z-index:40}
+  .brand-row{display:flex;align-items:center;gap:12px}
+  .logo-text{font-weight:800;font-size:20px;color:#0f1724;letter-spacing:-0.5px}
+  .board-meta{display:flex;align-items:center;gap:10px}
+  .meta-icon{width:36px;height:36px;border-radius:8px;background:#f3f4f6;display:inline-flex;align-items:center;justify-content:center;box-shadow:inset 0 -4px rgba(0,0,0,0.02);}
+  .board-name{font-size:16px;font-weight:700;color:#0f1724}
+  .dots-btn{width:44px;height:44px;border-radius:10px;background:transparent;border:none;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#0f1724}
+  .top-actions{display:flex;gap:12px;align-items:center}
+  .wrap{display:flex;flex:1;height:calc(100% - 64px);position:relative}
+  .leftbar{width:72px;padding:12px 8px;display:flex;flex-direction:column;gap:10px;align-items:center}
+  .tool{width:46px;height:46px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(2,6,23,0.06);cursor:pointer;margin:8px 0}
+  .canvas-area{flex:1;position:relative;overflow:hidden;background:#fbfcfd}
+  .grid{position:absolute;inset:0;background-image:
+    linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size:48px 48px;opacity:.65;z-index:1}
+  canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;display:block;touch-action:none;cursor:crosshair}
+  .sticky{position:absolute;z-index:30;left:50%;top:50%;width:260px;height:260px;transform:translate(-50%,-50%) rotate(-1deg);
+         background: linear-gradient(180deg,#fff59d 0%, #fff09a 60%);border-radius:6px;
+         box-shadow:0 18px 30px rgba(2,6,23,0.12),0 6px 10px rgba(2,6,23,0.06);
+         display:flex;align-items:center;justify-content:center;padding:16px;font-size:52px;font-weight:600;color:#0f1724;text-align:center;line-height:1}
+  .right-top{position:absolute;right:16px;top:12px;z-index:40;display:flex;gap:10px;align-items:center}
+  .btn{background:#fff;border:1px solid rgba(2,6,23,0.06);padding:8px 10px;border-radius:8px;cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+  .profile-initial{
+    width:36px;height:36px;border-radius:18px;display:inline-flex;align-items:center;justify-content:center;
+    font-weight:700;color:#fff;font-size:16px;
+    background:linear-gradient(180deg,#f29a2e,#f97316); box-shadow:0 6px 12px rgba(2,6,23,0.08);
+  }
+  .zoom-control{position:absolute;right:18px;bottom:18px;z-index:40;background:#fff;border-radius:10px;padding:8px 10px;box-shadow:0 6px 18px rgba(2,6,23,0.06);display:flex;align-items:center;gap:8px}
+  .zoom-control button{width:28px;height:28px;border-radius:6px;border:1px solid rgba(2,6,23,0.06);background:#fff;cursor:pointer}
+  .cursor-dot{position:fixed;width:18px;height:18px;border-radius:9px;transform:translate(-50%,-50%);pointer-events:none;border:2px solid #fff;box-shadow:0 6px 12px rgba(2,6,23,0.12);z-index:60}
+  @media (max-width:600px){ .sticky{width:200px;height:200px;font-size:40px} .leftbar{display:none} }
+</style>
+</head>
+<body>
+  <div class="thin-top" aria-hidden></div>
+
+  <div class="topbar">
+    <div class="brand-row">
+      <div class="logo-text">Blanko</div>
+
+      <div class="board-meta">
+        <div class="meta-icon" aria-hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7.5A1.5 1.5 0 014.5 6h4.172a1 1 0 01.707.293l1.328 1.328A1 1 0 0012.707 8H19.5A1.5 1.5 0 0121 9.5v8A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5v-10z" fill="#111827" /></svg>
+        </div>
+
+        <div class="board-name" title="${safeTitle}">${safeTitle}</div>
+
+        <button class="dots-btn" aria-label="Board menu" title="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+            <circle cx="12" cy="6" r="1.9" fill="#111827"/>
+            <circle cx="12" cy="12" r="1.9" fill="#111827"/>
+            <circle cx="12" cy="18" r="1.9" fill="#111827"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button id="shareBtn" class="btn">Share</button>
+      <div class="profile-initial" id="profileInitial">${safeInitial}</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="leftbar" aria-hidden>
+      <div class="tool" title="Magic">✦</div>
+      <div class="tool" title="Select">▸</div>
+      <div class="tool" title="Frames">▢</div>
+      <div class="tool" title="Sticky">▭</div>
+      <div class="tool" title="Text">T</div>
+      <div class="tool" title="Pen">✎</div>
+      <div class="tool" title="More">⋯</div>
+    </div>
+
+    <div class="canvas-area">
+      <div class="grid" aria-hidden></div>
+      <canvas id="boardCanvas"></canvas>
+
+      <div class="sticky" role="article" aria-label="Sticky note">Hello<br/>World!</div>
+
+      <div class="right-top"></div>
+
+      <div class="zoom-control" aria-hidden><button id="zoomOut">−</button><div id="zoomLabel">100%</div><button id="zoomIn">+</button></div>
+    </div>
+  </div>
+
+  <script src="${socketScriptUrl}"></script>
+  <script>
+    (function(){
+      if (!window.createMockSocket) {
+        console.warn("createMockSocket not available (mockSocketClient not loaded)");
+        return;
+      }
+      const boardId = ${JSON.stringify(board.id)};
+      const uid = 'u_' + Math.random().toString(36).slice(2,9);
+      const uname = (window.dashData && window.dashData.name) || ('User ' + uid.slice(-3));
+      const sock = createMockSocket(boardId, { id: uid, name: uname, color: '#3b82f6' });
+
+      const canvas = document.getElementById('boardCanvas');
+      const ctx = canvas.getContext('2d');
+
+      function resize(){ const rect = canvas.parentElement.getBoundingClientRect(); const w=Math.floor(rect.width), h=Math.floor(rect.height); const tmp=document.createElement('canvas'); tmp.width=canvas.width; tmp.height=canvas.height; tmp.getContext('2d').drawImage(canvas,0,0); canvas.width=w; canvas.height=h; ctx.drawImage(tmp,0,0); }
+      window.addEventListener('resize', resize); resize();
+      ctx.lineCap='round'; ctx.lineJoin='round';
+
+      function drawStroke(st){
+        if(!st||!st.points) return;
+        ctx.save();
+        ctx.strokeStyle = st.color || '#111';
+        ctx.lineWidth = st.size || 3;
+        ctx.beginPath();
+        st.points.forEach((p,i)=>{ const x = p.x * canvas.width, y = p.y * canvas.height; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // pointer handling
+      let drawing=false, curStroke=null;
+      function getPos(e){
+        const r=canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x:(clientX - r.left)/r.width, y:(clientY - r.top)/r.height };
+      }
+      canvas.addEventListener('pointerdown',(e)=>{ drawing=true; curStroke={ color:'#111827', size:3, points:[getPos(e)] }; });
+      canvas.addEventListener('pointermove',(e)=>{ const p=getPos(e); if(!drawing){ sock.send('cursor', p); return; } curStroke.points.push(p); drawStroke({ color:curStroke.color, size:curStroke.size, points:curStroke.points.slice(-2) }); });
+      window.addEventListener('pointerup',()=>{ if(!drawing) return; drawing=false; sock.send('stroke', curStroke); curStroke=null; });
+
+      // cursors
+      const cursors = {};
+      function showCursor(id,pos,color){
+        if(!pos) return;
+        let el = cursors[id];
+        if(!el){
+          el = document.createElement('div');
+          el.className = 'cursor-dot';
+          el.style.background = color || '#ef4444';
+          document.body.appendChild(el);
+          cursors[id] = el;
+        }
+        const rect = canvas.getBoundingClientRect();
+        el.style.left = (rect.left + pos.x * rect.width) + 'px';
+        el.style.top = (rect.top + pos.y * rect.height) + 'px';
+      }
+      function removeCursor(id){ const el=cursors[id]; if(el){ el.remove(); delete cursors[id]; } }
+
+      sock.on('stroke', (msg) => {
+        const payload = msg.payload || msg.stroke || msg;
+        if (payload) drawStroke(payload);
+      });
+      sock.on('cursor', (msg) => {
+        const payload = msg.payload || msg.pos || msg;
+        const id = msg.userId || msg.sender || 'x';
+        showCursor(id, payload, msg.color || '#ef4444');
+      });
+      sock.on('clear', () => ctx.clearRect(0,0,canvas.width,canvas.height));
+
+      sock.send('join',{ id: uid, name: uname, color:'#3b82f6' });
+
+      // bots demo
+      setTimeout(()=> {
+        const botColors = ['#f97316','#10b981','#f43f5e'];
+        for (let bi=0; bi<3; bi++){
+          (function(idx){
+            setInterval(()=> {
+              const pos={ x: Math.random()*0.8+0.1, y: Math.random()*0.8+0.1 };
+              sock.send('cursor', pos);
+            }, 900 + idx*120);
+            setInterval(()=> {
+              const start = { x: Math.random()*0.7+0.15, y: Math.random()*0.7+0.15 };
+              const stroke = { color: botColors[idx%botColors.length], size: 2 + idx, points: [start] };
+              for (let i=0;i<6;i++) stroke.points.push({ x: start.x + (Math.random()-0.5)*0.06, y: start.y + (Math.random()-0.5)*0.06 });
+              sock.send('stroke', stroke);
+            }, 1600 + idx*300);
+          })(bi);
+        }
+      }, 900);
+
+      // zoom (visual only)
+      let zoom = 1;
+      function setZoom(z){
+        zoom = Math.max(0.4, Math.min(2, z));
+        const label = document.getElementById('zoomLabel');
+        if (label) label.textContent = Math.round(zoom*100) + '%';
+        const area = document.querySelector('.canvas-area');
+        if (area) {
+          area.style.transformOrigin = '50% 50%';
+          area.style.transform = 'scale(' + zoom + ')';
+        }
+      }
+      const zi = document.getElementById('zoomIn');
+      const zo = document.getElementById('zoomOut');
+      if (zi) zi.addEventListener('click', ()=> setZoom(zoom + 0.1));
+      if (zo) zo.addEventListener('click', ()=> setZoom(zoom - 0.1));
+  </script>
+</body>
+</html>`;
+
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+}
+
+/* ---------- Main React component (Boards) ---------- */
 export default function Boards({
                                    teams: teamsProp,
                                    activeTeamId,
@@ -380,8 +603,6 @@ export default function Boards({
     }, [teamsProp, activeTeamId, localBoards]);
 
     // Determine whether user is allowed to create boards:
-    // - If app is team-enabled (teamsProp provided), user can create only when an activeTeamId is set.
-    // - If app is not team-enabled (teamsProp absent), allow creating local boards.
     const canCreateBoard = teamsProp ? Boolean(activeTeamId) : true;
 
     // Determine whether the user actually has teams (used to show global placeholder)
@@ -492,14 +713,16 @@ export default function Boards({
                                                 data-board-id={b.id}
                                                 ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
                                                 onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // close menu as cursor leaves card
+                                                onClick={() => openBoardWindow(b)}
                                             >
                                                 <div className={`board-header board-header--${colorKey}`}>
                                                     <div className="board-preview" />
-                                                    <div className="board-card-controls" aria-hidden>
+                                                    <div className="board-card-controls" aria-hidden onClick={(e) => e.stopPropagation()}>
                                                         <div className="board-menu-wrapper">
                                                             <MenuButton
                                                                 variant="grid"
                                                                 onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
                                                                     menuAnchorRef.current = e.currentTarget;
                                                                     setMenuPlacement("left");
@@ -523,7 +746,7 @@ export default function Boards({
                                                             )}
                                                         </div>
 
-                                                        <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
+                                                        <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`} onClick={(e) => e.stopPropagation()}>
                                                             <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
                                                         </div>
                                                     </div>
@@ -560,7 +783,7 @@ export default function Boards({
                                                 className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
                                                 onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                                             >
-                                                <div className="boards-name-cell">
+                                                <div className="boards-name-cell" onClick={() => openBoardWindow(b)}>
                                                     <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
                                                     <div className="boards-name-text">
                                                         <div className="board-row-title">{b.title}</div>
@@ -574,13 +797,16 @@ export default function Boards({
 
                                                 <div className="boards-col owner" style={{ textAlign: "left" }}>{b.owner}</div>
 
-                                                <div className="boards-actions-cell">
-                                                    <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
+                                                <div className="boards-actions-cell" onClick={(e) => e.stopPropagation()}>
+                                                    <div onClick={(e) => { e.stopPropagation(); }}>
+                                                        <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
+                                                    </div>
 
-                                                    <div style={{ position: "relative" }} className="board-menu-wrapper">
+                                                    <div style={{ position: "relative" }} className="board-menu-wrapper" onClick={(e) => e.stopPropagation()}>
                                                         <MenuButton
                                                             variant="list"
                                                             onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
                                                                 menuAnchorRef.current = e.currentTarget;
                                                                 const forceTop = isLastRow;
