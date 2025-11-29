@@ -31,10 +31,10 @@ func (s *Server) Router() http.Handler {
 	)
 
 	// регистрируем dashboard
-	r.HandleFunc("/dashboard", s.dashboardHandler)
+	r.HandleFunc("/app/dashboard", s.dashboardHandler)
 
 	// logout
-	r.HandleFunc("/logout", s.handleLogout)
+	r.HandleFunc("/app/logout", s.handleLogout)
 
 	// ассеты vite
 	r.PathPrefix("/assets/").Handler(
@@ -50,7 +50,7 @@ type User struct {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/dashboard", http.StatusFound)
+	http.Redirect(w, r, "/app/dashboard", http.StatusFound)
 }
 
 type DashboardData struct {
