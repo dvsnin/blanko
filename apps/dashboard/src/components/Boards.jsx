@@ -361,21 +361,56 @@ export default function Boards({
         });
     };
 
-    // create board
-    const handleCreateBoard = () => {
+    // create board — always use the automatic name "Новая доска"
+    const handleCreateBoard = async () => {
+        const title = "Новая доска";
+
+        // If the parent app handles creation
         if (createBoardFromApp) {
-            const title = prompt("Название доски") || "Новая доска";
-            createBoardFromApp(title);
-            showToast("Доска создана");
-            return;
+            try {
+                // Pass title and activeTeamId (if any) to parent handler.
+                // Parent may return the created board object or nothing.
+                const maybe = createBoardFromApp(title, activeTeamId);
+                const created = maybe && typeof maybe.then === "function" ? await maybe : maybe;
+                const newBoard = created && typeof created === "object" ? created : {
+                    id: (created && (created.id || created.boardId)) || Math.floor(Math.random() * 1000000) + Date.now(),
+                    title,
+                    owner: user.name || "Owner",
+                    updated: "только что",
+                    lastOpened: "только что",
+                    onlineUsers: 0,
+                    colorKey: pickAvailableColorFrom(localBoards),
+                };
+
+                try {
+                    window.dispatchEvent(new CustomEvent("boardCreated", {
+                        detail: { teamId: activeTeamId || null, board: newBoard }
+                    }));
+                } catch (err) {}
+
+                showToast("Доска создана");
+                openBoardWindow(newBoard);
+                return newBoard;
+            } catch (err) {
+                console.error("createBoardFromApp failed", err);
+                showToast("Ошибка создания доски");
+                return null;
+            }
         }
+
+        // Local creation fallback
         setLocalBoards((prev) => {
             const colorKey = pickAvailableColorFrom(prev);
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
-            const newBoard = { id, title: "Новая доска", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
+            const newBoard = { id, title, owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
+            try {
+                window.dispatchEvent(new CustomEvent("boardCreated", { detail: { teamId: activeTeamId || null, board: newBoard } }));
+            } catch (err) {}
+            setTimeout(() => openBoardWindow(newBoard), 50);
             return [...prev, newBoard];
         });
+
         showToast("Доска создана");
     };
 
@@ -393,38 +428,59 @@ export default function Boards({
 
     const closeDialog = () => { setDialog(null); setRenameDraft(""); };
 
-    const handleRenameConfirm = () => {
+    const handleRenameConfirm = async () => {
         if (!dialog || dialog.type !== "rename") return;
         const value = renameDraft.trim();
         if (!value) { closeDialog(); return; }
 
         if (teamsProp) {
             if (typeof renameBoardFromApp === "function") {
-                renameBoardFromApp(dialog.boardId, value);
+                try {
+                    const maybe = renameBoardFromApp(dialog.boardId, value);
+                    if (maybe && typeof maybe.then === "function") await maybe;
+                } catch (err) {
+                    console.error("renameBoardFromApp error", err);
+                }
                 showToast("Доска переименована");
             } else {
                 console.log("Rename requested for board id:", dialog.boardId, "new name:", value);
                 showToast("Доска переименована (request logged)");
             }
+
+            try {
+                window.dispatchEvent(new CustomEvent("boardRenamed", { detail: { teamId: activeTeamId || null, board: { id: dialog.boardId, title: value } } }));
+            } catch (err) {}
         } else {
             setLocalBoards((prev) => prev.map((b) => (b.id === dialog.boardId ? { ...b, title: value } : b)));
             showToast("Доска переименована");
+            try {
+                window.dispatchEvent(new CustomEvent("boardRenamed", { detail: { teamId: activeTeamId || null, board: { id: dialog.boardId, title: value } } }));
+            } catch (err) {}
         }
         closeDialog();
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = async () => {
         if (!dialog || dialog.type !== "delete") return;
         const id = dialog.boardId;
 
         if (teamsProp) {
             if (typeof deleteBoardFromApp === "function") {
-                deleteBoardFromApp(id);
+                try {
+                    const maybe = deleteBoardFromApp(id);
+                    if (maybe && typeof maybe.then === "function") await maybe;
+                } catch (err) {
+                    console.error("deleteBoardFromApp error", err);
+                }
                 showToast("Доска удалена");
             } else {
                 console.log("Delete requested for board id:", id);
                 showToast("Доска удалена (request logged)");
             }
+
+            try {
+                window.dispatchEvent(new CustomEvent("boardDeleted", { detail: { teamId: activeTeamId || null, board: { id } } }));
+            } catch (err) {}
         } else {
             setLocalBoards((prev) => prev.filter((b) => b.id !== id));
             setStarredIds((prev) => {
@@ -433,6 +489,9 @@ export default function Boards({
                 return next;
             });
             showToast("Доска удалена");
+            try {
+                window.dispatchEvent(new CustomEvent("boardDeleted", { detail: { teamId: activeTeamId || null, board: { id } } }));
+            } catch (err) {}
         }
 
         try {
@@ -665,10 +724,7 @@ export default function Boards({
                     <button
                         type="button"
                         className={`primary-btn create-btn ${!canCreateBoard ? "disabled" : ""}`}
-                        onClick={() => {
-                            if (!canCreateBoard) return;
-                            (createBoardFromApp ? createBoardFromApp() : handleCreateBoard());
-                        }}
+                        onClick={() => { if (!canCreateBoard) return; handleCreateBoard(); }}
                         disabled={!canCreateBoard}
                         aria-disabled={!canCreateBoard}
                         title={!canCreateBoard ? "Нельзя создавать доски без выбранной команды" : "Создать доску"}

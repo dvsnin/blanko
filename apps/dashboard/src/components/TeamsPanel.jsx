@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import "./TeamsPanel.css";
 import initialTeams from "./teamsData";
 import StarButton from "./StarButton";
@@ -9,6 +9,8 @@ import WorkspaceHeader from "./WorkspaceHeader";
   TeamsPanel — render teams by role only.
   - teamsProp is authoritative (array of teams). If not provided, fallback to local initialTeams.
   - Roles are expected to be one of "owner" | "admin" | "member".
+  - This component listens to global events (boardCreated, boardDeleted, boardRenamed)
+    so it can update team boards/counts immediately if a board is created from Boards.jsx.
 */
 
 const VALID_ROLES = new Set(["owner", "admin", "member"]);
@@ -30,8 +32,88 @@ export default function TeamsPanel({
 
     // Use teamsProp if it's an array; otherwise fall back to initialTeams.
     // Also filter out any teams with invalid role values.
-    const sourceTeams = Array.isArray(teamsProp) ? teamsProp : initialTeams;
-    const teams = sourceTeams.filter((t) => VALID_ROLES.has(t.role)).map((t) => ({ ...t }));
+    const initial = Array.isArray(teamsProp) ? teamsProp : initialTeams;
+    const [teamsState, setTeamsState] = useState(() => (initial || []).map((t) => ({ ...t })));
+
+    // Keep teamsState in sync with teamsProp when prop changes (parent-controlled mode)
+    useEffect(() => {
+        if (Array.isArray(teamsProp)) {
+            setTeamsState(teamsProp.map((t) => ({ ...t })));
+        }
+    }, [teamsProp]);
+
+    // Global events to keep counts in sync when boards are created/renamed/deleted elsewhere
+    useEffect(() => {
+        function onBoardCreated(e) {
+            try {
+                const detail = e && e.detail;
+                if (!detail) return;
+                const { teamId, board } = detail;
+                if (!teamId) return; // not a team board
+                setTeamsState((prev) => {
+                    const next = prev.map((t) => ({ ...t, boards: Array.isArray(t.boards) ? [...t.boards] : [] }));
+                    const idx = next.findIndex((t) => t.id === teamId);
+                    if (idx === -1) return next;
+                    // Avoid duplicate insertion if board with same id exists
+                    const exists = (next[idx].boards || []).some((b) => b && b.id === board.id);
+                    if (!exists) {
+                        next[idx].boards = next[idx].boards ? [...next[idx].boards, board] : [board];
+                    }
+                    return next;
+                });
+            } catch (err) {
+                console.error("onBoardCreated handler error", err);
+            }
+        }
+
+        function onBoardDeleted(e) {
+            try {
+                const detail = e && e.detail;
+                if (!detail) return;
+                const { teamId, board } = detail;
+                if (!teamId) return;
+                setTeamsState((prev) => {
+                    const next = prev.map((t) => ({ ...t, boards: Array.isArray(t.boards) ? [...t.boards] : [] }));
+                    const idx = next.findIndex((t) => t.id === teamId);
+                    if (idx === -1) return next;
+                    next[idx].boards = next[idx].boards.filter((b) => b && b.id !== board.id);
+                    return next;
+                });
+            } catch (err) {
+                console.error("onBoardDeleted handler error", err);
+            }
+        }
+
+        function onBoardRenamed(e) {
+            try {
+                const detail = e && e.detail;
+                if (!detail) return;
+                const { teamId, board } = detail;
+                if (!teamId) return;
+                setTeamsState((prev) => {
+                    const next = prev.map((t) => ({ ...t, boards: Array.isArray(t.boards) ? [...t.boards] : [] }));
+                    const idx = next.findIndex((t) => t.id === teamId);
+                    if (idx === -1) return next;
+                    next[idx].boards = next[idx].boards.map((b) => (b && b.id === board.id ? { ...b, title: board.title } : b));
+                    return next;
+                });
+            } catch (err) {
+                console.error("onBoardRenamed handler error", err);
+            }
+        }
+
+        window.addEventListener("boardCreated", onBoardCreated);
+        window.addEventListener("boardDeleted", onBoardDeleted);
+        window.addEventListener("boardRenamed", onBoardRenamed);
+        return () => {
+            window.removeEventListener("boardCreated", onBoardCreated);
+            window.removeEventListener("boardDeleted", onBoardDeleted);
+            window.removeEventListener("boardRenamed", onBoardRenamed);
+        };
+    }, []);
+
+    // Make sure we only consider valid-role teams for display
+    const teams = teamsState.filter((t) => VALID_ROLES.has(t.role)).map((t) => ({ ...t }));
 
     const visibleTeams = useMemo(() => {
         let list = teams.slice();
