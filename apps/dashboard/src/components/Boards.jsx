@@ -19,8 +19,11 @@ import ViewToggle from "./ViewToggle";
 /*
   Boards.jsx — application boards page
   - manages topbar/profile state, notifications, boards list and menus
-  - uses MenuPortal with onClose to auto-close when mouse leaves anchor+menu area
-  - ensures menu anchor is blurred on close to remove visual focus state
+  - when the app is team-enabled (teamsProp provided):
+      * if user has NO teams -> show global hint (already implemented)
+      * if user has teams but selected team has NO boards -> hide filters + list
+        and show a calm centered hint encouraging to create the first board
+  - "Create board" remains visible. It's enabled only when there is an active team.
 */
 
 const colorKeys = [
@@ -138,19 +141,19 @@ export default function Boards({
     // create board
     const handleCreateBoard = () => {
         if (createBoardFromApp) {
-            const title = prompt("Название доски") || "Untitled";
+            const title = prompt("Название доски") || "Новая доска";
             createBoardFromApp(title);
-            showToast("Board created");
+            showToast("Доска создана");
             return;
         }
         setLocalBoards((prev) => {
             const colorKey = pickAvailableColorFrom(prev);
             const maxId = prev.reduce((m, b) => Math.max(m, b.id), 0);
             const id = maxId + 1;
-            const newBoard = { id, title: "Untitled", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
+            const newBoard = { id, title: "Новая доска", owner: user.name || "Owner", updated: "только что", lastOpened: "только что", onlineUsers: 0, colorKey };
             return [...prev, newBoard];
         });
-        showToast("Board created");
+        showToast("Доска создана");
     };
 
     // rename/delete dialogs
@@ -175,14 +178,14 @@ export default function Boards({
         if (teamsProp) {
             if (typeof renameBoardFromApp === "function") {
                 renameBoardFromApp(dialog.boardId, value);
-                showToast("Board renamed");
+                showToast("Доска переименована");
             } else {
                 console.log("Rename requested for board id:", dialog.boardId, "new name:", value);
-                showToast("Board renamed (request logged)");
+                showToast("Доска переименована (request logged)");
             }
         } else {
             setLocalBoards((prev) => prev.map((b) => (b.id === dialog.boardId ? { ...b, title: value } : b)));
-            showToast("Board renamed");
+            showToast("Доска переименована");
         }
         closeDialog();
     };
@@ -194,10 +197,10 @@ export default function Boards({
         if (teamsProp) {
             if (typeof deleteBoardFromApp === "function") {
                 deleteBoardFromApp(id);
-                showToast("Board deleted");
+                showToast("Доска удалена");
             } else {
                 console.log("Delete requested for board id:", id);
-                showToast("Board deleted (request logged)");
+                showToast("Доска удалена (request logged)");
             }
         } else {
             setLocalBoards((prev) => prev.filter((b) => b.id !== id));
@@ -206,7 +209,7 @@ export default function Boards({
                 next.delete(id);
                 return next;
             });
-            showToast("Board deleted");
+            showToast("Доска удалена");
         }
 
         try {
@@ -226,7 +229,7 @@ export default function Boards({
         try {
             // ensure anchor blur so the overlay/focus state is removed visually
             if (menuAnchorRef.current && typeof menuAnchorRef.current.blur === "function") {
-                menuAnchorRef.current.blur();
+                try { menuAnchorRef.current.blur(); } catch {}
             }
         } catch (err) {}
         menuAnchorRef.current = null;
@@ -366,13 +369,26 @@ export default function Boards({
 
     // board list/array to render — chosen by activeTeamId if teamsProp given
     const renderContext = useMemo(() => {
-        if (teamsProp && activeTeamId) {
-            const team = teamsProp.find((t) => t.id === activeTeamId);
+        if (teamsProp) {
+            // When teamsProp is provided, show boards only for a selected team.
+            // If no activeTeamId is set (user has no teams), do not fall back to localBoards.
+            const team = activeTeamId ? teamsProp.find((t) => t.id === activeTeamId) : null;
             return { team: team || null, boards: team ? assignColorsToInitial(team.boards || []) : [] };
         }
-        // legacy fallback
+        // legacy fallback when app is not team-enabled: use localBoards
         return { team: null, boards: assignColorsToInitial(localBoards) };
     }, [teamsProp, activeTeamId, localBoards]);
+
+    // Determine whether user is allowed to create boards:
+    // - If app is team-enabled (teamsProp provided), user can create only when an activeTeamId is set.
+    // - If app is not team-enabled (teamsProp absent), allow creating local boards.
+    const canCreateBoard = teamsProp ? Boolean(activeTeamId) : true;
+
+    // Determine whether the user actually has teams (used to show global placeholder)
+    const userHasTeams = Array.isArray(teamsProp) ? teamsProp.length > 0 : true;
+
+    // Determine whether the selected team (if any) has boards
+    const selectedTeamHasBoards = Boolean(renderContext.team && (renderContext.boards || []).length > 0);
 
     // UI render
     return (
@@ -425,153 +441,178 @@ export default function Boards({
 
             <div className="boards-wrapper">
                 <div className="boards-header-line">
-                    <button type="button" className="primary-btn create-btn" onClick={() => (createBoardFromApp ? createBoardFromApp() : handleCreateBoard())}>
-                        + Create board
+                    <button
+                        type="button"
+                        className={`primary-btn create-btn ${!canCreateBoard ? "disabled" : ""}`}
+                        onClick={() => {
+                            if (!canCreateBoard) return;
+                            (createBoardFromApp ? createBoardFromApp() : handleCreateBoard());
+                        }}
+                        disabled={!canCreateBoard}
+                        aria-disabled={!canCreateBoard}
+                        title={!canCreateBoard ? "Нельзя создавать доски без выбранной команды" : "Создать доску"}
+                    >
+                        + Создать доску
                     </button>
                 </div>
 
-                <div className="boards-toolbar">
-                    <div className="boards-filters">
-                        <div className="filter-group"><span className="filter-label">Filter by</span><select className="filter-select" defaultValue="all"><option value="all">All boards</option></select></div>
-                        <div className="filter-group"><span className="filter-label">Owned by</span><select className="filter-select" defaultValue="anyone"><option value="anyone">Owned by anyone</option><option value="me">Owned by me</option></select></div>
-                        <div className="filter-group"><span className="filter-label">Sort by</span><select className="filter-select" defaultValue="last-opened"><option value="last-opened">Last opened</option><option value="name">Name</option><option value="updated">Last modified</option></select></div>
-                    </div>
-
-                    <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
-                </div>
-
-                {view === "grid" ? (
-                    <div className="boards-grid">
-                        {renderContext.boards.map((b, index) => {
-                            const isStarred = starredIds.has(b.id);
-                            const isMenuOpen = menuBoardId === b.id;
-                            const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
-                            return (
-                                <div
-                                    key={b.id}
-                                    className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
-                                    data-board-id={b.id}
-                                    ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
-                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // close menu as cursor leaves card
-                                >
-                                    <div className={`board-header board-header--${colorKey}`}>
-                                        <div className="board-preview" />
-                                        <div className="board-card-controls" aria-hidden>
-                                            <div className="board-menu-wrapper">
-                                                <MenuButton
-                                                    variant="grid"
-                                                    onClick={(e) => {
-                                                        try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
-                                                        menuAnchorRef.current = e.currentTarget;
-                                                        setMenuPlacement("left");
-                                                        setShiftMenuLeft(false);
-                                                        handleMenuToggle(b.id);
-                                                    }}
-                                                />
-                                                {menuBoardId === b.id && (
-                                                    <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
-                                                        <div ref={menuRef} className="board-card-menu" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Open in new tab", b.id); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
-                                                            <div className="board-card-menu-separator" />
-                                                            <button type="button" className="board-card-menu-item" onClick={() => { console.log("Info", b.id); }}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
-                                                            <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
-                                                            <div className="board-card-menu-separator" />
-                                                            <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
-                                                        </div>
-                                                    </MenuPortal>
-                                                )}
-                                            </div>
-
-                                            <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
-                                                <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="board-info">
-                                        <div className="board-title">{b.title}</div>
-                                        <div className="line"><span className="label">Owner:</span> {b.owner}</div>
-                                        <div className="line"><span className="label">Last opened:</span> {b.lastOpened}</div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                {/* If user has no teams (team-enabled app), show minimal centered hint instead of filters + boards */}
+                {!userHasTeams ? (
+                    <div className="boards-empty-hint" role="status" aria-live="polite">
+                        <p className="boards-empty-hint__text">Чтобы создавать доски, создайте команду или присоединитесь к существующей.</p>
                     </div>
                 ) : (
-                    <div className="boards-list">
-                        <div className="boards-list-header" role="row">
-                            <div>Name</div>
-                            <div style={{ textAlign: "center" }}>Online users</div>
-                            <div style={{ textAlign: "center" }}>Last opened</div>
-                            <div style={{ textAlign: "left" }}>Owner</div>
-                            <div style={{ textAlign: "right" }} aria-hidden> </div>
+                    // If the user has teams but selected team has no boards -> show team-empty hint
+                    !selectedTeamHasBoards ? (
+                        <div className="boards-team-empty-hint" role="status" aria-live="polite">
+                            <p className="boards-team-empty-hint__text">В этой команде пока нет досок. Создайте первую доску, чтобы начать работу вместе.</p>
                         </div>
-
-                        {renderContext.boards.map((b, index) => {
-                            const isStarred = starredIds.has(b.id);
-                            const isMenuOpen = menuBoardId === b.id;
-                            const isLastRow = index === renderContext.boards.length - 1;
-                            const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
-                            return (
-                                <div
-                                    key={b.id}
-                                    data-board-id={b.id}
-                                    className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
-                                    onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
-                                >
-                                    <div className="boards-name-cell">
-                                        <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
-                                        <div className="boards-name-text">
-                                            <div className="board-row-title">{b.title}</div>
-                                            <div className="board-row-sub">Modified by {b.owner}, {b.updated}</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="boards-col" style={{ textAlign: "center" }}>{b.onlineUsers > 0 ? `${b.onlineUsers} online` : "—"}</div>
-
-                                    <div className="boards-col" style={{ textAlign: "center" }}>{b.lastOpened}</div>
-
-                                    <div className="boards-col owner" style={{ textAlign: "left" }}>{b.owner}</div>
-
-                                    <div className="boards-actions-cell">
-                                        <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
-
-                                        <div style={{ position: "relative" }} className="board-menu-wrapper">
-                                            <MenuButton
-                                                variant="list"
-                                                onClick={(e) => {
-                                                    try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
-                                                    menuAnchorRef.current = e.currentTarget;
-                                                    const forceTop = isLastRow;
-                                                    setMenuPlacement(forceTop ? "top" : "left");
-                                                    handleMenuToggle(b.id);
-                                                }}
-                                            />
-
-                                            {menuBoardId === b.id && (
-                                                <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
-                                                    <div ref={menuRef} className="board-card-menu board-card-menu--list" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
-                                                        <button type="button" className="board-card-menu-item" onClick={() => console.log("Share", b.id)}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
-                                                        <button type="button" className="board-card-menu-item" onClick={() => console.log("Copy link", b.id)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
-                                                        <button type="button" className="board-card-menu-item" onClick={() => console.log("Open in new tab", b.id)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
-                                                        <div className="board-card-menu-separator" />
-                                                        <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
-                                                        <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
-                                                        <div className="board-card-menu-separator" />
-                                                        <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
-                                                    </div>
-                                                </MenuPortal>
-                                            )}
-                                        </div>
-                                    </div>
+                    ) : (
+                        <>
+                            <div className="boards-toolbar">
+                                <div className="boards-filters">
+                                    <div className="filter-group"><span className="filter-label">Filter by</span><select className="filter-select" defaultValue="all"><option value="all">All boards</option></select></div>
+                                    <div className="filter-group"><span className="filter-label">Owned by</span><select className="filter-select" defaultValue="anyone"><option value="anyone">Owned by anyone</option><option value="me">Owned by me</option></select></div>
+                                    <div className="filter-group"><span className="filter-label">Sort by</span><select className="filter-select" defaultValue="last-opened"><option value="last-opened">Last opened</option><option value="name">Name</option><option value="updated">Last modified</option></select></div>
                                 </div>
-                            );
-                        })}
-                    </div>
-                )}
 
+                                <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
+                            </div>
+
+                            {view === "grid" ? (
+                                <div className="boards-grid">
+                                    {renderContext.boards.map((b, index) => {
+                                        const isStarred = starredIds.has(b.id);
+                                        const isMenuOpen = menuBoardId === b.id;
+                                        const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
+                                        return (
+                                            <div
+                                                key={b.id}
+                                                className={`board-card ${isMenuOpen ? "board-card--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
+                                                data-board-id={b.id}
+                                                ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
+                                                onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }} // close menu as cursor leaves card
+                                            >
+                                                <div className={`board-header board-header--${colorKey}`}>
+                                                    <div className="board-preview" />
+                                                    <div className="board-card-controls" aria-hidden>
+                                                        <div className="board-menu-wrapper">
+                                                            <MenuButton
+                                                                variant="grid"
+                                                                onClick={(e) => {
+                                                                    try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
+                                                                    menuAnchorRef.current = e.currentTarget;
+                                                                    setMenuPlacement("left");
+                                                                    setShiftMenuLeft(false);
+                                                                    handleMenuToggle(b.id);
+                                                                }}
+                                                            />
+                                                            {menuBoardId === b.id && (
+                                                                <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
+                                                                    <div ref={menuRef} className="board-card-menu" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                                                                        <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
+                                                                        <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
+                                                                        <button type="button" className="board-card-menu-item" onClick={() => { console.log("Open in new tab", b.id); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
+                                                                        <div className="board-card-menu-separator" />
+                                                                        <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
+                                                                        <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
+                                                                        <div className="board-card-menu-separator" />
+                                                                        <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
+                                                                    </div>
+                                                                </MenuPortal>
+                                                            )}
+                                                        </div>
+
+                                                        <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`}>
+                                                            <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="board-info">
+                                                    <div className="board-title">{b.title}</div>
+                                                    <div className="line"><span className="label">Owner:</span> {b.owner}</div>
+                                                    <div className="line"><span className="label">Last opened:</span> {b.lastOpened}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="boards-list">
+                                    <div className="boards-list-header" role="row">
+                                        <div>Name</div>
+                                        <div style={{ textAlign: "center" }}>Online users</div>
+                                        <div style={{ textAlign: "center" }}>Last opened</div>
+                                        <div style={{ textAlign: "left" }}>Owner</div>
+                                        <div style={{ textAlign: "right" }} aria-hidden> </div>
+                                    </div>
+
+                                    {renderContext.boards.map((b, index) => {
+                                        const isStarred = starredIds.has(b.id);
+                                        const isMenuOpen = menuBoardId === b.id;
+                                        const isLastRow = index === renderContext.boards.length - 1;
+                                        const colorKey = b.colorKey ?? colorKeys[index % colorKeys.length];
+                                        return (
+                                            <div
+                                                key={b.id}
+                                                data-board-id={b.id}
+                                                className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
+                                                onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
+                                            >
+                                                <div className="boards-name-cell">
+                                                    <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
+                                                    <div className="boards-name-text">
+                                                        <div className="board-row-title">{b.title}</div>
+                                                        <div className="board-row-sub">Modified by {b.owner}, {b.updated}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="boards-col" style={{ textAlign: "center" }}>{b.onlineUsers > 0 ? `${b.onlineUsers} online` : "—"}</div>
+
+                                                <div className="boards-col" style={{ textAlign: "center" }}>{b.lastOpened}</div>
+
+                                                <div className="boards-col owner" style={{ textAlign: "left" }}>{b.owner}</div>
+
+                                                <div className="boards-actions-cell">
+                                                    <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
+
+                                                    <div style={{ position: "relative" }} className="board-menu-wrapper">
+                                                        <MenuButton
+                                                            variant="list"
+                                                            onClick={(e) => {
+                                                                try { e.currentTarget.dataset.boardId = String(b.id); } catch (err) {}
+                                                                menuAnchorRef.current = e.currentTarget;
+                                                                const forceTop = isLastRow;
+                                                                setMenuPlacement(forceTop ? "top" : "left");
+                                                                handleMenuToggle(b.id);
+                                                            }}
+                                                        />
+
+                                                        {menuBoardId === b.id && (
+                                                            <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
+                                                                <div ref={menuRef} className="board-card-menu board-card-menu--list" style={menuStyle || {}} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+                                                                    <button type="button" className="board-card-menu-item" onClick={() => console.log("Share", b.id)}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
+                                                                    <button type="button" className="board-card-menu-item" onClick={() => console.log("Copy link", b.id)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
+                                                                    <button type="button" className="board-card-menu-item" onClick={() => console.log("Open in new tab", b.id)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
+                                                                    <div className="board-card-menu-separator" />
+                                                                    <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
+                                                                    <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
+                                                                    <div className="board-card-menu-separator" />
+                                                                    <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
+                                                                </div>
+                                                            </MenuPortal>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )
+                )}
                 {toastVisible && <div className="boards-toast">{toastMessage}</div>}
             </div>
 
@@ -587,8 +628,6 @@ export default function Boards({
                             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={closeDialog}>×</button>
                         </div>
                         <div className="boards-modal-body">
-                            {/* Only the input remains — prefilled with renameDraft.
-                                If the input is empty, apply a visual "empty" state and disable Save. */}
                             <input
                                 className={`boards-modal-input ${renameDraft.trim() === "" ? "boards-modal-input--empty" : ""}`}
                                 value={renameDraft}

@@ -4,13 +4,14 @@ import "./Boards.modals.css";
 import ConfirmModal from "./ConfirmModal";
 
 /*
- TeamSettingsModal — updated access rules:
-  - Only owner (team.role === "owner") can delete the team.
-  - Admins (role === "admin") can manage settings and can leave the team (like members).
-  - Members can leave, but cannot delete.
-  - Owner does not see "Покинуть команду" in this UI (to avoid accidental ownership loss).
-  - Creation flow (isCreate) unchanged.
+  TeamSettingsModal — decision based only on team.role.
+  role must be one of "owner", "admin", "member".
+  If role is missing or invalid, we treat the team as broken and hide destructive actions.
+
+  Fix: make leave behaviour robust — ensure onLeave called reliably and modal closed cleanly.
 */
+
+const VALID_ROLES = new Set(["owner", "admin", "member"]);
 
 export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete, onLeave }) {
     const [name, setName] = useState(team?.name || "");
@@ -38,12 +39,22 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
         if (e.target === e.currentTarget) onClose && onClose();
     }
 
-    const role = team?.role || "";
+    const role = team?.role;
+    const hasValidRole = !!role && VALID_ROLES.has(role);
+
     const isOwner = role === "owner";
     const isAdmin = role === "admin";
+    const isMember = role === "member";
     const isAdminOrOwner = isAdmin || isOwner;
     const isCreate = !!team?.create || !team?.id;
     const isEmpty = (name || "").trim() === "";
+
+    // Tabs: members should see only "main"
+    const tabs = isMember ? ["main"] : ["main", "members", "perms", "invites", "audit"];
+    useEffect(() => {
+        if (!tabs.includes(activeTab)) setActiveTab("main");
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [role]);
 
     function handleSave() {
         const val = (name || "").trim();
@@ -54,25 +65,37 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
 
     function handleDeleteConfirmed() {
         if (!team?.id) return;
-        // only owner can trigger delete — caller should ensure that
-        if (isOwner) {
-            if (typeof onDelete === "function") onDelete(team.id);
+        if (isOwner && typeof onDelete === "function") {
+            // call onDelete synchronously — UI will update accordingly
+            onDelete(team.id);
         }
         setShowDeleteConfirm(false);
         onClose && onClose();
     }
 
     function handleLeaveConfirmed() {
-        if (!team?.id) return;
-        // admins/members can leave
-        if (!isOwner) {
-            if (typeof onLeave === "function") onLeave(team.id);
+        // Robust leave: call onLeave if provided and we're not owner,
+        // then close confirm + modal. Use synchronous call to onLeave,
+        // but close modal afterwards to avoid visual race.
+        if (!team?.id) {
+            setShowLeaveConfirm(false);
+            onClose && onClose();
+            return;
         }
+
+        if (!isOwner && typeof onLeave === "function") {
+            try {
+                onLeave(team.id);
+            } catch (err) {
+                // If onLeave throws, still close modal to avoid blocking UI.
+                // (No console logs here to keep output clean.)
+            }
+        }
+
         setShowLeaveConfirm(false);
         onClose && onClose();
     }
 
-    // Minimal "create" modal (no duplicate label above input)
     if (isCreate) {
         return (
             <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
@@ -119,7 +142,6 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
         );
     }
 
-    // Full settings modal for existing teams
     return (
         <>
             <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
@@ -132,11 +154,16 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
                     <div className="team-settings-body">
                         <nav className="team-settings-sidebar" aria-label="Настройки команды">
                             <ul>
-                                <li className={`ts-nav-item ${activeTab === "main" ? "active" : ""}`} onClick={() => setActiveTab("main")}>Основные</li>
-                                <li className={`ts-nav-item ${activeTab === "members" ? "active" : ""}`} onClick={() => setActiveTab("members")}>Участники</li>
-                                <li className={`ts-nav-item ${activeTab === "perms" ? "active" : ""}`} onClick={() => setActiveTab("perms")}>Разрешения</li>
-                                <li className={`ts-nav-item ${activeTab === "invites" ? "active" : ""}`} onClick={() => setActiveTab("invites")}>Приглашения</li>
-                                <li className={`ts-nav-item ${activeTab === "audit" ? "active" : ""}`} onClick={() => setActiveTab("audit")}>Аудит логи</li>
+                                {tabs.includes("main") && <li className={`ts-nav-item ${activeTab === "main" ? "active" : ""}`} onClick={() => setActiveTab("main")}>Основные</li>}
+                                {/* only render other items when allowed (not for member) */}
+                                {!isMember && (
+                                    <>
+                                        <li className={`ts-nav-item ${activeTab === "members" ? "active" : ""}`} onClick={() => setActiveTab("members")}>Участники</li>
+                                        <li className={`ts-nav-item ${activeTab === "perms" ? "active" : ""}`} onClick={() => setActiveTab("perms")}>Разрешения</li>
+                                        <li className={`ts-nav-item ${activeTab === "invites" ? "active" : ""}`} onClick={() => setActiveTab("invites")}>Приглашения</li>
+                                        <li className={`ts-nav-item ${activeTab === "audit" ? "active" : ""}`} onClick={() => setActiveTab("audit")}>Аудит логи</li>
+                                    </>
+                                )}
                             </ul>
                         </nav>
 
@@ -151,26 +178,35 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
                                             onChange={(e) => setName(e.target.value)}
                                             placeholder="Название команды"
                                             aria-label="Название команды"
+                                            readOnly={isMember}           // members cannot edit name
+                                            disabled={isMember}           // visually indicate blocked state
                                         />
                                     </div>
 
                                     <hr className="ts-divider" />
 
-                                    {/* Покинуть: visible to non-owners (admins + members) */}
-                                    {!isOwner && (
+                                    {!hasValidRole && (
                                         <div className="ts-section">
-                                            <h4 className="ts-section-title">Покинуть команду</h4>
-                                            <p className="ts-section-text">Покинув команду, вы потеряете доступ ко всем её доскам в своём аккаунте. При необходимости администратор сможет пригласить вас снова.</p>
-                                            <div style={{ marginTop: 12 }}>
-                                                <button className="btn-outlined-danger" onClick={() => setShowLeaveConfirm(true)}>Покинуть команду</button>
-                                            </div>
+                                            <p className="ts-section-text">Неверные данные команды — отсутствует role. Обратитесь к бэкенду.</p>
                                         </div>
                                     )}
 
-                                    {!isOwner && <hr className="ts-divider" />}
+                                    {/* Покинуть: visible to non-owners (admin + member) */}
+                                    {hasValidRole && !isOwner && (
+                                        <>
+                                            <div className="ts-section">
+                                                <h4 className="ts-section-title">Покинуть команду</h4>
+                                                <p className="ts-section-text">Покинув команду, вы потеряете доступ ко всем её доскам в своём аккаунте. При необходимости администратор сможет пригласить вас снова.</p>
+                                                <div style={{ marginTop: 12 }}>
+                                                    <button className="btn-outlined-danger" onClick={() => setShowLeaveConfirm(true)}>Покинуть команду</button>
+                                                </div>
+                                            </div>
+                                            <hr className="ts-divider" />
+                                        </>
+                                    )}
 
                                     {/* Удалить: visible only to owner */}
-                                    {isOwner && (
+                                    {hasValidRole && isOwner && (
                                         <>
                                             <div className="ts-section">
                                                 <h4 className="ts-section-title">Удалить команду</h4>
@@ -184,8 +220,9 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
 
                                     <div className="ts-footer-inside" role="group" aria-label="Основные действия">
                                         <div className="boards-modal-footer">
+                                            {/* Save/edit limited to admins and owners only */}
                                             {(isAdminOrOwner || isCreate) && (
-                                                <button type="button" className="primary-btn" onClick={handleSave} disabled={isEmpty} aria-disabled={isEmpty}>
+                                                <button type="button" className="primary-btn" onClick={handleSave} disabled={isEmpty || isMember} aria-disabled={isEmpty || isMember}>
                                                     {isCreate ? "Создать команду" : "Сохранить"}
                                                 </button>
                                             )}
@@ -195,10 +232,10 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
                                 </>
                             )}
 
-                            {activeTab === "members" && <div className="ts-placeholder">Список участников (заглушка)</div>}
-                            {activeTab === "perms" && <div className="ts-placeholder">Управление разрешениями (заглушка)</div>}
-                            {activeTab === "invites" && <div className="ts-placeholder">Приглашения (заглушка)</div>}
-                            {activeTab === "audit" && <div className="ts-placeholder">Аудит логи (заглушка)</div>}
+                            {activeTab === "members" && !isMember && <div className="ts-placeholder">Список участников (заглушка)</div>}
+                            {activeTab === "perms" && !isMember && <div className="ts-placeholder">Управление разрешениями (заглушка)</div>}
+                            {activeTab === "invites" && !isMember && <div className="ts-placeholder">Приглашения (заглушка)</div>}
+                            {activeTab === "audit" && !isMember && <div className="ts-placeholder">Аудит логи (заглушка)</div>}
                         </section>
                     </div>
                 </div>
@@ -208,7 +245,7 @@ export default function TeamSettingsModal({ team = {}, onClose, onSave, onDelete
                 isOpen={showDeleteConfirm}
                 compact={true}
                 title="Удалить команду?"
-                message={<p style={{ margin: 0 }}>Удаление команды приведёт к удалению всех её досок и потере доступа у участников. Это действие нельзя отменить.</p>}
+                message={<p style={{ margin: 0 }}>Удаление команды <strong>{team?.name || "команды"}</strong> приведёт к удалению всех её досок и потере доступа у участников. Это действие нельзя отменить.</p>}
                 confirmLabel="Удалить"
                 cancelLabel="Отмена"
                 danger={true}

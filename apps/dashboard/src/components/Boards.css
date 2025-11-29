@@ -484,3 +484,71 @@
         gap: 18px;
     }
 }
+
+/* Create button disabled visual — apply to the header create button specifically */
+.primary-btn.create-btn.disabled,
+.primary-btn.create-btn[disabled] {
+    opacity: 0.56;
+    pointer-events: none;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* Add minimal styles for empty hint when user has no teams */
+
+/* Centered minimal hint */
+.boards-empty-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 24px;
+    min-height: 260px;
+    box-sizing: border-box;
+}
+
+.boards-empty-hint__text {
+    color: #6b7280; /* muted gray */
+    font-size: 15px;
+    line-height: 1.6;
+    text-align: center;
+    max-width: 640px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Slightly reduce prominence of toolbar when present and there are no boards */
+.boards-toolbar { margin-bottom: 18px; }
+
+/* Keep disabled create visual consistent (existing rule may already exist) */
+.primary-btn.create-btn.disabled,
+.primary-btn.create-btn[disabled] {
+    opacity: 0.56;
+    pointer-events: none;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* Add minimal styles for team-empty hint (no boards in selected team) */
+
+/* Centered minimal hint for "no teams" already exists (.boards-empty-hint).
+   Add a slightly smaller, calmer hint when a team exists but has no boards. */
+
+.boards-team-empty-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px;
+    min-height: 220px;
+    box-sizing: border-box;
+}
+
+.boards-team-empty-hint__text {
+    color: #6b7280; /* muted gray */
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: center;
+    max-width: 560px;
+    margin: 0;
+    font-weight: 500;
+}
+

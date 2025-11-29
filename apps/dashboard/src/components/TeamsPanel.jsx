@@ -5,6 +5,14 @@ import StarButton from "./StarButton";
 import TeamSettingsModal from "./TeamSettingsModal";
 import WorkspaceHeader from "./WorkspaceHeader";
 
+/*
+  TeamsPanel — render teams by role only.
+  - teamsProp is authoritative (array of teams). If not provided, fallback to local initialTeams.
+  - Roles are expected to be one of "owner" | "admin" | "member".
+*/
+
+const VALID_ROLES = new Set(["owner", "admin", "member"]);
+
 export default function TeamsPanel({
                                        teams: teamsProp,
                                        activeTeamId,
@@ -20,7 +28,10 @@ export default function TeamsPanel({
     const [hovered, setHovered] = useState(null);
     const [editingTeam, setEditingTeam] = useState(null);
 
-    const teams = teamsProp || initialTeams.map((t) => ({ ...t, isStarred: !!t.isStarred, role: t.role || (t.isOwner ? "owner" : "member") }));
+    // Use teamsProp if it's an array; otherwise fall back to initialTeams.
+    // Also filter out any teams with invalid role values.
+    const sourceTeams = Array.isArray(teamsProp) ? teamsProp : initialTeams;
+    const teams = sourceTeams.filter((t) => VALID_ROLES.has(t.role)).map((t) => ({ ...t }));
 
     const visibleTeams = useMemo(() => {
         let list = teams.slice();
@@ -28,7 +39,7 @@ export default function TeamsPanel({
         if (filter === "others") list = list.filter((t) => t.role !== "owner");
         if (query.trim()) {
             const q = query.trim().toLowerCase();
-            list = list.filter((t) => t.name.toLowerCase().includes(q));
+            list = list.filter((t) => String(t.name || "").toLowerCase().includes(q));
         }
         const starred = list.filter((t) => t.isStarred).sort((a, b) => a.name.localeCompare(b.name));
         const others = list.filter((t) => !t.isStarred).sort((a, b) => a.name.localeCompare(b.name));
@@ -36,7 +47,7 @@ export default function TeamsPanel({
     }, [teams, filter, query]);
 
     function openCreate() {
-        setEditingTeam({ create: true, id: null, name: "" });
+        setEditingTeam({ create: true, id: null, name: "Новая команда" });
     }
 
     function openSettingsForActive() {
@@ -148,11 +159,11 @@ export default function TeamsPanel({
 
             {editingTeam && (
                 <TeamSettingsModal
-                    team={editingTeam.create ? { id: null, name: "" } : editingTeam}
+                    team={editingTeam}
                     onClose={() => setEditingTeam(null)}
                     onSave={(teamId, newName) => {
                         if (editingTeam.create) {
-                            createTeam && createTeam({ name: newName, isOwner: true });
+                            createTeam && createTeam({ name: newName });
                         } else {
                             renameTeam && renameTeam(teamId, newName);
                         }
