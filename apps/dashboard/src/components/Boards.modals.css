@@ -1,11 +1,12 @@
-/* Compact centered modal styles — interactive hover states for buttons
-   Updated & harmonized:
-   - unified input sizing/typography across modals
-   - minimal height for consistent visual weight
-   - empty-input highlight (soft red) and disabled primary button styling
+/* Boards.modals.css — final consolidated stylesheet for modals (complete)
+   Notes:
+   - Scopes confirm modal layout so it doesn't affect board/team modals.
+   - Ensures footer alignment for board rename/delete modals.
+   - Restores visual states (empty input red) and button animations.
+   - Keeps team-settings modal styles isolated.
 */
 
-/* Backdrop: center modal both vertically and horizontally */
+/* ===== Global backdrop & modal card ===== */
 .boards-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -14,37 +15,36 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px; /* small page padding for tiny viewports */
+    padding: 20px;
     box-sizing: border-box;
 }
 
-/* Modal card: compact, nice rounded corners, constrained to viewport */
 .boards-modal {
     background: #ffffff;
-    width: min(640px, 96%);
-    max-width: 640px;
+    width: min(920px, 96%);
+    max-width: 920px;
     border-radius: 18px;
-    padding: 0; /* internal spacing handled by header/body/footer */
+    padding: 0;
     box-sizing: border-box;
     box-shadow: 0 22px 46px rgba(6, 22, 34, 0.14);
-    border: 1px solid rgba(6,22,34,0.04);
+    border: 1px solid rgba(6, 22, 34, 0.04);
     position: relative;
     color: #0f1724;
     font-family: inherit;
     transition: transform 180ms cubic-bezier(.2,.9,.2,1), box-shadow 180ms ease;
-    max-height: calc(100vh - 80px); /* keep some offset from viewport edges */
+    max-height: calc(100vh - 80px);
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* keep header/footer visible; body scrolls */
-    min-height: 220px; /* ensure consistent visual weight for short modals */
+    overflow: hidden;
+    min-height: 220px;
 }
 
-/* Header */
+/* ===== Header ===== */
 .boards-modal-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 24px;
+    padding: 20px 24px;
     border-bottom: 1px solid #eef2f7;
 }
 .boards-modal-title {
@@ -55,8 +55,6 @@
     color: #0b1220;
     flex: 1 1 auto;
 }
-
-/* Close button (subtle square) */
 .boards-modal-close {
     background: #f7f8fb;
     border: 1px solid rgba(6,22,34,0.04);
@@ -75,24 +73,22 @@
 .boards-modal-close:hover {
     background: #eef2ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(79,139,255,0.08);
 }
 
-/* Body */
+/* ===== Body ===== */
 .boards-modal-body {
     padding: 20px 24px;
     color: #374151;
     font-size: 15px;
     line-height: 1.45;
     overflow: auto;
-    /* allow body to take remaining modal height (header/footer fixed) */
     flex: 1 1 auto;
+    box-sizing: border-box;
 }
 
-/* Harmonized input styles for modal text fields */
+/* ===== Inputs ===== */
 .boards-modal-input,
 .teams-modal-input {
-    display: block;
     width: 100%;
     box-sizing: border-box;
     padding: 12px 16px;
@@ -102,163 +98,176 @@
     background: #fff;
     color: #0f1724;
     font-size: 16px;
-    line-height: 1.25;
     font-weight: 500;
     outline: none;
     transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
-    margin: 4px 0 0 0; /* small gap from heading/title above */
+    margin: 4px 0 0 0;
     box-shadow: inset 0 1px 0 rgba(2,6,23,0.02);
 }
-
-/* placeholder */
 .boards-modal-input::placeholder,
 .teams-modal-input::placeholder {
     color: #8b949e;
     opacity: 1;
     font-weight: 500;
 }
-
-/* Focus visuals (subtle, consistent) */
 .boards-modal-input:focus,
 .teams-modal-input:focus {
     border-color: rgba(37,100,255,0.22);
     box-shadow: 0 6px 18px rgba(37,100,255,0.06);
 }
-
-/* stronger visible focus for keyboard users */
 .boards-modal-input:focus-visible,
 .teams-modal-input:focus-visible {
     box-shadow: 0 8px 22px rgba(37,100,255,0.08), 0 0 0 4px rgba(37,100,255,0.06);
 }
 
-/* Empty input visual state (used when rename input is empty) */
+/* Empty / invalid input visual */
 .boards-modal-input--empty {
-    border-color: rgba(191,30,46,0.20); /* soft red tint */
-    box-shadow: 0 8px 24px rgba(191,30,46,0.06); /* soft red glow */
+    border-color: rgba(191,30,46,0.22) !important;
+    box-shadow: 0 8px 24px rgba(191,30,46,0.06) !important;
 }
 
-/* Disabled primary button visual parity */
-.boards-modal .primary-btn[disabled],
-.primary-btn[aria-disabled="true"] {
-    opacity: 0.56;
-    pointer-events: none;
-    transform: none;
-    box-shadow: none;
-}
-
-/* Disabled primary focus override */
-.boards-modal .primary-btn[disabled]:focus,
-.primary-btn[aria-disabled="true"]:focus {
-    outline: none;
-}
-
-/* Disabled input look (read-only) */
-.input-disabled {
-    background: #f3f5f8;
-    color: #6b7280;
-    cursor: not-allowed;
-}
-
-/* Footer (buttons) — LEFT-ALIGNED now */
-.boards-modal-footer {
-    display: flex;
-    gap: 12px;
-    margin: 16px 24px;
-    align-items: center;
-    justify-content: flex-start; /* <-- moved buttons to the LEFT */
-    border-top: 1px solid #eef2f7;
-    padding-top: 12px;
-}
-
-/* Primary, secondary and danger buttons (compact) */
-.boards-modal .primary-btn {
+/* ===== Buttons ===== */
+.primary-btn {
     background: linear-gradient(90deg,#4f8bff 0%, #7e5bff 100%);
     color: #fff;
     border: none;
-    padding: 10px 14px;
+    padding: 10px 16px;
     border-radius: 12px;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 15px;
     cursor: pointer;
     box-shadow: 0 8px 26px rgba(79,139,255,0.12);
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
     min-width: 72px;
-    text-align: center;
-    transition: transform 150ms cubic-bezier(.2,.9,.2,1), box-shadow 150ms ease, filter 150ms ease;
 }
-
-/* Primary hover/active: brighten and lift */
-.boards-modal .primary-btn:hover {
+.primary-btn:hover {
     transform: translateY(-3px);
     box-shadow: 0 18px 40px rgba(79,139,255,0.18);
     filter: brightness(1.03);
 }
-.boards-modal .primary-btn:active {
+.primary-btn:active {
     transform: translateY(-1px);
     box-shadow: 0 10px 28px rgba(79,139,255,0.14);
-    filter: brightness(0.98);
 }
+.boards-modal .primary-btn[disabled],
+.primary-btn[aria-disabled="true"] { opacity: 0.56; pointer-events: none; box-shadow: none; }
 
-/* Secondary button baseline */
-.boards-modal .secondary-btn {
+.secondary-btn {
     background: #fff;
     border: 1px solid #e6e9f2;
-    padding: 9px 12px;
+    padding: 9px 14px;
     border-radius: 12px;
     color: #0f1724;
     cursor: pointer;
     font-size: 14px;
     min-width: 72px;
-    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    transition: transform 140ms ease, box-shadow 140ms ease;
 }
+.secondary-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(6,22,34,0.06); }
 
-/* Danger button baseline */
-.boards-modal .danger-btn {
+.danger-btn {
     background: #fff5f6;
     border: 1px solid rgba(191,30,46,0.08);
     color: #bf1e2e;
-    padding: 9px 12px;
+    padding: 9px 14px;
     border-radius: 12px;
     cursor: pointer;
     font-weight: 700;
     font-size: 14px;
     min-width: 72px;
-    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    transition: background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+.danger-btn:hover { background: rgba(191,30,46,0.08); border-color: rgba(191,30,46,0.16); transform: translateY(-2px); box-shadow: 0 10px 26px rgba(191,30,46,0.06); }
+.danger-btn:active { transform: translateY(0); box-shadow: 0 6px 12px rgba(191,30,46,0.04); }
+
+/* Outlined content danger */
+.btn-outlined-danger {
+    background: transparent;
+    border: 1px solid rgba(191,30,46,0.16);
+    color: #bf1e2e;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: background 120ms ease, transform 120ms ease;
+}
+.btn-outlined-danger:hover { background: rgba(191,30,46,0.04); transform: translateY(-2px); }
+
+/* ===== Footer layout ===== */
+.boards-modal-footer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px 0;
+    box-sizing: border-box;
+}
+/* Boards modals (no sidebar) — align footer with body padding */
+.boards-modal:not(.team-settings-modal) .boards-modal-footer {
+    padding-left: 24px;
 }
 
-/* Danger hover: stronger red background and small lift */
-.boards-modal .danger-btn:hover {
-    background: rgba(191,30,46,0.08);
-    border-color: rgba(191,30,46,0.16);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(191,30,46,0.08);
-    color: #8b1620;
+/* ===== Confirm portal & confirm modal specifics ===== */
+#confirm-portal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    pointer-events: none;
 }
-.boards-modal .danger-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 6px 12px rgba(191,30,46,0.06);
-}
+#confirm-portal-root > * { pointer-events: auto; }
+.confirm-backdrop { z-index: 2147483001; }
 
-/* Accessibility: focus styles for modal controls */
+.boards-modal--confirm .boards-modal-body { padding: 20px 28px; line-height: 1.5; }
+
+/* Align confirm footer with content padding */
+.boards-modal--confirm .boards-modal-footer,
+.boards-modal--compact .boards-modal-footer {
+    padding-left: 28px;
+    padding-right: 28px;
+    padding-top: 12px;
+    padding-bottom: 18px;
+    justify-content: flex-start;
+}
+.confirm-footer { padding-top: 6px; }
+
+/* Portal child wrapper */
+.confirm-portal-host-child { position: relative; width: 100%; height: 100%; }
+
+/* ===== Team settings (scoped) ===== */
+.team-settings-modal--fixed { height: min(72vh, 680px); max-height: 72vh; }
+.team-settings-body { display: flex; height: calc(100% - 72px); min-height: 360px; box-sizing: border-box; }
+.team-settings-sidebar { flex: 0 0 200px; width: 200px; border-right: 1px solid #f0f2f6; background: #fbfcfd; padding: 18px 12px; box-sizing: border-box; }
+.team-settings-sidebar ul { list-style: none; margin: 0; padding: 0; }
+.ts-nav-item { padding: 12px; border-radius: 8px; cursor: pointer; color: #4b5563; font-weight: 400; margin-bottom: 6px; transition: background 120ms ease, color 120ms ease; }
+.ts-nav-item:hover { background: rgba(15,23,42,0.03); }
+.ts-nav-item.active { background: rgba(15,23,42,0.03); color: #111827; }
+.team-settings-content { flex: 1 1 auto; padding: 22px 30px; overflow: auto; min-height: 0; }
+
+/* ===== Misc helpers ===== */
+.ts-section { margin-bottom: 18px; }
+.ts-section-label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 8px; font-weight: 400; }
+.ts-section-title { margin: 0 0 8px 0; font-size: 18px; color: #111827; font-weight: 500; }
+.ts-section-text { margin: 0; color: #6b7280; line-height: 1.5; font-size: 15px; }
+.ts-divider { border: none; border-top: 1px solid #eef2f7; margin: 18px 0; }
+.ts-placeholder { padding: 18px; border-radius: 8px; background: #fbfdff; border: 1px solid #f0f4ff; color: #6b7280; }
+
+/* ===== Focus visuals ===== */
 .boards-modal .primary-btn:focus,
 .boards-modal .secondary-btn:focus,
 .boards-modal .danger-btn:focus,
 .boards-modal-close:focus,
-.boards-modal-input:focus {
-    outline: none; /* we use box-shadow for visual focus instead of native outline here */
+.boards-modal-input:focus,
+.teams-modal-input:focus,
+.btn-outlined-danger:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(37,100,255,0.04);
 }
 
-/* Small screens adjustments: keep modal compact and usable */
-@media (max-width: 480px) {
-    .boards-modal {
-        width: calc(100% - 32px);
-        padding: 0;
-        border-radius: 14px;
-    }
-    .boards-modal-title { font-size: 20px; }
-    .boards-modal-input,
-    .teams-modal-input { height: 44px; padding: 10px 12px; font-size: 15px; }
-    .boards-modal-body { font-size: 14px; padding: 14px; }
-    .boards-modal .primary-btn,
-    .boards-modal .secondary-btn,
-    .boards-modal .danger-btn { padding: 10px 12px; min-width: 64px; }
+/* ===== Responsive ===== */
+@media (max-width: 920px) {
+    .boards-modal { width: calc(100% - 32px); }
+    .team-settings-modal--fixed { height: auto; max-height: calc(100vh - 80px); }
+    .team-settings-body { flex-direction: column; height: auto; }
+    .team-settings-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #f0f2f6; }
+    .team-settings-content { padding: 16px; min-height: 200px; }
+    .team-settings-modal--fixed { min-height: 360px; }
 }

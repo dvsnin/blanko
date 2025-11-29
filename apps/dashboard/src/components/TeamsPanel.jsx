@@ -102,7 +102,7 @@ export default function TeamsPanel({
                 <div className="teams-filters" role="tablist" aria-label="Фильтры команд">
                     <button className={`teams-filter ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>Все</button>
                     <button className={`teams-filter ${filter === "mine" ? "active" : ""}`} onClick={() => setFilter("mine")}>Мои</button>
-                    <button className={`teams-filter ${filter === "others" ? "active" : ""}`} onClick={() => setFilter("others")}>Не мои</button>
+                    <button className={`teams-filter ${filter === "others" ? "active" : ""}`} onClick={() => setFilter("others")}>Другие</button>
                 </div>
 
                 <div className="teams-list" role="list">
