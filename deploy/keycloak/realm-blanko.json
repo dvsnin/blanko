@@ -1,0 +1,88 @@
+{
+  "realm": "blanko",
+  "enabled": true,
+
+  "registrationAllowed": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "resetPasswordAllowed": true,
+
+  "sslRequired": "none",
+
+  "clients": [
+    {
+      "clientId": "blanko",
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "super-secret-pass",
+
+      "redirectUris": [
+        "http://app.localhost/oauth2/callback"
+      ],
+      "webOrigins": [
+        "http://app.localhost"
+      ],
+
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
+
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "basic",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "organization",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "test",
+      "enabled": true,
+      "email": "test@example.com",
+      "emailVerified": true,
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "qwerty1234",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+
+  "groups": [],
+  "roles": {},
+  "scopeMappings": [],
+
+  "defaultDefaultClientScopes": [
+    "web-origins",
+    "roles",
+    "profile",
+    "email"
+  ],
+  "defaultOptionalClientScopes": [
+    "offline_access"
+  ]
+}

@@ -73,11 +73,12 @@ services:
 
       # OIDC / Keycloak
       - --provider=oidc
-      - --oidc-issuer-url=http://keycloak.localhost/realms/syncboard
-      - --client-id=syncboard
-      - --client-secret=replace-me
+      - --oidc-issuer-url=http://keycloak.localhost/realms/blanko
+      - --client-id=blanko
+      - --client-secret=super-secret-pass
       - --scope=openid profile email
       - --email-domain=*
+      - --insecure-oidc-allow-unverified-email=true
 
       # куда редиректить после логина
       - --redirect-url=http://app.localhost/oauth2/callback
