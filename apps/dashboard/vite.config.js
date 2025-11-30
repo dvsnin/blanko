@@ -22,5 +22,7 @@ export default defineConfig({
         alias: {
             "@blanko/ui": path.resolve(__dirname, "../../packages/ui/src")
         }
-    }
+    },
+
+    base: '/app/',
 });

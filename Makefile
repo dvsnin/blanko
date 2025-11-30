@@ -1,5 +1,3 @@
-# Makefile — monorepo helpers (build frontend before docker compose up)
-
 DOCKER_COMPOSE = docker compose -f deploy/docker-compose.yml
 
 # list of frontend apps to build (adjust package names or paths if needed)
@@ -33,10 +31,11 @@ build-frontend:
 	@command -v pnpm >/dev/null 2>&1 || (echo "pnpm not found. Install pnpm: npm i -g pnpm" && exit 1)
 	@echo "Installing workspace dependencies (pnpm -w install)..."
 	pnpm -w install
-	@echo "Building dashboard..."
-	pnpm --filter $(word 1,$(FRONTEND_FILTERS)) build
-	@echo "Building canvas..."
-	pnpm --filter $(word 2,$(FRONTEND_FILTERS)) build
+	@echo "Building frontend packages from FRONTEND_FILTERS: $(FRONTEND_FILTERS)"
+	@for pkg in $(FRONTEND_FILTERS); do \
+		echo "-> Building $$pkg"; \
+		pnpm --filter $$pkg build || exit $$?; \
+	done
 	@echo "Frontend build finished."
 
 # Если нужно только установить зависимости в monorepo
