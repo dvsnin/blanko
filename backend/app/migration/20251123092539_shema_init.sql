@@ -197,6 +197,20 @@ COMMENT ON COLUMN team_member.deleted_at IS 'Время софт удалени�
 
 CREATE INDEX idx_team_member_account_id ON team_member (account_id);
 
+CREATE TABLE IF NOT EXISTS team_starred
+(
+    account_id UUID      NOT NULL REFERENCES account (id),
+    team_id   UUID      NOT NULL REFERENCES team (id),
+    created_at timestamp NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (account_id, team_id)
+);
+COMMENT ON TABLE team_starred IS 'Хранит информацию о командах, отмеченных пользователем как избранные.';
+COMMENT ON COLUMN team_starred.account_id IS 'Идентификатор пользователя.';
+COMMENT ON COLUMN team_starred.team_id IS 'Идентификатор команды, отмеченной пользователем как избранная.';
+COMMENT ON COLUMN team_starred.created_at IS 'Время создания';
+
+CREATE INDEX idx_team_starred_team_id ON team_starred (team_id);
+
 CREATE TABLE IF NOT EXISTS board
 (
     id                  uuid PRIMARY KEY NOT NULL,
