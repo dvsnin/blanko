@@ -233,7 +233,7 @@ COMMENT ON COLUMN board.deleted_at IS 'Время софт удаления.';
 CREATE INDEX idx_board_team_id ON board (team_id);
 CREATE INDEX idx_board_account_id ON board (account_id);
 
-CREATE TABLE board_share_token
+CREATE TABLE IF NOT EXISTS board_share_token
 (
     id         uuid PRIMARY KEY,
     board_id   uuid         NOT NULL REFERENCES board (id),
