@@ -63,7 +63,7 @@ COMMENT ON COLUMN organization_domain.domain IS 'Домен, принадлеж�
 COMMENT ON COLUMN organization_domain.created_at IS 'Время создания.';
 COMMENT ON COLUMN organization_domain.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_organization_domain_organization_id ON organization_domain (organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_domain_organization_id ON organization_domain (organization_id);
 
 CREATE TABLE IF NOT EXISTS organization_permission
 (
@@ -82,7 +82,7 @@ COMMENT ON COLUMN organization_permission.allow_members_team_creation IS 'Раз
 COMMENT ON COLUMN organization_permission.created_at IS 'Время создания.';
 COMMENT ON COLUMN organization_permission.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_organization_permission_organization_id ON organization_permission (organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_permission_organization_id ON organization_permission (organization_id);
 
 CREATE TABLE IF NOT EXISTS organization_member
 (
@@ -102,7 +102,7 @@ COMMENT ON COLUMN organization_member.role IS 'Роль пользователя
 COMMENT ON COLUMN organization_member.created_at IS 'Время создания.';
 COMMENT ON COLUMN organization_member.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_organization_member_organization_id ON organization_member (organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_member_organization_id ON organization_member (organization_id);
 
 CREATE TABLE IF NOT EXISTS workspace
 (
@@ -169,7 +169,7 @@ COMMENT ON COLUMN team.created_at IS 'Время создания.';
 COMMENT ON COLUMN team.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN team.deleted_at IS 'Время софт удаления.';
 
-CREATE INDEX idx_team_workspace_id ON team (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_team_workspace_id ON team (workspace_id);
 
 CREATE TABLE IF NOT EXISTS team_member
 (
@@ -190,7 +190,7 @@ COMMENT ON COLUMN team_member.role IS 'Роль пользователя в ко
 COMMENT ON COLUMN team_member.created_at IS 'Время создания.';
 COMMENT ON COLUMN team_member.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_team_member_account_id ON team_member (account_id);
+CREATE INDEX IF NOT EXISTS idx_team_member_account_id ON team_member (account_id);
 
 CREATE TABLE IF NOT EXISTS team_starred
 (
@@ -204,7 +204,7 @@ COMMENT ON COLUMN team_starred.account_id IS 'Идентификатор пол�
 COMMENT ON COLUMN team_starred.team_id IS 'Идентификатор команды, отмеченной пользователем как избранная.';
 COMMENT ON COLUMN team_starred.created_at IS 'Время создания';
 
-CREATE INDEX idx_team_starred_team_id ON team_starred (team_id);
+CREATE INDEX IF NOT EXISTS idx_team_starred_team_id ON team_starred (team_id);
 
 CREATE TABLE IF NOT EXISTS board
 (
@@ -233,8 +233,8 @@ COMMENT ON COLUMN board.created_at IS 'Время создания.';
 COMMENT ON COLUMN board.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN board.deleted_at IS 'Время софт удаления.';
 
-CREATE INDEX idx_board_team_id ON board (team_id);
-CREATE INDEX idx_board_account_id ON board (account_id);
+CREATE INDEX IF NOT EXISTS idx_board_team_id ON board (team_id);
+CREATE INDEX IF NOT EXISTS idx_board_account_id ON board (account_id);
 
 CREATE TABLE IF NOT EXISTS board_share_token
 (
@@ -258,7 +258,7 @@ COMMENT ON COLUMN board_share_token.created_at IS 'Время создания.'
 COMMENT ON COLUMN board_share_token.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN board_share_token.deleted_at IS 'Отключение/ревокация ссылки.';
 
-CREATE INDEX idx_board_share_token_board_id ON board_share_token (board_id);
+CREATE INDEX IF NOT EXISTS idx_board_share_token_board_id ON board_share_token (board_id);
 
 CREATE TABLE IF NOT EXISTS board_starred
 (
@@ -272,7 +272,7 @@ COMMENT ON COLUMN board_starred.account_id IS 'Идентификатор пол
 COMMENT ON COLUMN board_starred.board_id IS 'Идентификатор доски, отмеченной пользователем как избранная.';
 COMMENT ON COLUMN board_starred.created_at IS 'Время создания';
 
-CREATE INDEX idx_board_starred_board_id ON board_starred (board_id);
+CREATE INDEX IF NOT EXISTS idx_board_starred_board_id ON board_starred (board_id);
 
 CREATE TABLE IF NOT EXISTS board_event_journal
 (
@@ -291,7 +291,7 @@ COMMENT ON COLUMN board_event_journal.account_id IS 'Пользователь, �
 COMMENT ON COLUMN board_event_journal.created_at IS 'Время создания.';
 COMMENT ON COLUMN board_event_journal.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_board_event_journal_board_id ON board_event_journal (board_id);
+CREATE INDEX IF NOT EXISTS idx_board_event_journal_board_id ON board_event_journal (board_id);
 
 CREATE TABLE IF NOT EXISTS board_login
 (
@@ -312,8 +312,8 @@ COMMENT ON COLUMN board_login.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN board_login.access IS 'Уровень доступа при входе.';
 COMMENT ON COLUMN board_login.logout_at IS 'Время выхода.';
 
-CREATE INDEX idx_board_login_board_id ON board_login (board_id);
-CREATE INDEX idx_board_login_account_id ON board_login (account_id);
+CREATE INDEX IF NOT EXISTS idx_board_login_board_id ON board_login (board_id);
+CREATE INDEX IF NOT EXISTS idx_board_login_account_id ON board_login (account_id);
 
 CREATE TABLE IF NOT EXISTS notification
 (
@@ -334,7 +334,7 @@ COMMENT ON COLUMN notification.created_at IS 'Время создания.';
 COMMENT ON COLUMN notification.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN notification.deleted_at IS 'Время софт удаления.';
 
-CREATE INDEX idx_notification_account_id ON notification (account_id);
+CREATE INDEX IF NOT EXISTS idx_notification_account_id ON notification (account_id);
 -- +goose StatementEnd
 
 -- +goose Down
