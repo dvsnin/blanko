@@ -53,7 +53,6 @@ CREATE TABLE IF NOT EXISTS organization_domain
     domain          VARCHAR(255)     NOT NULL,
     created_at      timestamp        NOT NULL,
     updated_at      timestamp        NOT NULL,
-    deleted_at      timestamp,
 
     UNIQUE (domain)
 );
@@ -63,7 +62,6 @@ COMMENT ON COLUMN organization_domain.organization_id IS 'Идентификат
 COMMENT ON COLUMN organization_domain.domain IS 'Домен, принадлежащий организации.';
 COMMENT ON COLUMN organization_domain.created_at IS 'Время создания.';
 COMMENT ON COLUMN organization_domain.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN organization_domain.deleted_at IS 'Время софт удаления.';
 
 CREATE INDEX idx_organization_domain_organization_id ON organization_domain (organization_id);
 
@@ -94,7 +92,6 @@ CREATE TABLE IF NOT EXISTS organization_member
     role            organization_role NOT NULL,
     created_at      timestamp         NOT NULL,
     updated_at      timestamp         NOT NULL,
-    deleted_at      timestamp,
 
     UNIQUE (account_id)
 );
@@ -104,7 +101,6 @@ COMMENT ON COLUMN organization_member.account_id IS 'Идентификатор 
 COMMENT ON COLUMN organization_member.role IS 'Роль пользователя в организации.';
 COMMENT ON COLUMN organization_member.created_at IS 'Время создания.';
 COMMENT ON COLUMN organization_member.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN organization_member.deleted_at IS 'Время софт удаления.';
 
 CREATE INDEX idx_organization_member_organization_id ON organization_member (organization_id);
 
@@ -139,7 +135,6 @@ CREATE TABLE IF NOT EXISTS license
     expires_at   timestamp,
     created_at   timestamp        NOT NULL,
     updated_at   timestamp        NOT NULL,
-    deleted_at   timestamp,
 
     UNIQUE (workspace_id)
 );
@@ -151,7 +146,6 @@ COMMENT ON COLUMN license.seats IS 'Количество оплаченных р
 COMMENT ON COLUMN license.expires_at IS 'Дата окончания лицензии, бесконечно - если не установлено.';
 COMMENT ON COLUMN license.created_at IS 'Время создания.';
 COMMENT ON COLUMN license.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN license.deleted_at IS 'Время софт удаления.';
 
 CREATE TABLE IF NOT EXISTS team
 (
@@ -182,7 +176,6 @@ CREATE TABLE IF NOT EXISTS team_member
     role       team_role        NOT NULL,
     created_at timestamp        NOT NULL,
     updated_at timestamp        NOT NULL,
-    deleted_at timestamp,
 
     UNIQUE (team_id, account_id)
 );
@@ -193,15 +186,14 @@ COMMENT ON COLUMN team_member.account_id IS 'Идентификатор поль
 COMMENT ON COLUMN team_member.role IS 'Роль пользователя в команде.';
 COMMENT ON COLUMN team_member.created_at IS 'Время создания.';
 COMMENT ON COLUMN team_member.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN team_member.deleted_at IS 'Время софт удаления.';
 
 CREATE INDEX idx_team_member_account_id ON team_member (account_id);
 
 CREATE TABLE IF NOT EXISTS team_starred
 (
     account_id UUID      NOT NULL REFERENCES account (id),
-    team_id   UUID      NOT NULL REFERENCES team (id),
-    created_at timestamp NOT NULL DEFAULT NOW(),
+    team_id    UUID      NOT NULL REFERENCES team (id),
+    created_at timestamp NOT NULL,
     PRIMARY KEY (account_id, team_id)
 );
 COMMENT ON TABLE team_starred IS 'Хранит информацию о командах, отмеченных пользователем как избранные.';
@@ -241,33 +233,35 @@ COMMENT ON COLUMN board.deleted_at IS 'Время софт удаления.';
 CREATE INDEX idx_board_team_id ON board (team_id);
 CREATE INDEX idx_board_account_id ON board (account_id);
 
-CREATE TABLE board_share_link
+CREATE TABLE board_share_token
 (
     id         uuid PRIMARY KEY,
     board_id   uuid         NOT NULL REFERENCES board (id),
     access     board_access NOT NULL,
-    token      text         NOT NULL UNIQUE,
+    token      VARCHAR(255) NOT NULL,
     expires_at timestamp    NULL,
     created_at timestamp    NOT NULL,
     updated_at timestamp    NOT NULL,
-    deleted_at timestamp
-);
-COMMENT ON TABLE board_share_link IS 'Публичные и приватные ссылки для доступа к доске.';
-COMMENT ON COLUMN board_share_link.board_id IS 'Идентификатор доски, к которой относится ссылка.';
-COMMENT ON COLUMN board_share_link.access IS 'Уровень доступа по данной ссылке.';
-COMMENT ON COLUMN board_share_link.token IS 'Секретный токен доступа (часть URL).';
-COMMENT ON COLUMN board.created_at IS 'Время создания.';
-COMMENT ON COLUMN board.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN board_share_link.deleted_at IS 'Отключение/ревокация ссылки.';
+    deleted_at timestamp,
 
-CREATE INDEX idx_board_share_link_board_id ON board_share_link (board_id);
-CREATE INDEX idx_board_share_link_token ON board_share_link (token);
+    UNIQUE (token)
+);
+COMMENT ON TABLE board_share_token IS 'Токены для доступа к доске.';
+COMMENT ON COLUMN board_share_token.board_id IS 'Идентификатор доски, к которой относится ссылка.';
+COMMENT ON COLUMN board_share_token.access IS 'Уровень доступа по данной ссылке.';
+COMMENT ON COLUMN board_share_token.token IS 'Секретный токен доступа (query параметр).';
+COMMENT ON COLUMN board_share_token.expires_at IS 'Время действия ссылки, бесконечно - если не задано.';
+COMMENT ON COLUMN board_share_token.created_at IS 'Время создания.';
+COMMENT ON COLUMN board_share_token.updated_at IS 'Время обновления.';
+COMMENT ON COLUMN board_share_token.deleted_at IS 'Отключение/ревокация ссылки.';
+
+CREATE INDEX idx_board_share_token_board_id ON board_share_token (board_id);
 
 CREATE TABLE IF NOT EXISTS board_starred
 (
     account_id UUID      NOT NULL REFERENCES account (id),
     board_id   UUID      NOT NULL REFERENCES board (id),
-    created_at timestamp NOT NULL DEFAULT NOW(),
+    created_at timestamp NOT NULL,
     PRIMARY KEY (account_id, board_id)
 );
 COMMENT ON TABLE board_starred IS 'Хранит информацию о досках, отмеченных пользователем как избранные.';
@@ -294,17 +288,17 @@ COMMENT ON COLUMN board_event_journal.account_id IS 'Пользователь, �
 COMMENT ON COLUMN board_event_journal.created_at IS 'Время создания.';
 COMMENT ON COLUMN board_event_journal.updated_at IS 'Время обновления.';
 
-CREATE INDEX idx_board_event_board_id ON board_event_journal (board_id);
+CREATE INDEX idx_board_event_journal_board_id ON board_event_journal (board_id);
 
 CREATE TABLE IF NOT EXISTS board_login
 (
-    id         uuid PRIMARY KEY NOT NULL,
-    board_id   uuid REFERENCES board,
-    account_id uuid             NULL, -- if null - guest
-    created_at timestamp        NOT NULL,
-    updated_at timestamp        NOT NULL,
-    access     board_access     NOT NULL,
-    logout_at  timestamp        NULL
+    id         uuid PRIMARY KEY      NOT NULL,
+    board_id   uuid REFERENCES board NOT NULL,
+    account_id uuid                  NULL, -- if null - guest
+    created_at timestamp             NOT NULL,
+    updated_at timestamp             NOT NULL,
+    access     board_access          NOT NULL,
+    logout_at  timestamp             NULL
 );
 COMMENT ON TABLE board_login IS 'Записи входов пользователей и гостей на доску.';
 COMMENT ON COLUMN board_login.id IS 'Уникальный идентификатор.';
@@ -320,13 +314,13 @@ CREATE INDEX idx_board_login_account_id ON board_login (account_id);
 
 CREATE TABLE IF NOT EXISTS notification
 (
-    id         uuid PRIMARY KEY        NOT NULL,
-    created_at timestamp default now() NOT NULL,
-    updated_at timestamp default now() NOT NULL,
+    id         uuid PRIMARY KEY      NOT NULL,
+    created_at timestamp             NOT NULL,
+    updated_at timestamp             NOT NULL,
     deleted_at timestamp,
-    account_id uuid                    NOT NULL REFERENCES account (id),
-    is_read    boolean   DEFAULT false NOT NULL,
-    payload    jsonb                   NOT NULL
+    account_id uuid                  NOT NULL REFERENCES account (id),
+    is_read    boolean DEFAULT false NOT NULL,
+    payload    jsonb                 NOT NULL
 );
 COMMENT ON TABLE notification IS 'Уведомления пользователей.';
 COMMENT ON COLUMN notification.id IS 'Уникальный идентификатор.';
