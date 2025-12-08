@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS account
     name       varchar(255)     NOT NULL,
     created_at timestamp        NOT NULL,
     updated_at timestamp        NOT NULL,
-    deleted_at timestamp,
+    deleted_at timestamp        NULL,
 
     UNIQUE (email)
 );
@@ -34,10 +34,10 @@ COMMENT ON COLUMN account.deleted_at IS 'Время софт удаления.';
 CREATE TABLE IF NOT EXISTS organization
 (
     id         uuid PRIMARY KEY NOT NULL,
-    name       text             NOT NULL,
+    name       VARCHAR(255)     NOT NULL,
     created_at timestamp        NOT NULL,
     updated_at timestamp        NOT NULL,
-    deleted_at timestamp
+    deleted_at timestamp        NULL
 );
 COMMENT ON TABLE organization IS 'Организации, объединяющие пользователей.';
 COMMENT ON COLUMN organization.id IS 'Уникальный идентификатор организации.';
@@ -48,11 +48,11 @@ COMMENT ON COLUMN organization.deleted_at IS 'Время софт удалени
 
 CREATE TABLE IF NOT EXISTS organization_domain
 (
-    id              uuid PRIMARY KEY NOT NULL,
-    organization_id uuid             NOT NULL REFERENCES organization (id),
-    domain          VARCHAR(255)     NOT NULL,
-    created_at      timestamp        NOT NULL,
-    updated_at      timestamp        NOT NULL,
+    id              uuid PRIMARY KEY                  NOT NULL,
+    organization_id uuid REFERENCES organization (id) NOT NULL,
+    domain          VARCHAR(255)                      NOT NULL,
+    created_at      timestamp                         NOT NULL,
+    updated_at      timestamp                         NOT NULL,
 
     UNIQUE (domain)
 );
@@ -67,12 +67,12 @@ CREATE INDEX idx_organization_domain_organization_id ON organization_domain (org
 
 CREATE TABLE IF NOT EXISTS organization_permission
 (
-    id                          uuid PRIMARY KEY NOT NULL,
-    organization_id             uuid             NOT NULL REFERENCES organization (id),
-    auto_join_users_by_domain   boolean          NOT NULL DEFAULT false,
-    allow_members_team_creation boolean          NOT NULL DEFAULT false,
-    created_at                  timestamp        NOT NULL,
-    updated_at                  timestamp        NOT NULL
+    id                          uuid PRIMARY KEY                  NOT NULL,
+    organization_id             uuid REFERENCES organization (id) NOT NULL,
+    auto_join_users_by_domain   boolean DEFAULT false             NOT NULL,
+    allow_members_team_creation boolean DEFAULT false             NOT NULL,
+    created_at                  timestamp                         NOT NULL,
+    updated_at                  timestamp                         NOT NULL
 );
 COMMENT ON TABLE organization_permission IS 'Настройки политик организации.';
 COMMENT ON COLUMN organization_permission.id IS 'Уникальный идентификатор.';
@@ -86,12 +86,12 @@ CREATE INDEX idx_organization_permission_organization_id ON organization_permiss
 
 CREATE TABLE IF NOT EXISTS organization_member
 (
-    id              uuid PRIMARY KEY  NOT NULL,
-    organization_id uuid              NOT NULL REFERENCES organization (id),
-    account_id      uuid              NOT NULL REFERENCES account (id),
-    role            organization_role NOT NULL,
-    created_at      timestamp         NOT NULL,
-    updated_at      timestamp         NOT NULL,
+    id              uuid PRIMARY KEY                  NOT NULL,
+    organization_id uuid REFERENCES organization (id) NOT NULL,
+    account_id      uuid REFERENCES account (id)      NOT NULL,
+    role            organization_role                 NOT NULL,
+    created_at      timestamp                         NOT NULL,
+    updated_at      timestamp                         NOT NULL,
 
     UNIQUE (account_id)
 );
@@ -106,16 +106,18 @@ CREATE INDEX idx_organization_member_organization_id ON organization_member (org
 
 CREATE TABLE IF NOT EXISTS workspace
 (
-    id              uuid PRIMARY KEY NOT NULL,
-    name            text             NOT NULL,
-    account_id      uuid             NULL REFERENCES account (id),
-    organization_id uuid             NULL REFERENCES organization (id),
-    created_at      timestamp        NOT NULL,
-    updated_at      timestamp        NOT NULL,
-    deleted_at      timestamp,
+    id              uuid PRIMARY KEY                  NOT NULL,
+    name            text                              NOT NULL,
+    account_id      uuid REFERENCES account (id)      NULL,
+    organization_id uuid REFERENCES organization (id) NULL,
+    created_at      timestamp                         NOT NULL,
+    updated_at      timestamp                         NOT NULL,
+    deleted_at      timestamp                         NULL,
 
     UNIQUE (account_id),
-    UNIQUE (organization_id)
+    UNIQUE (organization_id),
+
+    CONSTRAINT chk_workspace_owner CHECK ((account_id IS NOT NULL) OR (organization_id IS NOT NULL))
 );
 COMMENT ON TABLE workspace IS 'Рабочие пространство, пользователя или организации.';
 COMMENT ON COLUMN workspace.id IS 'Уникальный идентификатор.';
@@ -128,13 +130,14 @@ COMMENT ON COLUMN workspace.deleted_at IS 'Время софт удаления.
 
 CREATE TABLE IF NOT EXISTS license
 (
-    id           uuid PRIMARY KEY NOT NULL,
-    workspace_id uuid             NOT NULL REFERENCES workspace (id),
-    plan         plan_type        NOT NULL,
-    seats        int              NOT NULL,
-    expires_at   timestamp,
-    created_at   timestamp        NOT NULL,
-    updated_at   timestamp        NOT NULL,
+    id           uuid PRIMARY KEY               NOT NULL,
+    workspace_id uuid REFERENCES workspace (id) NOT NULL,
+    plan         plan_type                      NOT NULL,
+    seats        int                            NOT NULL,
+    expires_at   timestamp                      NULL,
+    created_at   timestamp                      NOT NULL,
+    updated_at   timestamp                      NOT NULL,
+    deleted_at   timestamp                      NULL,
 
     UNIQUE (workspace_id)
 );
@@ -149,13 +152,13 @@ COMMENT ON COLUMN license.updated_at IS 'Время обновления.';
 
 CREATE TABLE IF NOT EXISTS team
 (
-    id                  uuid PRIMARY KEY NOT NULL,
-    workspace_id        uuid             NOT NULL REFERENCES workspace (id),
-    name                varchar(255)     NOT NULL,
-    member_board_access board_access     NOT NULL,
-    created_at          timestamp        NOT NULL,
-    updated_at          timestamp        NOT NULL,
-    deleted_at          timestamp
+    id                  uuid PRIMARY KEY               NOT NULL,
+    workspace_id        uuid REFERENCES workspace (id) NOT NULL,
+    name                varchar(255)                   NOT NULL,
+    member_board_access board_access                   NOT NULL,
+    created_at          timestamp                      NOT NULL,
+    updated_at          timestamp                      NOT NULL,
+    deleted_at          timestamp                      NULL
 );
 COMMENT ON TABLE team IS 'Команды внутри рабочей области.';
 COMMENT ON COLUMN team.id IS 'Уникальный идентификатор.';
@@ -170,12 +173,12 @@ CREATE INDEX idx_team_workspace_id ON team (workspace_id);
 
 CREATE TABLE IF NOT EXISTS team_member
 (
-    id         uuid PRIMARY KEY NOT NULL,
-    team_id    uuid             NOT NULL REFERENCES team (id),
-    account_id uuid             NOT NULL REFERENCES account (id),
-    role       team_role        NOT NULL,
-    created_at timestamp        NOT NULL,
-    updated_at timestamp        NOT NULL,
+    id         uuid PRIMARY KEY             NOT NULL,
+    team_id    uuid REFERENCES team (id)    NOT NULL,
+    account_id uuid REFERENCES account (id) NOT NULL,
+    role       team_role                    NOT NULL,
+    created_at timestamp                    NOT NULL,
+    updated_at timestamp                    NOT NULL,
 
     UNIQUE (team_id, account_id)
 );
@@ -191,9 +194,9 @@ CREATE INDEX idx_team_member_account_id ON team_member (account_id);
 
 CREATE TABLE IF NOT EXISTS team_starred
 (
-    account_id UUID      NOT NULL REFERENCES account (id),
-    team_id    UUID      NOT NULL REFERENCES team (id),
-    created_at timestamp NOT NULL,
+    account_id UUID REFERENCES account (id) NOT NULL,
+    team_id    UUID REFERENCES team (id)    NOT NULL,
+    created_at timestamp                    NOT NULL,
     PRIMARY KEY (account_id, team_id)
 );
 COMMENT ON TABLE team_starred IS 'Хранит информацию о командах, отмеченных пользователем как избранные.';
@@ -205,16 +208,16 @@ CREATE INDEX idx_team_starred_team_id ON team_starred (team_id);
 
 CREATE TABLE IF NOT EXISTS board
 (
-    id                  uuid PRIMARY KEY NOT NULL,
-    public_id           VARCHAR(255)     NOT NULL,
-    name                varchar(255)     NOT NULL,
-    team_id             uuid             NOT NULL REFERENCES team (id),
-    account_id          uuid             NOT NULL REFERENCES account (id),
-    team_access         board_access     NOT NULL,
-    link_access_enabled bool             NOT NULL,
-    created_at          timestamp        NOT NULL,
-    updated_at          timestamp        NOT NULL,
-    deleted_at          timestamp,
+    id                  uuid PRIMARY KEY             NOT NULL,
+    public_id           VARCHAR(255)                 NOT NULL,
+    name                varchar(255)                 NOT NULL,
+    team_id             uuid REFERENCES team (id)    NOT NULL,
+    account_id          uuid REFERENCES account (id) NOT NULL,
+    team_access         board_access                 NOT NULL,
+    link_access_enabled bool DEFAULT false           NOT NULL,
+    created_at          timestamp                    NOT NULL,
+    updated_at          timestamp                    NOT NULL,
+    deleted_at          timestamp                    NULL,
 
     UNIQUE (public_id)
 );
@@ -235,14 +238,14 @@ CREATE INDEX idx_board_account_id ON board (account_id);
 
 CREATE TABLE IF NOT EXISTS board_share_token
 (
-    id         uuid PRIMARY KEY,
-    board_id   uuid         NOT NULL REFERENCES board (id),
-    access     board_access NOT NULL,
-    token      VARCHAR(255) NOT NULL,
-    expires_at timestamp    NULL,
-    created_at timestamp    NOT NULL,
-    updated_at timestamp    NOT NULL,
-    deleted_at timestamp,
+    id         uuid PRIMARY KEY           NOT NULL,
+    board_id   uuid REFERENCES board (id) NOT NULL,
+    access     board_access               NOT NULL,
+    token      VARCHAR(255)               NOT NULL,
+    expires_at timestamp                  NULL,
+    created_at timestamp                  NOT NULL,
+    updated_at timestamp                  NOT NULL,
+    deleted_at timestamp                  NULL,
 
     UNIQUE (token)
 );
@@ -259,9 +262,9 @@ CREATE INDEX idx_board_share_token_board_id ON board_share_token (board_id);
 
 CREATE TABLE IF NOT EXISTS board_starred
 (
-    account_id UUID      NOT NULL REFERENCES account (id),
-    board_id   UUID      NOT NULL REFERENCES board (id),
-    created_at timestamp NOT NULL,
+    account_id UUID REFERENCES account (id) NOT NULL,
+    board_id   UUID REFERENCES board (id)   NOT NULL,
+    created_at timestamp                    NOT NULL,
     PRIMARY KEY (account_id, board_id)
 );
 COMMENT ON TABLE board_starred IS 'Хранит информацию о досках, отмеченных пользователем как избранные.';
@@ -273,12 +276,12 @@ CREATE INDEX idx_board_starred_board_id ON board_starred (board_id);
 
 CREATE TABLE IF NOT EXISTS board_event_journal
 (
-    id            uuid PRIMARY KEY NOT NULL,
-    board_id      uuid REFERENCES board,
-    event_payload TEXT,
-    account_id    uuid             NULL, -- if null - guest
-    created_at    timestamp        NOT NULL,
-    updated_at    timestamp        NOT NULL
+    id            uuid PRIMARY KEY             NOT NULL,
+    board_id      uuid REFERENCES board (id)   NOT NULL,
+    event_payload jsonb                        NOT NULL,
+    account_id    uuid REFERENCES account (id) NULL,
+    created_at    timestamp                    NOT NULL,
+    updated_at    timestamp                    NOT NULL
 );
 COMMENT ON TABLE board_event_journal IS 'Журнал событий на доске.';
 COMMENT ON COLUMN board_event_journal.id IS 'Уникальный идентификатор.';
@@ -292,13 +295,13 @@ CREATE INDEX idx_board_event_journal_board_id ON board_event_journal (board_id);
 
 CREATE TABLE IF NOT EXISTS board_login
 (
-    id         uuid PRIMARY KEY      NOT NULL,
-    board_id   uuid REFERENCES board NOT NULL,
-    account_id uuid                  NULL, -- if null - guest
-    created_at timestamp             NOT NULL,
-    updated_at timestamp             NOT NULL,
-    access     board_access          NOT NULL,
-    logout_at  timestamp             NULL
+    id         uuid PRIMARY KEY             NOT NULL,
+    board_id   uuid REFERENCES board (id)   NOT NULL,
+    account_id uuid REFERENCES account (id) NULL,
+    access     board_access                 NOT NULL,
+    created_at timestamp                    NOT NULL,
+    updated_at timestamp                    NOT NULL,
+    logout_at  timestamp                    NULL
 );
 COMMENT ON TABLE board_login IS 'Записи входов пользователей и гостей на доску.';
 COMMENT ON COLUMN board_login.id IS 'Уникальный идентификатор.';
@@ -314,13 +317,13 @@ CREATE INDEX idx_board_login_account_id ON board_login (account_id);
 
 CREATE TABLE IF NOT EXISTS notification
 (
-    id         uuid PRIMARY KEY      NOT NULL,
-    created_at timestamp             NOT NULL,
-    updated_at timestamp             NOT NULL,
-    deleted_at timestamp,
-    account_id uuid                  NOT NULL REFERENCES account (id),
-    is_read    boolean DEFAULT false NOT NULL,
-    payload    jsonb                 NOT NULL
+    id         uuid PRIMARY KEY             NOT NULL,
+    account_id uuid REFERENCES account (id) NOT NULL,
+    is_read    boolean DEFAULT false        NOT NULL,
+    payload    jsonb                        NOT NULL,
+    created_at timestamp                    NOT NULL,
+    updated_at timestamp                    NOT NULL,
+    deleted_at timestamp                    NULL
 );
 COMMENT ON TABLE notification IS 'Уведомления пользователей.';
 COMMENT ON COLUMN notification.id IS 'Уникальный идентификатор.';
