@@ -238,19 +238,21 @@ CREATE INDEX IF NOT EXISTS idx_board_account_id ON board (account_id);
 
 CREATE TABLE IF NOT EXISTS board_share_token
 (
-    id         uuid PRIMARY KEY           NOT NULL,
-    board_id   uuid REFERENCES board (id) NOT NULL,
-    access     board_access               NOT NULL,
-    token      VARCHAR(255)               NOT NULL,
-    expires_at timestamp                  NULL,
-    created_at timestamp                  NOT NULL,
-    updated_at timestamp                  NOT NULL,
-    deleted_at timestamp                  NULL,
+    id         uuid PRIMARY KEY             NOT NULL,
+    board_id   uuid REFERENCES board (id)   NOT NULL,
+    account_id uuid REFERENCES account (id) NOT NULL,
+    access     board_access                 NOT NULL,
+    token      VARCHAR(255)                 NOT NULL,
+    expires_at timestamp                    NULL,
+    created_at timestamp                    NOT NULL,
+    updated_at timestamp                    NOT NULL,
+    deleted_at timestamp                    NULL,
 
     UNIQUE (token)
 );
 COMMENT ON TABLE board_share_token IS 'Токены для доступа к доске.';
 COMMENT ON COLUMN board_share_token.board_id IS 'Идентификатор доски, к которой относится ссылка.';
+COMMENT ON COLUMN board_share_token.account_id IS 'Идентификатор аккаунта, кто сгенерировал токен доступа.';
 COMMENT ON COLUMN board_share_token.access IS 'Уровень доступа по данной ссылке.';
 COMMENT ON COLUMN board_share_token.token IS 'Секретный токен доступа (query параметр).';
 COMMENT ON COLUMN board_share_token.expires_at IS 'Время действия ссылки, бесконечно - если не задано.';
@@ -259,6 +261,7 @@ COMMENT ON COLUMN board_share_token.updated_at IS 'Время обновлени
 COMMENT ON COLUMN board_share_token.deleted_at IS 'Отключение/ревокация ссылки.';
 
 CREATE INDEX IF NOT EXISTS idx_board_share_token_board_id ON board_share_token (board_id);
+CREATE INDEX IF NOT EXISTS idx_board_share_token_account_id ON board_share_token (account_id);
 
 CREATE TABLE IF NOT EXISTS board_starred
 (
