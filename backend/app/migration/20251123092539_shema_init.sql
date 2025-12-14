@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS team_member
     UNIQUE (team_id, account_id)
 );
 COMMENT ON TABLE team_member IS 'Участники команд и их роли.';
-COMMENT ON COLUMN team.id IS 'Уникальный идентификатор.';
+COMMENT ON COLUMN team_member.id IS 'Уникальный идентификатор.';
 COMMENT ON COLUMN team_member.team_id IS 'Идентификатор команды.';
 COMMENT ON COLUMN team_member.account_id IS 'Идентификатор пользователя.';
 COMMENT ON COLUMN team_member.role IS 'Роль пользователя в команде.';
@@ -235,6 +235,27 @@ COMMENT ON COLUMN board.deleted_at IS 'Время софт удаления.';
 
 CREATE INDEX IF NOT EXISTS idx_board_team_id ON board (team_id);
 CREATE INDEX IF NOT EXISTS idx_board_account_id ON board (account_id);
+
+CREATE TABLE IF NOT EXISTS board_member
+(
+    id         uuid PRIMARY KEY             NOT NULL,
+    board_id   uuid REFERENCES board (id)   NOT NULL,
+    account_id uuid REFERENCES account (id) NOT NULL,
+    access     board_access                 NOT NULL,
+    created_at timestamp                    NOT NULL,
+    updated_at timestamp                    NOT NULL,
+
+    UNIQUE (board_id, account_id)
+);
+COMMENT ON TABLE board_member IS 'Участники доски и их роли.';
+COMMENT ON COLUMN board_member.id IS 'Уникальный идентификатор.';
+COMMENT ON COLUMN board_member.board_id IS 'Идентификатор доски.';
+COMMENT ON COLUMN board_member.account_id IS 'Идентификатор пользователя.';
+COMMENT ON COLUMN board_member.access IS 'Доступ пользователя в доске.';
+COMMENT ON COLUMN board_member.created_at IS 'Время создания.';
+COMMENT ON COLUMN board_member.updated_at IS 'Время обновления.';
+
+CREATE INDEX IF NOT EXISTS idx_board_member_account_id ON board_member (account_id);
 
 CREATE TABLE IF NOT EXISTS board_share_token
 (
