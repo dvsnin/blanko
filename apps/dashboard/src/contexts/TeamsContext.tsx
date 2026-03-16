@@ -11,10 +11,6 @@ import { VALID_ROLES } from "../constants/roles";
 import { pickAvailableColor } from "../utils/colors";
 import initialTeams from "../components/teamsData";
 
-/* ------------------------------------------------------------------ */
-/*  Context value shape                                                */
-/* ------------------------------------------------------------------ */
-
 interface TeamsContextValue {
   /** All teams (filtered to valid roles). */
   teams: Team[];
@@ -25,7 +21,6 @@ interface TeamsContextValue {
   /** Boards belonging to the active team. */
   activeBoards: Board[];
 
-  /* ---- Mutations ---- */
   setActiveTeamId: (id: string | null) => void;
   createTeam: (opts: { name: string }) => void;
   renameTeam: (teamId: string, newName: string) => void;
@@ -38,10 +33,6 @@ interface TeamsContextValue {
 }
 
 const TeamsContext = createContext<TeamsContextValue | null>(null);
-
-/* ------------------------------------------------------------------ */
-/*  Provider                                                           */
-/* ------------------------------------------------------------------ */
 
 interface TeamsProviderProps {
   children: ReactNode;
@@ -69,16 +60,12 @@ export function TeamsProvider({ children, currentUser = "dvsnin" }: TeamsProvide
 
   const [activeTeamId, setActiveTeamId] = useState<string | null>(defaultTeamId);
 
-  /* ---- Derived values ---- */
-
   const activeTeam = useMemo(
     () => (activeTeamId ? teams.find((t) => t.id === activeTeamId) ?? null : null),
     [teams, activeTeamId],
   );
 
   const activeBoards = useMemo(() => activeTeam?.boards ?? [], [activeTeam]);
-
-  /* ---- Team mutations ---- */
 
   const createTeam = useCallback(
     ({ name }: { name: string }) => {
@@ -138,8 +125,6 @@ export function TeamsProvider({ children, currentUser = "dvsnin" }: TeamsProvide
     );
   }, []);
 
-  /* ---- Board mutations ---- */
-
   const createBoard = useCallback(
     (title = "Новая доска"): Board | null => {
       if (!activeTeamId) return null;
@@ -188,8 +173,6 @@ export function TeamsProvider({ children, currentUser = "dvsnin" }: TeamsProvide
     );
   }, []);
 
-  /* ---- Context value (stable reference via useMemo) ---- */
-
   const value = useMemo<TeamsContextValue>(
     () => ({
       teams,
@@ -224,10 +207,6 @@ export function TeamsProvider({ children, currentUser = "dvsnin" }: TeamsProvide
 
   return <TeamsContext.Provider value={value}>{children}</TeamsContext.Provider>;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Hook                                                               */
-/* ------------------------------------------------------------------ */
 
 export function useTeams(): TeamsContextValue {
   const ctx = useContext(TeamsContext);

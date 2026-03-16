@@ -5,9 +5,3 @@ export const VALID_ROLES: ReadonlySet<TeamRole> = new Set<TeamRole>([
   "admin",
   "member",
 ]);
-
-export const TEAM_ROLES = {
-  OWNER: "owner" as const,
-  ADMIN: "admin" as const,
-  MEMBER: "member" as const,
-};

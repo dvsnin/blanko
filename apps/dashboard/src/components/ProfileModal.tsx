@@ -6,10 +6,6 @@ interface ProfileModalProps {
   email?: string;
   onClose: () => void;
   onSave: (newName: string) => void;
-  /** Unused legacy props kept for backwards compatibility */
-  teams?: unknown[];
-  activeTeamId?: string | null;
-  onOpenTeam?: (teamId: string) => void;
 }
 
 export default function ProfileModal({ name = "", email = "", onClose, onSave }: ProfileModalProps) {

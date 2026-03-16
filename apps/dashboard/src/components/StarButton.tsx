@@ -1,13 +1,5 @@
-import React from "react";
 import "./StarButton.css";
 
-/*
-  StarButton — Miro-like behaviour:
-   - shows plain glyph (★/☆) by default;
-   - reveals an interactive overlay button on hover or focus (so the chrome appears only on hover/focus);
-   - overlay button handles clicks and keyboard (Enter/Space) and calls onToggle.
-   - isStarred controls glyph; visual "filled" appearance handled by CSS.
-*/
 export default function StarButton({ isStarred = false, onToggle, size = 36, variant = "grid", ariaLabel }) {
     const wrapperClass = `star-wrap ${variant === "list" ? "star-wrap--list" : "star-wrap--grid"} ${isStarred ? "is-starred" : "is-not-starred"}`;
 

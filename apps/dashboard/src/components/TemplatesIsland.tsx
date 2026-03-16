@@ -1,14 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import "./TemplatesIsland.css";
-
-/*
-  TemplatesIsland — обновлённая:
-  - горизонтальная прокрутка внутри острова
-  - названия отображаются только внутри превью (не повторяются под карточкой)
-  - добавлен заголовок слева и "View all templates →" справа
-  - props:
-      templates, itemWidth, gap, viewAllHref (optional), onViewAll (optional)
-*/
 
 const DEFAULT_TEMPLATES = [
     { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
@@ -46,36 +37,6 @@ export default function TemplatesIsland({
                                             onTemplateClick = null,
                                         }: TemplatesIslandProps) {
     const innerRef = useRef(null);
-    const [maxVisible, setMaxVisible] = useState(templates.length);
-
-    useEffect(() => {
-        const el = innerRef.current;
-        if (!el) return;
-
-        function calculate() {
-            const containerWidth = el.clientWidth || el.getBoundingClientRect().width;
-            const count = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
-            setMaxVisible(Math.min(count, templates.length));
-        }
-
-        calculate();
-
-        let ro = null;
-        if (typeof ResizeObserver !== "undefined") {
-            ro = new ResizeObserver(() => calculate());
-            ro.observe(el);
-        } else {
-            window.addEventListener("resize", calculate);
-        }
-
-        return () => {
-            if (ro) ro.disconnect();
-            else window.removeEventListener("resize", calculate);
-        };
-    }, [templates, itemWidth, gap]);
-
-    // show all templates but only render visible count in the tight layout calculation above
-    const visibleTemplates = templates.slice(0, templates.length); // we allow scrolling so render all
 
     return (
         <section className="templates-island ti-island" aria-label="Templates island">
@@ -100,7 +61,7 @@ export default function TemplatesIsland({
 
                 <div className="templates-row-wrap">
                     <ul className="templates-row ti-row" role="list">
-                        {visibleTemplates.map((t, idx) => {
+                        {templates.map((t, idx) => {
                             const variant = t.variant || "";
                             const legacyVariant =
                                 variant.startsWith("template-thumb--") ? variant : `template-thumb--${variant}`.replace(/template-thumb--thumb-/, "template-thumb--");

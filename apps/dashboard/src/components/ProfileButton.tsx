@@ -1,11 +1,5 @@
-import React from "react";
 import "./ProfileMenu.css";
 
-/*
-  ProfileButton (presentational)
-  - onMouseDown: stopPropagation to avoid document mousedown handlers closing the menu
-  - onClick: toggles menu (handled by parent)
-*/
 export default function ProfileButton({ userInitial = "U", onClick, ariaLabel = "Profile" }) {
     return (
         <button

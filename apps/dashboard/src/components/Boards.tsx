@@ -19,10 +19,6 @@ import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
 import { COLOR_KEYS, assignColors } from "../utils/colors";
 
-/* ------------------------------------------------------------------ */
-/*  Helper                                                             */
-/* ------------------------------------------------------------------ */
-
 function openBoardWindow(board: { id: number }) {
   const url = `/app/board/${encodeURIComponent(board.id)}`;
   const w = window.open(url, "_blank");
@@ -32,10 +28,6 @@ function openBoardWindow(board: { id: number }) {
   }
   try { w.focus(); } catch {}
 }
-
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
 
 export default function Boards() {
   const {
@@ -51,46 +43,35 @@ export default function Boards() {
 
   const { user, setUser, userInitial } = useUser();
 
-  // Profile + topbar state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Board view
   const [view, setView] = useState<"grid" | "list">("grid");
   const [menuBoardId, setMenuBoardId] = useState<number | null>(null);
   const [starredIds, setStarredIds] = useState<Set<number>>(() => new Set());
 
-  // Toast
   const { toastMessage, toastVisible, showToast } = useToast();
 
-  // Portal/menu refs
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuAnchorRef = useRef<HTMLElement | null>(null);
   const menuCardRef = useRef<HTMLElement | null>(null);
 
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const [menuPlacement, setMenuPlacement] = useState("left");
-  const [shiftMenuLeft, setShiftMenuLeft] = useState(false);
 
-  // Notifications
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [unreadCount] = useState(0);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const notificationsAnchorRef = useRef<HTMLElement | null>(null);
 
-  // Dialogs
   const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: number } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
-  /* ---- Board list with colors ---- */
   const boards = useMemo(() => assignColors(activeBoards), [activeBoards]);
 
-  /* ---- Capabilities ---- */
   const canCreateBoard = Boolean(activeTeamId);
   const userHasTeams = teams.length > 0;
   const selectedTeamHasBoards = Boolean(activeTeam && boards.length > 0);
-
-  /* ---- Handlers ---- */
 
   const handleStarClick = (board: { id: number }) => {
     setStarredIds((prev) => {
@@ -159,8 +140,6 @@ export default function Boards() {
     closeDialog();
   };
 
-  /* ---- Menu logic ---- */
-
   function closeMenu() {
     setMenuBoardId(null);
     menuCardRef.current = null;
@@ -189,7 +168,6 @@ export default function Boards() {
     });
   };
 
-  // compute menu placement & style
   useLayoutEffect(() => {
     if (!menuBoardId) { setMenuStyle(null); return; }
     let raf = 0;
@@ -254,7 +232,6 @@ export default function Boards() {
     };
   }, [menuBoardId]);
 
-  // click outside & escape handling
   useEffect(() => {
     function isEventInside(event: Event, element: HTMLElement | null) {
       if (!event || !element) return false;
@@ -296,8 +273,6 @@ export default function Boards() {
     };
   }, [menuBoardId, isNotificationsOpen]);
 
-  /* ---- Board context menu items (shared between grid and list) ---- */
-
   const renderContextMenu = (b: { id: number; title: string }, variant: "grid" | "list") => (
     <div
       ref={menuRef}
@@ -317,11 +292,8 @@ export default function Boards() {
     </div>
   );
 
-  /* ---- Render ---- */
-
   return (
     <div className="boards-page">
-      {/* TOP BAR */}
       <header className="topbar">
         <div className="topbar-left">
           <div className="topbar-logo-wrap">
@@ -362,7 +334,6 @@ export default function Boards() {
 
       <div className="topbar-divider" />
 
-      {/* TEMPLATE ISLAND */}
       <TemplatesIsland onTemplateClick={handleTemplateClick} />
 
       <div className="templates-bottom-divider" />
@@ -426,14 +397,13 @@ export default function Boards() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
-                                menuAnchorRef.current = e.currentTarget;
-                                setMenuPlacement("left");
-                                setShiftMenuLeft(false);
-                                handleMenuToggle(b.id);
+                menuAnchorRef.current = e.currentTarget;
+                setMenuPlacement("left");
+                handleMenuToggle(b.id);
                               }}
                             />
                             {menuBoardId === b.id && (
-                              <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
+                              <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
                                 {renderContextMenu(b, "grid")}
                               </MenuPortal>
                             )}
@@ -507,7 +477,7 @@ export default function Boards() {
                           />
 
                           {menuBoardId === b.id && (
-                            <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} shiftLeft={shiftMenuLeft} onClose={closeMenu}>
+                            <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
                               {renderContextMenu(b, "list")}
                             </MenuPortal>
                           )}
@@ -523,7 +493,6 @@ export default function Boards() {
         {toastVisible && <div className="boards-toast">{toastMessage}</div>}
       </div>
 
-      {/* Rename/Delete modals */}
       {dialog?.type === "rename" && (
         <div
           className="boards-modal-backdrop"
@@ -583,17 +552,10 @@ export default function Boards() {
         </div>
       )}
 
-      {/* Profile modal */}
       {isProfileModalOpen && (
         <ProfileModal
           name={user.name}
           email={user.email}
-          teams={teams}
-          activeTeamId={activeTeamId}
-          onOpenTeam={(teamId: string) => {
-            setActiveTeamId(teamId);
-            setIsProfileModalOpen(false);
-          }}
           onClose={() => setIsProfileModalOpen(false)}
           onSave={(newName: string) => {
             setUser({ ...user, name: newName });
