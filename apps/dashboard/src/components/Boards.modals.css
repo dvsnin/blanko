@@ -233,6 +233,7 @@
 .confirm-portal-host-child { position: relative; width: 100%; height: 100%; }
 
 /* ===== Team settings (scoped) ===== */
+.boards-modal.team-settings-modal { width: min(1150px, 96%); max-width: 1150px; }
 .team-settings-modal--fixed { height: min(72vh, 680px); max-height: 72vh; }
 .team-settings-body { display: flex; height: calc(100% - 72px); min-height: 360px; box-sizing: border-box; }
 .team-settings-sidebar { flex: 0 0 200px; width: 200px; border-right: 1px solid #f0f2f6; background: #fbfcfd; padding: 18px 12px; box-sizing: border-box; }
@@ -263,6 +264,9 @@
 }
 
 /* ===== Responsive ===== */
+@media (max-width: 1150px) {
+    .boards-modal.team-settings-modal { width: calc(100% - 32px); }
+}
 @media (max-width: 920px) {
     .boards-modal { width: calc(100% - 32px); }
     .team-settings-modal--fixed { height: auto; max-height: calc(100vh - 80px); }

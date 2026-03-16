@@ -10,7 +10,7 @@ import ProfileMenu from "./ProfileMenu";
 import ProfileModal from "./ProfileModal";
 import MenuPortal from "./MenuPortal";
 import NotificationsPanel from "./NotificationsPanel";
-import TemplatesIsland from "./TemplatesIsland";
+import TemplatesIsland, { Template } from "./TemplatesIsland";
 import NotificationButton from "./NotificationButton";
 import ProfileButton from "./ProfileButton";
 import ViewToggle from "./ViewToggle";
@@ -106,6 +106,17 @@ export default function Boards() {
     const newBoard = createBoard("Новая доска");
     if (newBoard) {
       showToast("Доска создана");
+      openBoardWindow(newBoard);
+    }
+  };
+
+  const handleTemplateClick = (template: Template) => {
+    const title = template.id === "tpl-blank"
+      ? "Новая доска"
+      : `${template.title} (шаблон)`;
+    const newBoard = createBoard(title);
+    if (newBoard) {
+      showToast(`Доска создана из шаблона «${template.title}»`);
       openBoardWindow(newBoard);
     }
   };
@@ -352,7 +363,7 @@ export default function Boards() {
       <div className="topbar-divider" />
 
       {/* TEMPLATE ISLAND */}
-      <TemplatesIsland />
+      <TemplatesIsland onTemplateClick={handleTemplateClick} />
 
       <div className="templates-bottom-divider" />
 

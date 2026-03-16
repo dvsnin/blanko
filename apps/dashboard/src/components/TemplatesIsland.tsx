@@ -20,13 +20,31 @@ const DEFAULT_TEMPLATES = [
     { id: "tpl-study", title: "Study 2", subtype: "Template", variant: "thumb-study" },
 ];
 
+export interface Template {
+    id: string;
+    title: string;
+    subtype?: string;
+    variant?: string;
+    badge?: string;
+}
+
+interface TemplatesIslandProps {
+    templates?: Template[];
+    itemWidth?: number;
+    gap?: number;
+    viewAllHref?: string;
+    onViewAll?: (() => void) | null;
+    onTemplateClick?: ((template: Template) => void) | null;
+}
+
 export default function TemplatesIsland({
                                             templates = DEFAULT_TEMPLATES,
                                             itemWidth = 180,
                                             gap = 22,
                                             viewAllHref = "#/templates",
                                             onViewAll = null,
-                                        }) {
+                                            onTemplateClick = null,
+                                        }: TemplatesIslandProps) {
     const innerRef = useRef(null);
     const [maxVisible, setMaxVisible] = useState(templates.length);
 
@@ -98,7 +116,7 @@ export default function TemplatesIsland({
                                         className="template-thumb-button ti-thumb-button"
                                         aria-label={`Открыть шаблон: ${t.title}`}
                                         onClick={() => {
-                                            console.log("Template click:", t.id);
+                                            onTemplateClick?.(t);
                                         }}
                                     >
                                         <div className={thumbClass}>
