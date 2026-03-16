@@ -1,13 +1,5 @@
-import React from "react";
 import "./ViewToggle.css";
 
-/*
- ViewToggle
- - props:
-    view: "grid" | "list"
-    setView: (v) => void
- - Renders two icon buttons (grid / list) with accessible labels and active state
-*/
 export default function ViewToggle({ view, setView }) {
     return (
         <div className="view-toggle" role="toolbar" aria-label="View toggle">

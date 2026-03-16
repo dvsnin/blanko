@@ -1,15 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-/*
-MenuPortal (updated)
-- Positions menu fixed in the viewport (same as before).
-- Adds "auto-close on mouseleave" behaviour:
-  when isOpen === true, we watch hover state of both the anchor (anchorRef.current)
-  and the portal host (hostRef.current). If the pointer leaves BOTH and stays out
-  for a short timeout, we call onClose() to request closing the menu.
-- Exposes onClose prop (optional) so parent can close menu and also blur the anchor.
-*/
 export default function MenuPortal({
                                        anchorRef,
                                        isOpen,
@@ -121,7 +112,6 @@ export default function MenuPortal({
         window.addEventListener("resize", onUpdate);
         window.addEventListener("scroll", onUpdate, true);
 
-        // --- auto-close on mouseleave logic ---
         let anchorHovered = false;
         let hostHovered = false;
 
@@ -179,7 +169,6 @@ export default function MenuPortal({
             host.removeEventListener("mouseenter", onHostEnter);
             host.removeEventListener("mouseleave", onHostLeave);
         };
-        // --- end auto-close logic ---
     }, [isOpen, anchorRef, placement, shiftLeft, onClose]);
 
     if (!isOpen) return null;

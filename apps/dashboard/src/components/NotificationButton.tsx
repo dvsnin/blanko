@@ -1,14 +1,5 @@
-import React from "react";
 import "./NotificationButton.css";
 
-/*
-  NotificationButton
-  - purely presentational
-  - props:
-      unreadCount: number
-      onClick: () => void
-      ariaLabel?: string
-*/
 export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel = "Notifications" }) {
     return (
         <button

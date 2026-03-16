@@ -1,12 +1,5 @@
-import React, { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import "./NotificationsPanel.css";
-
-/*
-  NotificationsPanel (minimal, updated)
-  - Temporarily shows only header, filter control and EMPTY state
-  - Removed list items, per-item popup and helper paragraph
-  - Empty icon is visually centered
-*/
 
 const NotificationsPanel = forwardRef(function NotificationsPanel({ isOpen, onClose }, ref) {
     const [filterOpen, setFilterOpen] = useState(false);
