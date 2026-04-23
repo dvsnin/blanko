@@ -1,7 +1,7 @@
 DOCKER_COMPOSE = docker compose -f deploy/docker-compose.yml
 
 # list of frontend apps to build (adjust package names or paths if needed)
-FRONTEND_FILTERS = @blanko/dashboard @blanko/canvas
+FRONTEND_FILTERS = @blanko/dashboard
 
 .PHONY: up down build-frontend deps
 
