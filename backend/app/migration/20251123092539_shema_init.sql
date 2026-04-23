@@ -9,9 +9,6 @@ COMMENT ON TYPE plan_type IS 'Тип тарифа.';
 CREATE TYPE team_role AS ENUM ('owner', 'admin', 'member');
 COMMENT ON TYPE team_role IS 'Роль пользователя в команде.';
 
-CREATE TYPE organization_role AS ENUM ('admin', 'member');
-COMMENT ON TYPE organization_role IS 'Роль пользователя в организации.';
-
 CREATE TABLE IF NOT EXISTS account
 (
     id         uuid PRIMARY KEY NOT NULL,
@@ -31,99 +28,23 @@ COMMENT ON COLUMN account.created_at IS 'Время создания запис�
 COMMENT ON COLUMN account.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN account.deleted_at IS 'Время софт удаления.';
 
-CREATE TABLE IF NOT EXISTS organization
-(
-    id         uuid PRIMARY KEY NOT NULL,
-    name       VARCHAR(255)     NOT NULL,
-    created_at timestamp        NOT NULL,
-    updated_at timestamp        NOT NULL,
-    deleted_at timestamp        NULL
-);
-COMMENT ON TABLE organization IS 'Организации, объединяющие пользователей.';
-COMMENT ON COLUMN organization.id IS 'Уникальный идентификатор организации.';
-COMMENT ON COLUMN organization.name IS 'Название организации.';
-COMMENT ON COLUMN organization.created_at IS 'Время создания.';
-COMMENT ON COLUMN organization.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN organization.deleted_at IS 'Время софт удаления.';
-
-CREATE TABLE IF NOT EXISTS organization_domain
-(
-    id              uuid PRIMARY KEY                  NOT NULL,
-    organization_id uuid REFERENCES organization (id) NOT NULL,
-    domain          VARCHAR(255)                      NOT NULL,
-    created_at      timestamp                         NOT NULL,
-    updated_at      timestamp                         NOT NULL,
-
-    UNIQUE (domain)
-);
-COMMENT ON TABLE organization_domain IS 'Домены, привязанные к организации.';
-COMMENT ON COLUMN organization_domain.id IS 'Уникальный идентификатор записи домена.';
-COMMENT ON COLUMN organization_domain.organization_id IS 'Идентификатор организации.';
-COMMENT ON COLUMN organization_domain.domain IS 'Домен, принадлежащий организации.';
-COMMENT ON COLUMN organization_domain.created_at IS 'Время создания.';
-COMMENT ON COLUMN organization_domain.updated_at IS 'Время обновления.';
-
-CREATE INDEX IF NOT EXISTS idx_organization_domain_organization_id ON organization_domain (organization_id);
-
-CREATE TABLE IF NOT EXISTS organization_permission
-(
-    id                          uuid PRIMARY KEY                  NOT NULL,
-    organization_id             uuid REFERENCES organization (id) NOT NULL,
-    auto_join_users_by_domain   boolean DEFAULT false             NOT NULL,
-    allow_members_team_creation boolean DEFAULT false             NOT NULL,
-    created_at                  timestamp                         NOT NULL,
-    updated_at                  timestamp                         NOT NULL
-);
-COMMENT ON TABLE organization_permission IS 'Настройки политик организации.';
-COMMENT ON COLUMN organization_permission.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN organization_permission.organization_id IS 'Идентификатор организации.';
-COMMENT ON COLUMN organization_permission.auto_join_users_by_domain IS 'Автоматически присоединять пользователей к организации с корпоративным доменом.';
-COMMENT ON COLUMN organization_permission.allow_members_team_creation IS 'Разрешить пользователям создавать команды.';
-COMMENT ON COLUMN organization_permission.created_at IS 'Время создания.';
-COMMENT ON COLUMN organization_permission.updated_at IS 'Время обновления.';
-
-CREATE INDEX IF NOT EXISTS idx_organization_permission_organization_id ON organization_permission (organization_id);
-
-CREATE TABLE IF NOT EXISTS organization_member
-(
-    id              uuid PRIMARY KEY                  NOT NULL,
-    organization_id uuid REFERENCES organization (id) NOT NULL,
-    account_id      uuid REFERENCES account (id)      NOT NULL,
-    role            organization_role                 NOT NULL,
-    created_at      timestamp                         NOT NULL,
-    updated_at      timestamp                         NOT NULL,
-
-    UNIQUE (account_id)
-);
-COMMENT ON TABLE organization_member IS 'Участники организации и их роли.';
-COMMENT ON COLUMN organization_member.organization_id IS 'Идентификатор организации.';
-COMMENT ON COLUMN organization_member.account_id IS 'Идентификатор пользователя.';
-COMMENT ON COLUMN organization_member.role IS 'Роль пользователя в организации.';
-COMMENT ON COLUMN organization_member.created_at IS 'Время создания.';
-COMMENT ON COLUMN organization_member.updated_at IS 'Время обновления.';
-
-CREATE INDEX IF NOT EXISTS idx_organization_member_organization_id ON organization_member (organization_id);
-
 CREATE TABLE IF NOT EXISTS workspace
 (
     id              uuid PRIMARY KEY                  NOT NULL,
     name            text                              NOT NULL,
-    account_id      uuid REFERENCES account (id)      NULL,
-    organization_id uuid REFERENCES organization (id) NULL,
+    account_id      uuid REFERENCES account (id)      NOT NULL,
+    is_organization boolean DEFAULT false             NOT NULL,
     created_at      timestamp                         NOT NULL,
     updated_at      timestamp                         NOT NULL,
     deleted_at      timestamp                         NULL,
 
-    UNIQUE (account_id),
-    UNIQUE (organization_id),
-
-    CONSTRAINT chk_workspace_owner CHECK ((account_id IS NOT NULL) OR (organization_id IS NOT NULL))
+    UNIQUE (account_id)
 );
-COMMENT ON TABLE workspace IS 'Рабочие пространство, пользователя или организации.';
+COMMENT ON TABLE workspace IS 'Рабочие пространства пользователей. Могут быть конвертированы в организации (флаг is_organization) для применения расширенных политик.';
 COMMENT ON COLUMN workspace.id IS 'Уникальный идентификатор.';
 COMMENT ON COLUMN workspace.name IS 'Название рабочей области.';
-COMMENT ON COLUMN workspace.account_id IS 'Владелец рабочей области, если пространство личное.';
-COMMENT ON COLUMN workspace.organization_id IS 'Идентификатор организации, если пространство организации.';
+COMMENT ON COLUMN workspace.account_id IS 'Владелец рабочей области (аккаунт, создавший workspace).';
+COMMENT ON COLUMN workspace.is_organization IS 'Признак: workspace сконвертирован в организацию и применяет расширенные политики (домены, права и пр.).';
 COMMENT ON COLUMN workspace.created_at IS 'Время создания.';
 COMMENT ON COLUMN workspace.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN workspace.deleted_at IS 'Время софт удаления.';

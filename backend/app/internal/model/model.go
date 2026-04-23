@@ -15,12 +15,13 @@ type Account struct {
 	UpdatedAt time.Time
 }
 
-// Workspace — личное рабочее пространство пользователя (или организации).
+// Workspace — рабочее пространство пользователя. Может быть конвертировано
+// в организацию (IsOrganization) для применения расширенных политик.
 type Workspace struct {
 	ID             uuid.UUID
 	Name           string
-	AccountID      *uuid.UUID
-	OrganizationID *uuid.UUID
+	AccountID      uuid.UUID
+	IsOrganization bool
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }

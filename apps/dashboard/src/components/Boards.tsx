@@ -48,7 +48,19 @@ export default function Boards() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  const [view, setView] = useState<"grid" | "list">("grid");
+  // Режим отображения досок (grid/list) сохраняем в localStorage,
+  // чтобы не сбрасывался на grid после перезагрузки.
+  const [view, setView] = useState<"grid" | "list">(() => {
+    try {
+      const saved = localStorage.getItem("boards.view");
+      return saved === "list" ? "list" : "grid";
+    } catch {
+      return "grid";
+    }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("boards.view", view); } catch { /* ignore */ }
+  }, [view]);
   const [menuBoardId, setMenuBoardId] = useState<string | null>(null);
 
   // Фильтры / сортировка панели "boards-toolbar".

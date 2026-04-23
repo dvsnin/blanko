@@ -10,9 +10,7 @@
   "scripts": {
     "bootstrap": "pnpm -w install",
     "dev:dashboard": "pnpm --filter @blanko/dashboard dev",
-    "dev:canvas": "pnpm --filter @blanko/canvas dev",
     "build:dashboard": "pnpm --filter @blanko/dashboard build",
-    "build:canvas": "pnpm --filter @blanko/canvas build",
     "build:all": "pnpm -w run -r build"
   },
   "devDependencies": {

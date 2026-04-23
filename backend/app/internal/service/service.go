@@ -89,7 +89,7 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 		if errors.Is(err, repository.ErrNotFound) {
 			ws = &model.Workspace{
 				Name:      acc.Name,
-				AccountID: &acc.ID,
+				AccountID: acc.ID,
 			}
 			if err := wsRepo.Create(ctx, ws); err != nil {
 				return fmt.Errorf("create workspace: %w", err)

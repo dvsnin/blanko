@@ -30,8 +30,8 @@ func (r *WorkspaceRepo) Create(ctx context.Context, w *model.Workspace) error {
 	w.UpdatedAt = now
 
 	b := psql.Insert("workspace").
-		Columns("id", "name", "account_id", "organization_id", "created_at", "updated_at").
-		Values(w.ID, w.Name, w.AccountID, w.OrganizationID, w.CreatedAt, w.UpdatedAt)
+		Columns("id", "name", "account_id", "is_organization", "created_at", "updated_at").
+		Values(w.ID, w.Name, w.AccountID, w.IsOrganization, w.CreatedAt, w.UpdatedAt)
 	if _, err := execBuilder(ctx, r.db, b); err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (r *WorkspaceRepo) Create(ctx context.Context, w *model.Workspace) error {
 
 // GetByAccountID возвращает личное пространство пользователя.
 func (r *WorkspaceRepo) GetByAccountID(ctx context.Context, accountID uuid.UUID) (*model.Workspace, error) {
-	b := psql.Select("id", "name", "account_id", "organization_id", "created_at", "updated_at").
+	b := psql.Select("id", "name", "account_id", "is_organization", "created_at", "updated_at").
 		From("workspace").
 		Where("account_id = ? AND deleted_at IS NULL", accountID).
 		Limit(1)
@@ -50,7 +50,7 @@ func (r *WorkspaceRepo) GetByAccountID(ctx context.Context, accountID uuid.UUID)
 		return nil, err
 	}
 	var w model.Workspace
-	if err := row.Scan(&w.ID, &w.Name, &w.AccountID, &w.OrganizationID, &w.CreatedAt, &w.UpdatedAt); err != nil {
+	if err := row.Scan(&w.ID, &w.Name, &w.AccountID, &w.IsOrganization, &w.CreatedAt, &w.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}

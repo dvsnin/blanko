@@ -109,9 +109,8 @@ backend/app/public/
 # keep a .gitkeep if you want the directory in repo:
 !backend/app/static/.gitkeep
 !backend/app/public/.gitkeep
-# canvas/ — это рукописный исходник (tldraw mock), а не build artifact:
+# canvas/ — рукописный tldraw-исходник, не build artifact:
 !backend/app/static/canvas/
-backend/app/static/canvas/realtime/
 
 ########################
 # Go (backend)
