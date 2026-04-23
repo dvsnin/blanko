@@ -99,14 +99,23 @@ services:
       # куки и режим за прокси
       - --cookie-secret=1234567890123456abcd1234abcd5678
       - --cookie-secure=false
-      - --cookie-refresh=1h
-      - --cookie-expire=24h
+      # cookie_refresh должен быть МЕНЬШЕ access_token lifespan в Keycloak (сейчас 15m),
+      # чтобы oauth2-proxy успевал проактивно рефрешить access_token по refresh_token.
+      - --cookie-refresh=4m
+      # общий срок жизни сессионной куки (refresh_token). В Keycloak SSO idle = 30 дней.
+      - --cookie-expire=720h
       - --skip-jwt-bearer-tokens=true
       - --reverse-proxy=true
       - --skip-provider-button=true
 
+      # разрешаем редирект на Keycloak после /oauth2/sign_out?rd=...
+      - --whitelist-domain=keycloak.localhost
+
       # прокидываем заголовки в backend
       - --pass-user-headers=true
+      # прокидываем id_token в Authorization: Bearer <id_token>,
+      # нужен backend'у для id_token_hint при RP-initiated logout (Keycloak пропустит confirm)
+      - --pass-authorization-header=true
       #- --pass-access-token=true
 
     labels:

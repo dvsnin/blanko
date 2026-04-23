@@ -20,7 +20,7 @@ export default function WorkspaceHeader() {
     .slice(0, 2);
 
   function shortName(name: string) {
-    if (!name) return "Workspace";
+    if (!name) return "Рабочее пространство";
     if (name.length <= 40) return name;
     const parts = name.split(" ").filter(Boolean);
     if (parts.length >= 2) {
@@ -34,7 +34,7 @@ export default function WorkspaceHeader() {
 
   return (
     <>
-      <div className="workspace-header" role="region" aria-label="Workspace">
+      <div className="workspace-header" role="region" aria-label="Рабочее пространство">
         <div
           className="workspace-left"
           onClick={() => setOpen(true)}

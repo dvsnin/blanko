@@ -1,6 +1,6 @@
 import "./ProfileMenu.css";
 
-export default function ProfileButton({ userInitial = "U", onClick, ariaLabel = "Profile" }) {
+export default function ProfileButton({ userInitial = "U", onClick, ariaLabel = "Профиль" }) {
     return (
         <button
             type="button"

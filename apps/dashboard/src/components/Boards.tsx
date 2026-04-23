@@ -19,8 +19,8 @@ import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
 import { COLOR_KEYS, assignColors } from "../utils/colors";
 
-function openBoardWindow(board: { id: number }) {
-  const url = `/app/board/${encodeURIComponent(board.id)}`;
+function openBoardWindow(board: { publicId: string }) {
+  const url = `/app/board/${encodeURIComponent(board.publicId)}`;
   const w = window.open(url, "_blank");
   if (!w) {
     alert("Пожалуйста, разрешите всплывающие окна для этого сайта.");
@@ -39,16 +39,25 @@ export default function Boards() {
     createBoard,
     renameBoard,
     deleteBoard,
+    toggleStarBoard,
+    loading,
   } = useTeams();
 
-  const { user, setUser, userInitial } = useUser();
+  const { user, setUser, updateName, userInitial } = useUser();
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [menuBoardId, setMenuBoardId] = useState<number | null>(null);
-  const [starredIds, setStarredIds] = useState<Set<number>>(() => new Set());
+  const [menuBoardId, setMenuBoardId] = useState<string | null>(null);
+
+  // Фильтры / сортировка панели "boards-toolbar".
+  type BoardFilter = "all" | "starred";
+  type OwnerFilter = "anyone" | "me";
+  type SortBy = "last-opened" | "name" | "updated";
+  const [filter, setFilter] = useState<BoardFilter>("all");
+  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("anyone");
+  const [sortBy, setSortBy] = useState<SortBy>("last-opened");
 
   const { toastMessage, toastVisible, showToast } = useToast();
 
@@ -64,51 +73,87 @@ export default function Boards() {
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const notificationsAnchorRef = useRef<HTMLElement | null>(null);
 
-  const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: number } | null>(null);
+  const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
-  const boards = useMemo(() => assignColors(activeBoards), [activeBoards]);
+  const boards = useMemo(() => {
+    let list = activeBoards;
+
+    // фильтр "Все / Избранное"
+    if (filter === "starred") {
+      list = list.filter((b) => b.isStarred);
+    }
+
+    // фильтр по владельцу
+    if (ownerFilter === "me" && user.id) {
+      list = list.filter((b) => b.ownerId === user.id);
+    }
+
+    // сортировка
+    const sorted = [...list];
+    if (sortBy === "name") {
+      sorted.sort((a, b) => a.title.localeCompare(b.title, "ru"));
+    } else {
+      // last-opened и updated — по updatedAt desc (пока нет отдельного lastOpenedAt)
+      sorted.sort((a, b) => {
+        const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+        const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+        return tb - ta;
+      });
+    }
+
+    return assignColors(sorted);
+  }, [activeBoards, filter, ownerFilter, sortBy, user.id]);
 
   const canCreateBoard = Boolean(activeTeamId);
-  const userHasTeams = teams.length > 0;
-  const selectedTeamHasBoards = Boolean(activeTeam && boards.length > 0);
+  // Во время первого фетча опираемся на флаги из window.dashData, чтобы
+  // не мигать empty-state у пользователей, у которых на самом деле данные есть.
+  // После загрузки — реальное состояние из TeamsContext.
+  const dashFlags = window.dashData;
+  const userHasTeams = loading
+    ? dashFlags?.hasTeams !== false
+    : teams.length > 0;
+  const selectedTeamHasBoards = loading
+    ? dashFlags?.hasBoards !== false
+    : Boolean(activeTeam && activeBoards.length > 0);
+  const filtersActive = filter !== "all" || ownerFilter !== "anyone";
 
-  const handleStarClick = (board: { id: number }) => {
-    setStarredIds((prev) => {
-      const next = new Set(prev);
-      const willStar = !next.has(board.id);
-      if (willStar) next.add(board.id); else next.delete(board.id);
-      showToast(willStar ? "Board starred" : "Board unstarred");
-      return next;
-    });
+  const handleStarClick = (board: { id: string; isStarred?: boolean }) => {
+    const willStar = !board.isStarred;
+    void toggleStarBoard(board.id);
+    showToast(willStar ? "Доска добавлена в избранное" : "Убрана из избранного");
   };
 
   const handleCreateBoard = () => {
-    const newBoard = createBoard("Новая доска");
-    if (newBoard) {
-      showToast("Доска создана");
-      openBoardWindow(newBoard);
-    }
+    void (async () => {
+      const newBoard = await createBoard("Новая доска");
+      if (newBoard) {
+        showToast("Доска создана");
+        openBoardWindow(newBoard);
+      }
+    })();
   };
 
   const handleTemplateClick = (template: Template) => {
     const title = template.id === "tpl-blank"
       ? "Новая доска"
       : `${template.title} (шаблон)`;
-    const newBoard = createBoard(title);
-    if (newBoard) {
-      showToast(`Доска создана из шаблона «${template.title}»`);
-      openBoardWindow(newBoard);
-    }
+    void (async () => {
+      const newBoard = await createBoard(title);
+      if (newBoard) {
+        showToast(`Доска создана из шаблона «${template.title}»`);
+        openBoardWindow(newBoard);
+      }
+    })();
   };
 
-  const openRenameDialog = (board: { id: number; title: string }) => {
+  const openRenameDialog = (board: { id: string; title: string }) => {
     setRenameDraft(board.title);
     setDialog({ type: "rename", boardId: board.id });
     closeMenu();
   };
 
-  const openDeleteDialog = (board: { id: number }) => {
+  const openDeleteDialog = (board: { id: string }) => {
     setDialog({ type: "delete", boardId: board.id });
     closeMenu();
   };
@@ -119,20 +164,21 @@ export default function Boards() {
     if (!dialog || dialog.type !== "rename") return;
     const value = renameDraft.trim();
     if (!value) { closeDialog(); return; }
-    renameBoard(dialog.boardId, value);
-    showToast("Доска переименована");
+    void renameBoard(dialog.boardId, value)
+      .then(() => showToast("Доска переименована"))
+      .catch(() => showToast("Не удалось переименовать"));
     closeDialog();
   };
 
   const handleDeleteConfirm = () => {
     if (!dialog || dialog.type !== "delete") return;
     const id = dialog.boardId;
-    deleteBoard(id);
-    setStarredIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-    showToast("Доска удалена");
+    void deleteBoard(id)
+      .then(() => showToast("Доска удалена"))
+      .catch(() => showToast("Не удалось удалить"));
 
     try {
-      if (menuAnchorRef.current && Number((menuAnchorRef.current as HTMLElement).dataset.boardId) === id) {
+      if (menuAnchorRef.current && (menuAnchorRef.current as HTMLElement).dataset.boardId === id) {
         menuAnchorRef.current = null;
       }
     } catch {}
@@ -152,7 +198,7 @@ export default function Boards() {
     menuAnchorRef.current = null;
   }
 
-  const handleMenuToggle = (id: number) => {
+  const handleMenuToggle = (id: string) => {
     setMenuBoardId((prev) => {
       const next = prev === id ? null : id;
       if (next === null) {
@@ -273,7 +319,7 @@ export default function Boards() {
     };
   }, [menuBoardId, isNotificationsOpen]);
 
-  const renderContextMenu = (b: { id: number; title: string }, variant: "grid" | "list") => (
+  const renderContextMenu = (b: { id: string; title: string }, variant: "grid" | "list") => (
     <div
       ref={menuRef}
       className={`board-card-menu${variant === "list" ? " board-card-menu--list" : ""}`}
@@ -317,13 +363,15 @@ export default function Boards() {
 
           {isProfileMenuOpen && (
             <ProfileMenu
-              name={user.name || "User"}
+              name={user.name || "Пользователь"}
               email={user.email || "user@example.com"}
               onSettings={() => {
                 setIsProfileMenuOpen(false);
                 setIsProfileModalOpen(true);
               }}
-              onLogout={() => console.log("Logout clicked")}
+              onLogout={() => {
+                window.location.href = "/app/logout";
+              }}
               onClose={() => setIsProfileMenuOpen(false)}
             />
           )}
@@ -364,19 +412,54 @@ export default function Boards() {
         ) : (
           <>
             <div className="boards-toolbar">
-              <div className="boards-filters">
-                <div className="filter-group"><span className="filter-label">Filter by</span><select className="filter-select" defaultValue="all"><option value="all">All boards</option></select></div>
-                <div className="filter-group"><span className="filter-label">Owned by</span><select className="filter-select" defaultValue="anyone"><option value="anyone">Owned by anyone</option><option value="me">Owned by me</option></select></div>
-                <div className="filter-group"><span className="filter-label">Sort by</span><select className="filter-select" defaultValue="last-opened"><option value="last-opened">Last opened</option><option value="name">Name</option><option value="updated">Last modified</option></select></div>
+                <div className="boards-filters">
+                <div className="filter-group">
+                  <span className="filter-label">Фильтр</span>
+                  <select
+                    className="filter-select"
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value as BoardFilter)}
+                  >
+                    <option value="all">Все доски</option>
+                    <option value="starred">Избранное</option>
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <span className="filter-label">Владелец</span>
+                  <select
+                    className="filter-select"
+                    value={ownerFilter}
+                    onChange={(e) => setOwnerFilter(e.target.value as OwnerFilter)}
+                  >
+                    <option value="anyone">Любой владелец</option>
+                    <option value="me">Мои доски</option>
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <span className="filter-label">Сортировка</span>
+                  <select
+                    className="filter-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortBy)}
+                  >
+                    <option value="last-opened">Последние открытые</option>
+                    <option value="name">По названию</option>
+                    <option value="updated">По дате изменения</option>
+                  </select>
+                </div>
               </div>
 
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
             </div>
 
-            {view === "grid" ? (
+            {boards.length === 0 && filtersActive ? (
+              <div className="boards-team-empty-hint" role="status" aria-live="polite">
+                <p className="boards-team-empty-hint__text">По выбранным фильтрам нет досок.</p>
+              </div>
+            ) : view === "grid" ? (
               <div className="boards-grid">
                 {boards.map((b, index) => {
-                  const isStarred = starredIds.has(b.id);
+                  const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const colorKey = b.colorKey ?? COLOR_KEYS[index % COLOR_KEYS.length];
                   return (
@@ -417,8 +500,8 @@ export default function Boards() {
 
                       <div className="board-info">
                         <div className="board-title">{b.title}</div>
-                        <div className="line"><span className="label">Owner:</span> {b.owner}</div>
-                        <div className="line"><span className="label">Last opened:</span> {b.lastOpened}</div>
+                        <div className="line"><span className="label">Владелец:</span> {b.owner}</div>
+                        <div className="line"><span className="label">Открыта:</span> {b.lastOpened}</div>
                       </div>
                     </div>
                   );
@@ -427,15 +510,15 @@ export default function Boards() {
             ) : (
               <div className="boards-list">
                 <div className="boards-list-header" role="row">
-                  <div>Name</div>
+                  <div>Название</div>
                   <div style={{ textAlign: "center" }} aria-hidden></div>
-                  <div style={{ textAlign: "center" }}>Last opened</div>
-                  <div style={{ textAlign: "left" }}>Owner</div>
+                  <div style={{ textAlign: "center" }}>Последнее открытие</div>
+                  <div style={{ textAlign: "left" }}>Владелец</div>
                   <div style={{ textAlign: "right" }} aria-hidden> </div>
                 </div>
 
                 {boards.map((b, index) => {
-                  const isStarred = starredIds.has(b.id);
+                  const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const isLastRow = index === boards.length - 1;
                   const colorKey = b.colorKey ?? COLOR_KEYS[index % COLOR_KEYS.length];
@@ -450,7 +533,7 @@ export default function Boards() {
                         <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>
-                          <div className="board-row-sub">Modified by {b.owner}, {b.updated}</div>
+                          <div className="board-row-sub">Изменено: {b.owner}, {b.updated}</div>
                         </div>
                       </div>
 
@@ -558,8 +641,21 @@ export default function Boards() {
           email={user.email}
           onClose={() => setIsProfileModalOpen(false)}
           onSave={(newName: string) => {
-            setUser({ ...user, name: newName });
+            const trimmed = newName.trim();
+            if (!trimmed) {
+              setIsProfileModalOpen(false);
+              return;
+            }
+            // оптимистичное обновление локально
+            setUser({ ...user, name: trimmed });
             setIsProfileModalOpen(false);
+            void updateName(trimmed)
+              .then(() => showToast("Имя обновлено"))
+              .catch(() => {
+                // откат
+                setUser({ ...user });
+                showToast("Не удалось сохранить имя");
+              });
           }}
         />
       )}

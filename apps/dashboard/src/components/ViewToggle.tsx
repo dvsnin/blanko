@@ -2,7 +2,7 @@ import "./ViewToggle.css";
 
 export default function ViewToggle({ view, setView }) {
     return (
-        <div className="view-toggle" role="toolbar" aria-label="View toggle">
+        <div className="view-toggle" role="toolbar" aria-label="Переключить вид">
             <button
                 type="button"
                 className={`vt-btn vt-btn--grid ${view === "grid" ? "vt-active" : ""}`}

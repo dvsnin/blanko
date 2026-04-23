@@ -8,15 +8,6 @@
 <body>
 <div id="root"></div>
 
-<script>
-    // backend will inject workspaceName (either org name or personal name)
-    window.dashData = window.dashData || {
-        name: "{{ .Name }}",
-        email: "{{ .Email }}",
-        workspaceName: "{{ .WorkspaceName }}"
-    };
-</script>
-
 <script type="module" src="/main.tsx"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ import "./MenuButton.css";
   - onMouseDown only stops propagation (NOT preventDefault) so clicks inside portal/menu work.
 */
 const MenuButton = React.forwardRef(function MenuButton(
-    { onClick, ariaLabel = "Board options", size = 36, variant = "grid" },
+    { onClick, ariaLabel = "Действия с доской", size = 36, variant = "grid" },
     ref
 ) {
     const wrapClass = `menu-wrap ${variant === "list" ? "menu-wrap--list" : "menu-wrap--grid"}`;

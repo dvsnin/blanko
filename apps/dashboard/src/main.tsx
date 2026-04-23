@@ -5,13 +5,10 @@ import { UserProvider } from "./contexts/UserContext";
 import { TeamsProvider } from "./contexts/TeamsContext";
 import "./app.css";
 
-const currentUser =
-  (window.dashData && window.dashData.login) || "dvsnin";
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <UserProvider>
-      <TeamsProvider currentUser={currentUser}>
+      <TeamsProvider>
         <App />
       </TeamsProvider>
     </UserProvider>

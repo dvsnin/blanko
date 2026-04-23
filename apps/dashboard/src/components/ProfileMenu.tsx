@@ -15,7 +15,7 @@ export default function ProfileMenu({ name, email, onSettings, onLogout, onClose
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEscapeKey(onClose);
-  useClickOutside(menuRef, onClose);
+  useClickOutside([menuRef], onClose);
 
   return (
     <div className="profile-menu" ref={menuRef}>

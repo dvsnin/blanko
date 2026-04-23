@@ -9,6 +9,17 @@
 
   "sslRequired": "none",
 
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 2592000,
+  "ssoSessionMaxLifespan": 2592000,
+  "ssoSessionIdleTimeoutRememberMe": 2592000,
+  "ssoSessionMaxLifespanRememberMe": 2592000,
+  "offlineSessionIdleTimeout": 2592000,
+  "offlineSessionMaxLifespanEnabled": false,
+  "refreshTokenMaxReuse": 0,
+  "revokeRefreshToken": false,
+
   "clients": [
     {
       "clientId": "blanko",
@@ -33,7 +44,7 @@
       "fullScopeAllowed": true,
 
       "attributes": {
-        "post.logout.redirect.uris": "+"
+        "post.logout.redirect.uris": "http://app.localhost/app/dashboard##http://app.localhost/*"
       },
 
       "defaultClientScopes": [

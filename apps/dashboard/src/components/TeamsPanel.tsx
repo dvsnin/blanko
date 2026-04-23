@@ -22,6 +22,7 @@ export default function TeamsPanel() {
     deleteTeam,
     toggleStarTeam,
     leaveTeam,
+    loading,
   } = useTeams();
 
   const [query, setQuery] = useState("");
@@ -54,7 +55,7 @@ export default function TeamsPanel() {
 
   return (
     <>
-      <aside className="teams-panel" aria-label="Teams">
+      <aside className="teams-panel" aria-label="Команды">
         <WorkspaceHeader />
 
         <div className="teams-panel-header">
@@ -145,7 +146,7 @@ export default function TeamsPanel() {
             );
           })}
 
-          {visibleTeams.length === 0 && (
+          {visibleTeams.length === 0 && !(loading && window.dashData?.hasTeams !== false) && (
             <div className="teams-empty muted">Команд не найдено - измените фильтр или создайте новую команду</div>
           )}
         </div>

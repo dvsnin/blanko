@@ -2,13 +2,13 @@ import { useRef } from "react";
 import "./TemplatesIsland.css";
 
 const DEFAULT_TEMPLATES = [
-    { id: "tpl-blank", title: "Blank Board", subtype: "New", variant: "template-thumb--blank", badge: "New" },
-    { id: "tpl-retro", title: "Kanban", subtype: "Template", variant: "thumb-retro" },
-    { id: "tpl-year", title: "Sprint Planning", subtype: "Template", variant: "thumb-year" },
-    { id: "tpl-brain", title: "Brainstorm", subtype: "Template", variant: "thumb-brain" },
-    { id: "tpl-roadmap", title: "Roadmap", subtype: "Template", variant: "thumb-roadmap" },
-    { id: "tpl-sprint", title: "Study", subtype: "Template", variant: "thumb-sprint" },
-    { id: "tpl-study", title: "Study 2", subtype: "Template", variant: "thumb-study" },
+    { id: "tpl-blank", title: "Пустая доска", subtype: "Новое", variant: "template-thumb--blank", badge: "Новое" },
+    { id: "tpl-retro", title: "Канбан", subtype: "Шаблон", variant: "thumb-retro" },
+    { id: "tpl-year", title: "Планирование спринта", subtype: "Шаблон", variant: "thumb-year" },
+    { id: "tpl-brain", title: "Мозговой штурм", subtype: "Шаблон", variant: "thumb-brain" },
+    { id: "tpl-roadmap", title: "Дорожная карта", subtype: "Шаблон", variant: "thumb-roadmap" },
+    { id: "tpl-sprint", title: "Обучение", subtype: "Шаблон", variant: "thumb-sprint" },
+    { id: "tpl-study", title: "Обучение 2", subtype: "Шаблон", variant: "thumb-study" },
 ];
 
 export interface Template {
@@ -39,10 +39,10 @@ export default function TemplatesIsland({
     const innerRef = useRef(null);
 
     return (
-        <section className="templates-island ti-island" aria-label="Templates island">
+        <section className="templates-island ti-island" aria-label="Шаблоны">
             <div className="templates-inner ti-inner" ref={innerRef}>
                 <div className="ti-header">
-                    <div className="ti-title">Start with a template</div>
+                    <div className="ti-title">Начните с шаблона</div>
                     <div className="ti-actions">
                         <a
                             href={viewAllHref}
@@ -54,7 +54,7 @@ export default function TemplatesIsland({
                                 }
                             }}
                         >
-                            View all templates →
+                            Все шаблоны →
                         </a>
                     </div>
                 </div>
@@ -84,7 +84,7 @@ export default function TemplatesIsland({
                                             <div className="template-thumb-inner ti-thumb-inner" aria-hidden>
                                                 {isFirst ? (
                                                     <div className="ti-thumb-new-inner" aria-hidden>
-                                                        {t.badge || "New"}
+                                                        {t.badge || "Новое"}
                                                     </div>
                                                 ) : (
                                                     <div className="ti-thumb-caption-inner" aria-hidden>

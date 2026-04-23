@@ -1,6 +1,6 @@
 import "./NotificationButton.css";
 
-export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel = "Notifications" }) {
+export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel = "Уведомления" }) {
     return (
         <button
             type="button"
