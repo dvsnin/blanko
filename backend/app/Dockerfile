@@ -28,9 +28,6 @@ COPY --from=builder /app/server /app/server
 # Копируем статические файлы (vite build)
 COPY --from=builder /app/static /app/static
 
-# Копируем шаблоны
-COPY --from=builder /app/templates /app/templates
-
 # Копируем миграции
 COPY --from=builder /app/migration /app/migration
 

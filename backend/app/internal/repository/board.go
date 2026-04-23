@@ -77,6 +77,28 @@ func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, er
 	return &m, nil
 }
 
+// GetByPublicID возвращает доску по её короткому public_id (из URL доски).
+func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
+	b := psql.Select("id", "public_id", "name", "team_id", "account_id", "team_access",
+		"link_access_enabled", "created_at", "updated_at").
+		From("board").
+		Where("public_id = ? AND deleted_at IS NULL", publicID).Limit(1)
+
+	row, err := queryRowBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
+	var m model.Board
+	if err := row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
+		&m.TeamAccess, &m.LinkAccessEnabled, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &m, nil
+}
+
 // ListByTeam возвращает доски команды со сведениями о владельце и флагом isStarred для текущего пользователя.
 func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID uuid.UUID) ([]model.BoardView, error) {
 	b := psql.Select(

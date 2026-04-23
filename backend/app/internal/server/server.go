@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"html/template"
 	"log"
 	"net/http"
 	"net/url"
@@ -22,20 +21,17 @@ import (
 
 // Server — HTTP-сервер приложения.
 type Server struct {
-	templates *template.Template
-	api       *handler.API
-	pool      *pgxpool.Pool
-	services  *service.Services
+	api      *handler.API
+	pool     *pgxpool.Pool
+	services *service.Services
 }
 
 // New создаёт сервер, прикрученный к pgxpool и сервисам.
 func New(pool *pgxpool.Pool, services *service.Services) *Server {
-	t := template.Must(template.ParseGlob(filepath.Join("templates", "*.tmpl")))
 	return &Server{
-		templates: t,
-		pool:      pool,
-		services:  services,
-		api:       handler.NewAPI(services),
+		pool:     pool,
+		services: services,
+		api:      handler.NewAPI(services),
 	}
 }
 
@@ -241,28 +237,26 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	indexHTML := string(indexBytes)
 
-	indexHTML = strings.ReplaceAll(indexHTML, "/app/assets/", "/app/static/canvas/assets/")
-	indexHTML = strings.ReplaceAll(indexHTML, "/assets/", "/app/static/canvas/assets/")
-	indexHTML = strings.ReplaceAll(indexHTML, "href=\"assets/", "href=\"/app/static/canvas/assets/")
-	indexHTML = strings.ReplaceAll(indexHTML, "src=\"assets/", "src=\"/app/static/canvas/assets/")
-	indexHTML = strings.ReplaceAll(indexHTML, "src=\"/realtime/mockSocketClient.js\"", "src=\"/app/static/canvas/realtime/mockSocketClient.js\"")
-	indexHTML = strings.ReplaceAll(indexHTML, "src=\"realtime/mockSocketClient.js\"", "src=\"/app/static/canvas/realtime/mockSocketClient.js\"")
-
+	// Тянем настоящее имя доски из БД по public_id. При ошибке fallback на uid —
+	// страница должна отрендериться даже если БД недоступна.
 	title := uid
-	escTitle := html.EscapeString(title)
-	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", escTitle)
-
-	tmplData := struct {
-		UID       string
-		IndexHTML template.HTML
-	}{
-		UID:       uid,
-		IndexHTML: template.HTML(indexHTML),
+	if board, err := s.services.Board.GetByPublicID(r.Context(), uid); err == nil && board != nil {
+		if name := strings.TrimSpace(board.Name); name != "" {
+			title = name
+		}
 	}
+	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
+
+	// Инжектим перед </head> две вещи:
+	//   1. APP_UID — чтобы canvas знал, какая доска (используется в persistenceKey).
+	//   2. dashData — тот же payload, что на /app/dashboard. Нужен, чтобы
+	//      topbar доски показывал реальное имя/инициал пользователя, а не
+	//      заглушку "U".
+	uidJSON, _ := json.Marshal(uid)
+	dashJSON := s.buildDashDataJSON(r)
+	injectTag := "<script>window.APP_UID = " + string(uidJSON) + "; window.dashData = " + dashJSON + ";</script>\n"
+	indexHTML = strings.Replace(indexHTML, "</head>", injectTag+"</head>", 1)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.templates.ExecuteTemplate(w, "board", tmplData); err != nil {
-		http.Error(w, "Template render error: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.Write([]byte(indexHTML))
 }

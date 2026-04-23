@@ -104,11 +104,14 @@ apps/*/public/build/
 
 # If you configured builds to output into backend static paths, ignore them there too:
 # (allow overriding: if you intend to commit built static assets, remove these)
-backend/app/static/
+backend/app/static/*
 backend/app/public/
 # keep a .gitkeep if you want the directory in repo:
 !backend/app/static/.gitkeep
 !backend/app/public/.gitkeep
+# canvas/ — это рукописный исходник (tldraw mock), а не build artifact:
+!backend/app/static/canvas/
+backend/app/static/canvas/realtime/
 
 ########################
 # Go (backend)

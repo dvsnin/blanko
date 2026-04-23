@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+    <title>Canvas Board</title>
+
+    <!-- tldraw styles: инструменты, стили нод/стикеров/курсора и т.д. -->
+    <link rel="stylesheet" href="https://esm.sh/tldraw@3.15.3/tldraw.css"/>
+
+    <style>
+        html, body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #f3f6f9; overflow: hidden; }
+
+        .thin-top { height: 8px; background: linear-gradient(90deg, #1f8a3f, #0d6b2c); box-shadow: 0 2px 0 rgba(0,0,0,0.06); }
+
+        .topbar { height: 56px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-shadow: 0 1px 0 rgba(15,23,42,0.04); z-index: 40; position: relative; }
+        .brand-row { display: flex; align-items: center; gap: 12px; }
+        .board-meta { display: flex; align-items: center; gap: 18px; }
+        .board-name { font-size: 20px; font-weight: 700; color: #0f1724; line-height: 1; }
+
+        .top-actions { display: flex; gap: 10px; align-items: center; }
+        .btn { background: #fff; border: 1px solid #e6e9f2; padding: 9px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #0f1724; transition: background .15s, border-color .15s; }
+        .btn:hover { background: #f8fafc; border-color: rgba(37,100,255,0.14); }
+        /* Share — primary-btn из dashboard: сине-фиолетовый градиент, pill 12px, тень. */
+        .btn.primary { background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%); color: #fff; border: none; padding: 10px 16px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 26px rgba(79,139,255,0.12); transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease; }
+        .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(79,139,255,0.18); filter: brightness(1.03); }
+        .btn.primary:active { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(79,139,255,0.14); }
+
+        /* Профиль — такой же, как в dashboard (ProfileMenu.css): мягкий голубо-лиловый градиент, скруглённый квадрат 10px. */
+        .profile-initial { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #0f1724; font-size: 15px; background: linear-gradient(135deg, #eef4ff 0%, #f7f5ff 100%); border: 1px solid rgba(15,23,42,0.06); text-shadow: 0 1px 0 rgba(255,255,255,0.6); transition: box-shadow 160ms ease, border-color 160ms ease; }
+        .profile-initial:hover { box-shadow: 0 10px 22px rgba(46,80,170,0.06); border-color: rgba(37,100,255,0.08); }
+
+        #tldraw-root { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
+
+        /* tldraw sets its own font family via .tl-container — подхватываем Inter */
+        .tl-container { font-family: Inter, system-ui, -apple-system, sans-serif; }
+
+        /* Прячем watermark "Made with tldraw" — проект внутренний, не публичный.
+           Селекторы перекрываем с запасом: в разных версиях tldraw класс менялся. */
+        .tl-watermark_SEE-LICENSE,
+        .tlui-watermark,
+        .tl-watermark,
+        [class*="watermark"] { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="thin-top" aria-hidden></div>
+
+<div class="topbar">
+    <div class="brand-row">
+        <div class="board-meta">
+            <div class="board-name" id="boardName">%%BOARD_TITLE%%</div>
+        </div>
+    </div>
+
+    <div class="top-actions">
+        <button class="btn primary" id="shareBtn">Share</button>
+        <div class="profile-initial" id="profileInitial">U</div>
+    </div>
+</div>
+
+<div id="tldraw-root"></div>
+
+<!--
+  Canvas теперь построен на tldraw (через ESM CDN — без билд-шага, чтобы не
+  заводить отдельное React-приложение ради мока доски).
+  Содержит всё "как в Miro": select, sticky notes (с палитрой цветов),
+  text, shapes (rect/ellipse/diamond/arrow/...), freehand pencil, pan/zoom.
+  Состояние автоматически сохраняется в IndexedDB по persistenceKey=boardId
+  — каждая доска со своим content'ом, переживает перезагрузку.
+-->
+<script type="module">
+    import React from "https://esm.sh/react@18.3.1";
+    import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
+    import { Tldraw } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
+
+    // boardId пробрасывается server-side (window.APP_UID),
+    // dashData — то же, что на /app/dashboard (accountId/name/email).
+    const boardId = (window.APP_UID || window.location.pathname.split("/").pop() || "scratch").toString();
+    const profileName = (window.dashData && window.dashData.name) ? String(window.dashData.name) : "User";
+    const profileInitial = (profileName.trim().charAt(0) || "U").toUpperCase();
+    try { document.getElementById("profileInitial").textContent = profileInitial; } catch {}
+
+    document.getElementById("shareBtn").addEventListener("click", () => {
+        try {
+            navigator.clipboard.writeText(window.location.href);
+            alert("Ссылка на доску скопирована");
+        } catch {
+            alert(window.location.href);
+        }
+    });
+
+    createRoot(document.getElementById("tldraw-root")).render(
+        React.createElement(Tldraw, {
+            // IndexedDB-персист per-board: каждая доска автономна, переживает reload
+            persistenceKey: "blanko-board-" + boardId,
+            onMount: (editor) => {
+                // Начальное имя юзера в tldraw (влияет на подпись изменений и т.п.)
+                try {
+                    editor.user.updateUserPreferences({ name: profileName });
+                } catch {}
+            },
+        }),
+    );
+</script>
+</body>
+</html>

@@ -290,6 +290,19 @@ type BoardUpdateInput struct {
 	LinkAccessEnabled *bool
 }
 
+// GetByPublicID — лукап доски по короткому public_id (из URL).
+// ACL пока не проверяем: страница за oauth2-proxy, детальный доступ — отдельной задачей.
+func (s *BoardService) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
+	board, err := repository.NewBoardRepo(s.pool).GetByPublicID(ctx, publicID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return board, nil
+}
+
 // ListByTeam возвращает доски команды. Пользователь должен быть участником команды.
 func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.BoardView, error) {
 	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {
