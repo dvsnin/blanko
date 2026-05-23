@@ -246,3 +246,9 @@ pnpm-debug.log
 # MacOS Finder metadata
 .AppleDB
 .AppleDesktop
+
+########################
+# Superpowers (brainstorming/spec workspace) and local docs
+########################
+.superpowers/
+docs/
