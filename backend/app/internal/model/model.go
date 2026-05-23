@@ -15,17 +15,6 @@ type Account struct {
 	UpdatedAt time.Time
 }
 
-// Workspace — рабочее пространство пользователя. Может быть конвертировано
-// в организацию (IsOrganization) для применения расширенных политик.
-type Workspace struct {
-	ID             uuid.UUID
-	Name           string
-	AccountID      uuid.UUID
-	IsOrganization bool
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-}
-
 // TeamRole — роль участника команды.
 type TeamRole string
 
@@ -44,10 +33,10 @@ const (
 	BoardAccessEdit BoardAccess = "edit"
 )
 
-// Team — команда.
+// Team — команда. Если OrganizationID == nil — личная команда без организации.
 type Team struct {
 	ID                uuid.UUID
-	WorkspaceID       uuid.UUID
+	OrganizationID    *uuid.UUID
 	Name              string
 	MemberBoardAccess BoardAccess
 	CreatedAt         time.Time

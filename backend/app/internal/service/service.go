@@ -46,19 +46,18 @@ func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) e
 
 // ---------- AuthService ----------
 
-// AuthService отвечает за разрешение текущего пользователя и автосоздание
-// связанных сущностей (account + personal workspace).
+// AuthService отвечает за разрешение текущего пользователя
+// (account создаётся JIT при первом запросе).
 type AuthService struct {
 	pool *pgxpool.Pool
 }
 
 // Identity — разрешённая идентичность текущего пользователя.
 type Identity struct {
-	Account   model.Account
-	Workspace model.Workspace
+	Account model.Account
 }
 
-// Resolve обеспечивает наличие account и личного workspace для переданной пары (email, name).
+// Resolve обеспечивает наличие account для переданной пары (email, name).
 // Вызывается из middleware на каждом API-запросе.
 func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identity, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
@@ -72,7 +71,6 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 	var identity Identity
 	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
 		accRepo := repository.NewAccountRepo(tx)
-		wsRepo := repository.NewWorkspaceRepo(tx)
 
 		acc, err := accRepo.GetByEmail(ctx, email)
 		if errors.Is(err, repository.ErrNotFound) {
@@ -84,20 +82,6 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 			return fmt.Errorf("get account: %w", err)
 		}
 		identity.Account = *acc
-
-		ws, err := wsRepo.GetByAccountID(ctx, acc.ID)
-		if errors.Is(err, repository.ErrNotFound) {
-			ws = &model.Workspace{
-				Name:      acc.Name,
-				AccountID: acc.ID,
-			}
-			if err := wsRepo.Create(ctx, ws); err != nil {
-				return fmt.Errorf("create workspace: %w", err)
-			}
-		} else if err != nil {
-			return fmt.Errorf("get workspace: %w", err)
-		}
-		identity.Workspace = *ws
 		return nil
 	})
 	if err != nil {
@@ -142,10 +126,10 @@ type TeamUpdateInput struct {
 	Name string
 }
 
-// List возвращает команды пользователя в его workspace.
+// List возвращает все команды, в которых состоит пользователь.
 func (s *TeamService) List(ctx context.Context, id Identity) ([]model.TeamView, error) {
 	repo := repository.NewTeamRepo(s.pool)
-	return repo.ListForAccount(ctx, id.Workspace.ID, id.Account.ID)
+	return repo.ListForAccount(ctx, id.Account.ID)
 }
 
 // Create создаёт команду и добавляет текущего пользователя владельцем.
@@ -159,7 +143,7 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
 		repo := repository.NewTeamRepo(tx)
 		team := &model.Team{
-			WorkspaceID:       id.Workspace.ID,
+			OrganizationID:    nil,
 			Name:              name,
 			MemberBoardAccess: model.BoardAccessEdit,
 		}

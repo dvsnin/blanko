@@ -9,14 +9,17 @@ COMMENT ON TYPE plan_type IS 'Тип тарифа.';
 CREATE TYPE team_role AS ENUM ('owner', 'admin', 'member');
 COMMENT ON TYPE team_role IS 'Роль пользователя в команде.';
 
+CREATE TYPE organization_role AS ENUM ('owner', 'admin', 'member');
+COMMENT ON TYPE organization_role IS 'Роль пользователя в организации.';
+
 CREATE TABLE IF NOT EXISTS account
 (
     id         uuid PRIMARY KEY NOT NULL,
     email      varchar(255)     NOT NULL,
     name       varchar(255)     NOT NULL,
-    created_at timestamp        NOT NULL,
-    updated_at timestamp        NOT NULL,
-    deleted_at timestamp        NULL,
+    created_at timestamptz        NOT NULL,
+    updated_at timestamptz        NOT NULL,
+    deleted_at timestamptz        NULL,
 
     UNIQUE (email)
 );
@@ -28,43 +31,89 @@ COMMENT ON COLUMN account.created_at IS 'Время создания запис�
 COMMENT ON COLUMN account.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN account.deleted_at IS 'Время софт удаления.';
 
-CREATE TABLE IF NOT EXISTS workspace
+CREATE TABLE IF NOT EXISTS organization
 (
-    id              uuid PRIMARY KEY                  NOT NULL,
-    name            text                              NOT NULL,
-    account_id      uuid REFERENCES account (id)      NOT NULL,
-    is_organization boolean DEFAULT false             NOT NULL,
-    created_at      timestamp                         NOT NULL,
-    updated_at      timestamp                         NOT NULL,
-    deleted_at      timestamp                         NULL,
-
-    UNIQUE (account_id)
+    id               uuid PRIMARY KEY             NOT NULL,
+    name             varchar(255)                 NOT NULL,
+    owner_account_id uuid REFERENCES account (id) ON DELETE RESTRICT NOT NULL,
+    settings         jsonb DEFAULT '{}'::jsonb    NOT NULL,
+    created_at       timestamptz                    NOT NULL,
+    updated_at       timestamptz                    NOT NULL,
+    deleted_at       timestamptz                    NULL
 );
-COMMENT ON TABLE workspace IS 'Рабочие пространства пользователей. Могут быть конвертированы в организации (флаг is_organization) для применения расширенных политик.';
-COMMENT ON COLUMN workspace.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN workspace.name IS 'Название рабочей области.';
-COMMENT ON COLUMN workspace.account_id IS 'Владелец рабочей области (аккаунт, создавший workspace).';
-COMMENT ON COLUMN workspace.is_organization IS 'Признак: workspace сконвертирован в организацию и применяет расширенные политики (домены, права и пр.).';
-COMMENT ON COLUMN workspace.created_at IS 'Время создания.';
-COMMENT ON COLUMN workspace.updated_at IS 'Время обновления.';
-COMMENT ON COLUMN workspace.deleted_at IS 'Время софт удаления.';
+COMMENT ON TABLE organization IS 'Организации — корпоративный контейнер для команд. Привязанные домены хранятся в organization_domain, прочие политики (SSO, брендинг и т.п.) — в settings.';
+COMMENT ON COLUMN organization.id IS 'Уникальный идентификатор.';
+COMMENT ON COLUMN organization.name IS 'Название организации.';
+COMMENT ON COLUMN organization.owner_account_id IS 'Владелец организации (создатель).';
+COMMENT ON COLUMN organization.settings IS 'Политики организации в jsonb: sso_config, default_role, branding и прочее. Домены вынесены в organization_domain.';
+COMMENT ON COLUMN organization.created_at IS 'Время создания.';
+COMMENT ON COLUMN organization.updated_at IS 'Время обновления.';
+COMMENT ON COLUMN organization.deleted_at IS 'Время софт удаления.';
+
+CREATE INDEX IF NOT EXISTS idx_organization_owner_account_id ON organization (owner_account_id);
+
+CREATE TABLE IF NOT EXISTS organization_domain
+(
+    domain             varchar(253) PRIMARY KEY                              NOT NULL,
+    organization_id    uuid REFERENCES organization (id) ON DELETE CASCADE   NOT NULL,
+    verified           boolean DEFAULT false             NOT NULL,
+    verification_token varchar(64)                       NULL,
+    verified_at        timestamptz                         NULL,
+    auto_join_enabled  boolean DEFAULT false             NOT NULL,
+    created_at         timestamptz                         NOT NULL,
+    updated_at         timestamptz                         NOT NULL,
+
+    CHECK (domain = lower(domain))
+);
+COMMENT ON TABLE organization_domain IS 'Домены, привязанные к организации. Используется для автоджойна нового аккаунта в организацию при совпадении домена email. Домен может принадлежать только одной организации (PK).';
+COMMENT ON COLUMN organization_domain.domain IS 'Доменное имя в нижнем регистре, RFC 1035 (≤253 символа). PK даёт O(log n) lookup при регистрации.';
+COMMENT ON COLUMN organization_domain.organization_id IS 'Организация-владелец домена.';
+COMMENT ON COLUMN organization_domain.verified IS 'Подтверждён ли домен (DNS TXT). Только подтверждённые домены участвуют в автоджойне.';
+COMMENT ON COLUMN organization_domain.verification_token IS 'Случайный токен, который админ размещает в DNS TXT-записи для подтверждения владения.';
+COMMENT ON COLUMN organization_domain.verified_at IS 'Время успешной верификации.';
+COMMENT ON COLUMN organization_domain.auto_join_enabled IS 'Включён ли автоматический join новых аккаунтов с этим доменом. Может быть выключен даже на подтверждённом домене (ручной инвайт).';
+COMMENT ON COLUMN organization_domain.created_at IS 'Время создания.';
+COMMENT ON COLUMN organization_domain.updated_at IS 'Время обновления.';
+
+CREATE INDEX IF NOT EXISTS idx_organization_domain_organization_id ON organization_domain (organization_id);
+
+CREATE TABLE IF NOT EXISTS organization_member
+(
+    id              uuid PRIMARY KEY                                       NOT NULL,
+    organization_id uuid REFERENCES organization (id) ON DELETE CASCADE    NOT NULL,
+    account_id      uuid REFERENCES account (id) ON DELETE CASCADE         NOT NULL,
+    role            organization_role                                      NOT NULL,
+    created_at      timestamptz                         NOT NULL,
+    updated_at      timestamptz                         NOT NULL,
+
+    UNIQUE (organization_id, account_id)
+);
+COMMENT ON TABLE organization_member IS 'Членство аккаунтов в организациях. Один аккаунт может состоять в нескольких организациях. Владелец дополнительно зафиксирован в organization.owner_account_id для billing-сценариев.';
+COMMENT ON COLUMN organization_member.id IS 'Уникальный идентификатор.';
+COMMENT ON COLUMN organization_member.organization_id IS 'Организация.';
+COMMENT ON COLUMN organization_member.account_id IS 'Аккаунт.';
+COMMENT ON COLUMN organization_member.role IS 'Роль аккаунта в организации.';
+COMMENT ON COLUMN organization_member.created_at IS 'Время вступления.';
+COMMENT ON COLUMN organization_member.updated_at IS 'Время обновления.';
+
+CREATE INDEX IF NOT EXISTS idx_organization_member_account_id ON organization_member (account_id);
 
 CREATE TABLE IF NOT EXISTS license
 (
-    id           uuid PRIMARY KEY               NOT NULL,
-    workspace_id uuid REFERENCES workspace (id) NOT NULL,
-    plan         plan_type                      NOT NULL,
-    seats        int                            NOT NULL,
-    expires_at   timestamp                      NULL,
-    created_at   timestamp                      NOT NULL,
-    updated_at   timestamp                      NOT NULL,
-    deleted_at   timestamp                      NULL,
+    id              uuid PRIMARY KEY                                     NOT NULL,
+    organization_id uuid REFERENCES organization (id) ON DELETE CASCADE  NOT NULL,
+    plan            plan_type                                            NOT NULL,
+    seats           int                               NOT NULL,
+    expires_at      timestamptz                         NULL,
+    created_at      timestamptz                         NOT NULL,
+    updated_at      timestamptz                         NOT NULL,
+    deleted_at      timestamptz                         NULL,
 
-    UNIQUE (workspace_id)
+    UNIQUE (organization_id)
 );
-COMMENT ON TABLE license IS 'Лицензии рабочих пространств.';
+COMMENT ON TABLE license IS 'Лицензии организаций. У личных команд без организации лицензии нет.';
 COMMENT ON COLUMN license.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN license.workspace_id IS 'Уникальный идентификатор рабочей области.';
+COMMENT ON COLUMN license.organization_id IS 'Идентификатор организации.';
 COMMENT ON COLUMN license.plan IS 'Тарифный план.';
 COMMENT ON COLUMN license.seats IS 'Количество оплаченных рабочих мест.';
 COMMENT ON COLUMN license.expires_at IS 'Дата окончания лицензии, бесконечно - если не установлено.';
@@ -73,33 +122,35 @@ COMMENT ON COLUMN license.updated_at IS 'Время обновления.';
 
 CREATE TABLE IF NOT EXISTS team
 (
-    id                  uuid PRIMARY KEY               NOT NULL,
-    workspace_id        uuid REFERENCES workspace (id) NOT NULL,
-    name                varchar(255)                   NOT NULL,
-    member_board_access board_access                   NOT NULL,
-    created_at          timestamp                      NOT NULL,
-    updated_at          timestamp                      NOT NULL,
-    deleted_at          timestamp                      NULL
+    id                  uuid PRIMARY KEY                  NOT NULL,
+    organization_id     uuid REFERENCES organization (id) ON DELETE RESTRICT NULL,
+    name                varchar(255)                      NOT NULL,
+    member_board_access board_access                      NOT NULL,
+    settings            jsonb DEFAULT '{}'::jsonb         NOT NULL,
+    created_at          timestamptz                         NOT NULL,
+    updated_at          timestamptz                         NOT NULL,
+    deleted_at          timestamptz                         NULL
 );
-COMMENT ON TABLE team IS 'Команды внутри рабочей области.';
+COMMENT ON TABLE team IS 'Команды. Если organization_id IS NULL — личная команда пользователя без организации. В settings лежат параметры открытия команды внешним участникам.';
 COMMENT ON COLUMN team.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN team.workspace_id IS 'Идентификатор рабочей области.';
+COMMENT ON COLUMN team.organization_id IS 'Организация, к которой относится команда. NULL — личная команда.';
 COMMENT ON COLUMN team.name IS 'Название команды.';
 COMMENT ON COLUMN team.member_board_access IS 'Доступ участников команды к доскам команды.';
+COMMENT ON COLUMN team.settings IS 'Настройки команды в jsonb: открыта ли для внешних участников, дефолтный доступ гостей и т.д.';
 COMMENT ON COLUMN team.created_at IS 'Время создания.';
 COMMENT ON COLUMN team.updated_at IS 'Время обновления.';
 COMMENT ON COLUMN team.deleted_at IS 'Время софт удаления.';
 
-CREATE INDEX IF NOT EXISTS idx_team_workspace_id ON team (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_team_organization_id ON team (organization_id);
 
 CREATE TABLE IF NOT EXISTS team_member
 (
-    id         uuid PRIMARY KEY             NOT NULL,
-    team_id    uuid REFERENCES team (id)    NOT NULL,
-    account_id uuid REFERENCES account (id) NOT NULL,
-    role       team_role                    NOT NULL,
-    created_at timestamp                    NOT NULL,
-    updated_at timestamp                    NOT NULL,
+    id         uuid PRIMARY KEY                                  NOT NULL,
+    team_id    uuid REFERENCES team (id) ON DELETE CASCADE       NOT NULL,
+    account_id uuid REFERENCES account (id) ON DELETE CASCADE    NOT NULL,
+    role       team_role                                         NOT NULL,
+    created_at timestamptz                    NOT NULL,
+    updated_at timestamptz                    NOT NULL,
 
     UNIQUE (team_id, account_id)
 );
@@ -115,9 +166,9 @@ CREATE INDEX IF NOT EXISTS idx_team_member_account_id ON team_member (account_id
 
 CREATE TABLE IF NOT EXISTS team_starred
 (
-    account_id UUID REFERENCES account (id) NOT NULL,
-    team_id    UUID REFERENCES team (id)    NOT NULL,
-    created_at timestamp                    NOT NULL,
+    account_id UUID REFERENCES account (id) ON DELETE CASCADE NOT NULL,
+    team_id    UUID REFERENCES team (id) ON DELETE CASCADE    NOT NULL,
+    created_at timestamptz                                    NOT NULL,
     PRIMARY KEY (account_id, team_id)
 );
 COMMENT ON TABLE team_starred IS 'Хранит информацию о командах, отмеченных пользователем как избранные.';
@@ -132,13 +183,13 @@ CREATE TABLE IF NOT EXISTS board
     id                  uuid PRIMARY KEY             NOT NULL,
     public_id           VARCHAR(255)                 NOT NULL,
     name                varchar(255)                 NOT NULL,
-    team_id             uuid REFERENCES team (id)    NOT NULL,
-    account_id          uuid REFERENCES account (id) NOT NULL,
-    team_access         board_access                 NOT NULL,
+    team_id             uuid REFERENCES team (id) ON DELETE RESTRICT    NOT NULL,
+    account_id          uuid REFERENCES account (id) ON DELETE RESTRICT NOT NULL,
+    team_access         board_access                                    NOT NULL,
     link_access_enabled bool DEFAULT false           NOT NULL,
-    created_at          timestamp                    NOT NULL,
-    updated_at          timestamp                    NOT NULL,
-    deleted_at          timestamp                    NULL,
+    created_at          timestamptz                    NOT NULL,
+    updated_at          timestamptz                    NOT NULL,
+    deleted_at          timestamptz                    NULL,
 
     UNIQUE (public_id)
 );
@@ -159,16 +210,16 @@ CREATE INDEX IF NOT EXISTS idx_board_account_id ON board (account_id);
 
 CREATE TABLE IF NOT EXISTS board_member
 (
-    id         uuid PRIMARY KEY             NOT NULL,
-    board_id   uuid REFERENCES board (id)   NOT NULL,
-    account_id uuid REFERENCES account (id) NOT NULL,
-    access     board_access                 NOT NULL,
-    created_at timestamp                    NOT NULL,
-    updated_at timestamp                    NOT NULL,
+    id         uuid PRIMARY KEY                                NOT NULL,
+    board_id   uuid REFERENCES board (id) ON DELETE CASCADE    NOT NULL,
+    account_id uuid REFERENCES account (id) ON DELETE CASCADE  NOT NULL,
+    access     board_access                                    NOT NULL,
+    created_at timestamptz                                     NOT NULL,
+    updated_at timestamptz                                     NOT NULL,
 
     UNIQUE (board_id, account_id)
 );
-COMMENT ON TABLE board_member IS 'Участники доски и их роли.';
+COMMENT ON TABLE board_member IS 'Участники доски и их роли. Сюда же попадают внешние/гостевые пользователи без членства в команде.';
 COMMENT ON COLUMN board_member.id IS 'Уникальный идентификатор.';
 COMMENT ON COLUMN board_member.board_id IS 'Идентификатор доски.';
 COMMENT ON COLUMN board_member.account_id IS 'Идентификатор пользователя.';
@@ -180,23 +231,23 @@ CREATE INDEX IF NOT EXISTS idx_board_member_account_id ON board_member (account_
 
 CREATE TABLE IF NOT EXISTS board_share_token
 (
-    id         uuid PRIMARY KEY             NOT NULL,
-    board_id   uuid REFERENCES board (id)   NOT NULL,
-    account_id uuid REFERENCES account (id) NOT NULL,
-    access     board_access                 NOT NULL,
-    token      VARCHAR(255)                 NOT NULL,
-    expires_at timestamp                    NULL,
-    created_at timestamp                    NOT NULL,
-    updated_at timestamp                    NOT NULL,
-    deleted_at timestamp                    NULL,
+    id         uuid PRIMARY KEY                                NOT NULL,
+    board_id   uuid REFERENCES board (id) ON DELETE CASCADE    NOT NULL,
+    account_id uuid REFERENCES account (id) ON DELETE CASCADE  NOT NULL,
+    access     board_access                                    NOT NULL,
+    token_hash varchar(64)                                     NOT NULL,
+    expires_at timestamptz                                     NULL,
+    created_at timestamptz                                     NOT NULL,
+    updated_at timestamptz                                     NOT NULL,
+    deleted_at timestamptz                                     NULL,
 
-    UNIQUE (token)
+    UNIQUE (token_hash)
 );
 COMMENT ON TABLE board_share_token IS 'Токены для доступа к доске.';
 COMMENT ON COLUMN board_share_token.board_id IS 'Идентификатор доски, к которой относится ссылка.';
 COMMENT ON COLUMN board_share_token.account_id IS 'Идентификатор аккаунта, кто сгенерировал токен доступа.';
 COMMENT ON COLUMN board_share_token.access IS 'Уровень доступа по данной ссылке.';
-COMMENT ON COLUMN board_share_token.token IS 'Секретный токен доступа (query параметр).';
+COMMENT ON COLUMN board_share_token.token_hash IS 'SHA-256 hex (64 chars) от секретного токена. Сам токен клиенту возвращается один раз при генерации и в БД не хранится — при утечке дампа ссылки остаются непригодными.';
 COMMENT ON COLUMN board_share_token.expires_at IS 'Время действия ссылки, бесконечно - если не задано.';
 COMMENT ON COLUMN board_share_token.created_at IS 'Время создания.';
 COMMENT ON COLUMN board_share_token.updated_at IS 'Время обновления.';
@@ -207,9 +258,9 @@ CREATE INDEX IF NOT EXISTS idx_board_share_token_account_id ON board_share_token
 
 CREATE TABLE IF NOT EXISTS board_starred
 (
-    account_id UUID REFERENCES account (id) NOT NULL,
-    board_id   UUID REFERENCES board (id)   NOT NULL,
-    created_at timestamp                    NOT NULL,
+    account_id UUID REFERENCES account (id) ON DELETE CASCADE NOT NULL,
+    board_id   UUID REFERENCES board (id) ON DELETE CASCADE   NOT NULL,
+    created_at timestamptz                                    NOT NULL,
     PRIMARY KEY (account_id, board_id)
 );
 COMMENT ON TABLE board_starred IS 'Хранит информацию о досках, отмеченных пользователем как избранные.';
@@ -221,12 +272,12 @@ CREATE INDEX IF NOT EXISTS idx_board_starred_board_id ON board_starred (board_id
 
 CREATE TABLE IF NOT EXISTS board_event_journal
 (
-    id            uuid PRIMARY KEY             NOT NULL,
-    board_id      uuid REFERENCES board (id)   NOT NULL,
-    event_payload jsonb                        NOT NULL,
-    account_id    uuid REFERENCES account (id) NULL,
-    created_at    timestamp                    NOT NULL,
-    updated_at    timestamp                    NOT NULL
+    id            uuid PRIMARY KEY                                NOT NULL,
+    board_id      uuid REFERENCES board (id) ON DELETE CASCADE    NOT NULL,
+    event_payload jsonb                                           NOT NULL,
+    account_id    uuid REFERENCES account (id) ON DELETE SET NULL NULL,
+    created_at    timestamptz                    NOT NULL,
+    updated_at    timestamptz                    NOT NULL
 );
 COMMENT ON TABLE board_event_journal IS 'Журнал событий на доске.';
 COMMENT ON COLUMN board_event_journal.id IS 'Уникальный идентификатор.';
@@ -240,13 +291,13 @@ CREATE INDEX IF NOT EXISTS idx_board_event_journal_board_id ON board_event_journ
 
 CREATE TABLE IF NOT EXISTS board_login
 (
-    id         uuid PRIMARY KEY             NOT NULL,
-    board_id   uuid REFERENCES board (id)   NOT NULL,
-    account_id uuid REFERENCES account (id) NULL,
-    access     board_access                 NOT NULL,
-    created_at timestamp                    NOT NULL,
-    updated_at timestamp                    NOT NULL,
-    logout_at  timestamp                    NULL
+    id         uuid PRIMARY KEY                                 NOT NULL,
+    board_id   uuid REFERENCES board (id) ON DELETE CASCADE     NOT NULL,
+    account_id uuid REFERENCES account (id) ON DELETE SET NULL  NULL,
+    access     board_access                                     NOT NULL,
+    created_at timestamptz                    NOT NULL,
+    updated_at timestamptz                    NOT NULL,
+    logout_at  timestamptz                    NULL
 );
 COMMENT ON TABLE board_login IS 'Записи входов пользователей и гостей на доску.';
 COMMENT ON COLUMN board_login.id IS 'Уникальный идентификатор.';
@@ -262,13 +313,13 @@ CREATE INDEX IF NOT EXISTS idx_board_login_account_id ON board_login (account_id
 
 CREATE TABLE IF NOT EXISTS notification
 (
-    id         uuid PRIMARY KEY             NOT NULL,
-    account_id uuid REFERENCES account (id) NOT NULL,
-    is_read    boolean DEFAULT false        NOT NULL,
+    id         uuid PRIMARY KEY                                NOT NULL,
+    account_id uuid REFERENCES account (id) ON DELETE CASCADE  NOT NULL,
+    is_read    boolean DEFAULT false                           NOT NULL,
     payload    jsonb                        NOT NULL,
-    created_at timestamp                    NOT NULL,
-    updated_at timestamp                    NOT NULL,
-    deleted_at timestamp                    NULL
+    created_at timestamptz                    NOT NULL,
+    updated_at timestamptz                    NOT NULL,
+    deleted_at timestamptz                    NULL
 );
 COMMENT ON TABLE notification IS 'Уведомления пользователей.';
 COMMENT ON COLUMN notification.id IS 'Уникальный идентификатор.';
@@ -284,4 +335,23 @@ CREATE INDEX IF NOT EXISTS idx_notification_account_id ON notification (account_
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS board_login;
+DROP TABLE IF EXISTS board_event_journal;
+DROP TABLE IF EXISTS board_starred;
+DROP TABLE IF EXISTS board_share_token;
+DROP TABLE IF EXISTS board_member;
+DROP TABLE IF EXISTS board;
+DROP TABLE IF EXISTS team_starred;
+DROP TABLE IF EXISTS team_member;
+DROP TABLE IF EXISTS team;
+DROP TABLE IF EXISTS license;
+DROP TABLE IF EXISTS organization_member;
+DROP TABLE IF EXISTS organization_domain;
+DROP TABLE IF EXISTS organization;
+DROP TABLE IF EXISTS account;
+DROP TYPE IF EXISTS organization_role;
+DROP TYPE IF EXISTS team_role;
+DROP TYPE IF EXISTS plan_type;
+DROP TYPE IF EXISTS board_access;
 -- +goose StatementEnd
