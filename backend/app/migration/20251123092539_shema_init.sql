@@ -101,21 +101,25 @@ CREATE INDEX IF NOT EXISTS idx_organization_member_account_id ON organization_me
 CREATE TABLE IF NOT EXISTS license
 (
     id              uuid PRIMARY KEY                                     NOT NULL,
-    organization_id uuid REFERENCES organization (id) ON DELETE CASCADE  NOT NULL,
+    organization_id uuid REFERENCES organization (id) ON DELETE CASCADE  NULL,
+    account_id      uuid REFERENCES account (id) ON DELETE CASCADE       NULL,
     plan            plan_type                                            NOT NULL,
-    seats           int                               NOT NULL,
-    expires_at      timestamptz                         NULL,
-    created_at      timestamptz                         NOT NULL,
-    updated_at      timestamptz                         NOT NULL,
-    deleted_at      timestamptz                         NULL,
+    seats           int                                                  NOT NULL,
+    expires_at      timestamptz                                          NULL,
+    created_at      timestamptz                                          NOT NULL,
+    updated_at      timestamptz                                          NOT NULL,
+    deleted_at      timestamptz                                          NULL,
 
-    UNIQUE (organization_id)
+    UNIQUE (organization_id),
+    UNIQUE (account_id),
+    CONSTRAINT license_target_xor CHECK (num_nonnulls(organization_id, account_id) = 1)
 );
-COMMENT ON TABLE license IS 'Лицензии организаций. У личных команд без организации лицензии нет.';
+COMMENT ON TABLE license IS 'Лицензии. Привязана либо к организации (корпоративная), либо к аккаунту напрямую (персональный план для фрилансеров/одиночек). CHECK гарантирует ровно одного владельца — один из ID обязательно NOT NULL, другой NULL.';
 COMMENT ON COLUMN license.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN license.organization_id IS 'Идентификатор организации.';
+COMMENT ON COLUMN license.organization_id IS 'Организация-владелец. NULL для персональных лицензий.';
+COMMENT ON COLUMN license.account_id IS 'Аккаунт-владелец для персональных лицензий. NULL для корпоративных.';
 COMMENT ON COLUMN license.plan IS 'Тарифный план.';
-COMMENT ON COLUMN license.seats IS 'Количество оплаченных рабочих мест.';
+COMMENT ON COLUMN license.seats IS 'Количество оплаченных рабочих мест. Для персональной лицензии обычно 1.';
 COMMENT ON COLUMN license.expires_at IS 'Дата окончания лицензии, бесконечно - если не установлено.';
 COMMENT ON COLUMN license.created_at IS 'Время создания.';
 COMMENT ON COLUMN license.updated_at IS 'Время обновления.';
