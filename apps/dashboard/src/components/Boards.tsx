@@ -114,7 +114,10 @@ export default function Boards() {
       });
     }
 
-    return assignColors(sorted);
+    // избранные наверх (внутри каждой группы текущий sort сохраняется)
+    const starred = sorted.filter((b) => b.isStarred);
+    const others = sorted.filter((b) => !b.isStarred);
+    return assignColors([...starred, ...others]);
   }, [activeBoards, filter, ownerFilter, sortBy, user.id]);
 
   const canCreateBoard = Boolean(activeTeamId);

@@ -47,9 +47,8 @@
     box-sizing: border-box;
 }
 
-/* header control buttons: plus and gear - MATCH topbar controls (44x44) */
-.teams-plus-btn,
-.teams-header-settings {
+/* header «+» control button — MATCH topbar controls (44x44) */
+.teams-plus-btn {
     width: 44px;
     height: 44px;
     min-width: 44px;
@@ -76,40 +75,19 @@
     color: #374151;
     line-height: 1;
 }
-.teams-plus-btn:hover,
-.teams-header-settings:hover {
+.teams-plus-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 30px rgba(6,22,34,0.06);
     background: linear-gradient(180deg,#ffffff,#f2f8ff);
     border-color: rgba(37,100,255,0.08);
 }
-.teams-plus-btn:active,
-.teams-header-settings:active {
+.teams-plus-btn:active {
     transform: translateY(0);
     box-shadow: inset 0 2px 6px rgba(2,6,23,0.04);
 }
-.teams-plus-btn:focus-visible,
-.teams-header-settings:focus-visible {
+.teams-plus-btn:focus-visible {
     outline: 3px solid rgba(37,100,255,0.12);
     outline-offset: 2px;
-}
-.teams-header-settings.disabled {
-    opacity: 0.45;
-    cursor: default;
-    box-shadow: none;
-}
-
-/* gear SVG sizing and color handling (we use fill with currentColor) */
-.teams-header-settings svg,
-.teams-header-gear {
-    display: block;
-    width: 20px;
-    height: 20px;
-    color: currentColor; /* path uses fill=currentColor */
-}
-.teams-header-gear path {
-    vector-effect: non-scaling-stroke;
-    fill: currentColor;
 }
 
 /* search */
@@ -135,24 +113,22 @@
     transition: background .12s, transform .12s;
     background:transparent;
     position: relative;
-    padding-right: 64px; /* more room for name */
+    padding-right: 92px; /* room for star (32) + gap (8) + kebab (32) + right offset (12) */
     box-sizing: border-box;
 }
 .team-item:hover { background:#fbfdff; transform: translateY(-2px); }
 .team-item.active { background: linear-gradient(180deg,#eef6ff,#fff); border-left:4px solid #4f63ff; font-weight:700; }
 
 /* main content area */
-.team-main { flex: 1 1 auto; min-width: 0; }
+.team-main { flex: 1 1 auto; min-width: 0; max-width: 100%; overflow: hidden; }
 .team-name {
     font-weight: 800;
     font-size: 16px;
     color: #0b1220;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3; /* clamp to 3 lines */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.08;
+    line-height: 1.2;
     margin-bottom: 6px;
 }
 .team-meta { color: #6b7280; font-size: 13px; }
@@ -166,16 +142,24 @@
     align-items: center;
 }
 
-/* each icon slot */
+/* each icon slot — fixed 32x32 inside team list (smaller than boards) */
 .team-icon-slot {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-/* star sizing handled by StarButton.css; ensure slot fits */
+/* override the global star list size only inside team rows */
+.team-icon-slot .star-wrap--list { width: 32px !important; height: 32px !important; }
+
+/* kebab wrapper inside team row — fixed 32x32 */
+.team-menu-wrapper { width: 32px; height: 32px; flex: 0 0 32px; display: inline-flex; align-items: center; justify-content: center; }
+.team-menu-wrapper .menu-wrap { width: 32px !important; height: 32px !important; }
+
+/* keep the global star list size at 36 elsewhere (boards) — defined outside team scope */
 .star-wrap--list { width: 36px !important; height: 36px !important; }
 
 /* empty state */

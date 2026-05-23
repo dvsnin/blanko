@@ -3,6 +3,7 @@ import "./TeamsPanel.css";
 import StarButton from "./StarButton";
 import TeamSettingsModal from "./TeamSettingsModal";
 import WorkspaceHeader from "./WorkspaceHeader";
+import SettingsButton from "./SettingsButton";
 import { useTeams } from "../contexts/TeamsContext";
 import type { Team } from "../types";
 
@@ -47,12 +48,6 @@ export default function TeamsPanel() {
     setEditingTeam({ create: true, id: "", name: "Новая команда" } as Team & { create: boolean });
   }
 
-  function openSettingsForActive() {
-    if (!activeTeamId) return;
-    const team = teams.find((t) => t.id === activeTeamId);
-    if (team) setEditingTeam(team);
-  }
-
   return (
     <>
       <aside className="teams-panel" aria-label="Команды">
@@ -74,22 +69,6 @@ export default function TeamsPanel() {
                 <path d="M12 5v14M5 12h14" />
               </svg>
               <span className="sr-only">Создать команду</span>
-            </button>
-
-            <button
-              type="button"
-              className={`teams-header-settings ${!activeTeamId ? "disabled" : ""}`}
-              onClick={() => {
-                if (!activeTeamId) return;
-                openSettingsForActive();
-              }}
-              aria-label="Настройки выбранной команды"
-              disabled={!activeTeamId}
-            >
-              <svg className="teams-header-gear" width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <path fillRule="evenodd" clipRule="evenodd" d="M.969 12.016v2H3.03v1h3v-1h8.938v-2H6.03v-1h-3v1H.97zm0-3v-2h9.062v-1h3v1h1.938v2H13.03v1h-3v-1H.97zm0-5v-2H5.03v-1h3v1h6.938v2H8.03v1h-3v-1H.97z" fill="currentColor"></path>
-              </svg>
-              <span className="sr-only">Настройки выбранной команды</span>
             </button>
           </div>
         </div>
@@ -138,8 +117,21 @@ export default function TeamsPanel() {
                           toggleStarTeam(team.id);
                         }}
                         variant="list"
+                        size={32}
                       />
                     </div>
+                  </div>
+
+                  <div className="team-menu-wrapper" onClick={(e) => e.stopPropagation()}>
+                    <SettingsButton
+                      variant="list"
+                      ariaLabel="Настройки команды"
+                      size={32}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTeam(team);
+                      }}
+                    />
                   </div>
                 </div>
               </div>
