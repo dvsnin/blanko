@@ -46,9 +46,7 @@ node_modules/
 .pnpm-store/
 .pnpmfile.cjs
 
-# Keep pnpm lockfile committed; ignore npm/yarn lockfiles
-pnpm-lock.yaml
-pnpm-workspace.yaml
+# Keep pnpm lockfile and workspace config committed; ignore npm/yarn lockfiles
 package-lock.json
 yarn.lock
 
