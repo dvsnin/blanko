@@ -16,6 +16,10 @@ type Config struct {
 	MigrationsDir string
 	// RunMigrations — запускать ли миграции при старте.
 	RunMigrations bool
+	// TldrawLicenseKey — лицензионный ключ tldraw. Пустая строка допустима:
+	// локально (HTTP на loopback) SDK считает окружение разработкой и ключ
+	// не требует. Ключ публичный по дизайну — проверяется на клиенте.
+	TldrawLicenseKey string
 }
 
 // Load собирает конфиг из переменных окружения с разумными значениями по умолчанию.
@@ -25,6 +29,8 @@ func Load() (*Config, error) {
 		PostgresDSN:   getEnv("POSTGRES_DSN", ""),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migration"),
 		RunMigrations: getEnvBool("RUN_MIGRATIONS", true),
+
+		TldrawLicenseKey: getEnv("TLDRAW_LICENSE_KEY", ""),
 	}
 	if cfg.PostgresDSN == "" {
 		return nil, fmt.Errorf("POSTGRES_DSN is required")

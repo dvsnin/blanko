@@ -6,7 +6,7 @@
     <title>Canvas Board</title>
 
     <!-- tldraw styles: инструменты, стили нод/стикеров/курсора и т.д. -->
-    <link rel="stylesheet" href="https://esm.sh/tldraw@3.15.3/tldraw.css"/>
+    <link rel="stylesheet" href="https://esm.sh/tldraw@5.4.2/tldraw.css"/>
 
     <style>
         html, body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -67,11 +67,16 @@
 <script type="module">
     import React from "https://esm.sh/react@18.3.1";
     import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-    import { Tldraw } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
+    import { Tldraw } from "https://esm.sh/tldraw@5.4.2?deps=react@18.3.1,react-dom@18.3.1";
 
-    // licenseKey не передаём — используем tldraw по их публичной лицензии,
-    // которая требует оставлять watermark "Made with tldraw" видимым.
-    // Не скрывать его ни CSS-ом (.tl-watermark_SEE-LICENSE), ни через components.
+    // Лицензионный ключ tldraw инжектит бэкенд из TLDRAW_LICENSE_KEY.
+    // Пустая строка — валидное состояние: локально (HTTP на loopback) SDK
+    // считает окружение разработкой и ключ не проверяет.
+    //
+    // ВАЖНО: hobby-лицензия требует оставлять watermark "made with tldraw"
+    // видимым. Не скрывать его ни CSS-ом (.tl-watermark_SEE-LICENSE),
+    // ни переопределением components.
+    const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
     // boardId пробрасывается server-side (window.APP_UID),
     // dashData — то же, что на /app/dashboard (accountId/name/email).
@@ -91,6 +96,7 @@
 
     createRoot(document.getElementById("tldraw-root")).render(
         React.createElement(Tldraw, {
+            licenseKey,
             // IndexedDB-персист per-board: каждая доска автономна, переживает reload
             persistenceKey: "blanko-board-" + boardId,
             onMount: (editor) => {
