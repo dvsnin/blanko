@@ -29,10 +29,10 @@
       "secret": "super-secret-pass",
 
       "redirectUris": [
-        "http://app.localhost/oauth2/callback"
+        "http://blanko.localhost/oauth2/callback"
       ],
       "webOrigins": [
-        "http://app.localhost"
+        "http://blanko.localhost"
       ],
 
       "standardFlowEnabled": true,
@@ -44,7 +44,7 @@
       "fullScopeAllowed": true,
 
       "attributes": {
-        "post.logout.redirect.uris": "http://app.localhost/app/dashboard##http://app.localhost/*"
+        "post.logout.redirect.uris": "http://blanko.localhost/app/dashboard##http://blanko.localhost/*"
       },
 
       "defaultClientScopes": [

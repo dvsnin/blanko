@@ -86,7 +86,7 @@ func (s *Server) Router() http.Handler {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	const (
 		keycloakLogout   = "http://keycloak.localhost/realms/blanko/protocol/openid-connect/logout"
-		postLogoutRedir  = "http://app.localhost/app/dashboard"
+		postLogoutRedir  = "http://blanko.localhost/app/dashboard"
 		keycloakClientID = "blanko"
 	)
 

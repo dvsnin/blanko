@@ -34,7 +34,7 @@ cd blanko
 make up
 ```
 
-Команда соберёт фронтенд, поднимет контейнеры и применит миграции. Открыть **http://app.localhost/app/dashboard** и войти:
+Команда соберёт фронтенд, поднимет контейнеры и применит миграции. Открыть **http://blanko.localhost/app/dashboard** и войти:
 
 ```
 логин:  test
@@ -49,7 +49,7 @@ make up SKIP_FRONTEND=1                                # перезапусти�
 docker compose -f deploy/docker-compose.yml down -v     # остановить и стереть данные
 ```
 
-> Адрес именно `app.localhost`, а не `localhost` — по нему маршрутизирует Traefik. Если имя не резолвится (обычно на Windows), добавьте в hosts-файл `127.0.0.1 app.localhost keycloak.localhost`.
+> Адрес именно `blanko.localhost`, а не `localhost` — по нему маршрутизирует Traefik. Если имя не резолвится (обычно на Windows), добавьте в hosts-файл `127.0.0.1 blanko.localhost keycloak.localhost`.
 
 ## Структура
 
