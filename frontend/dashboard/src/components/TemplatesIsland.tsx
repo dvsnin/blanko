@@ -1,14 +1,15 @@
 import { useRef } from "react";
 import "./TemplatesIsland.css";
 
+// Тематические шаблоны занятий. Названия короткие намеренно: подпись
+// рендерится внутри миниатюры шириной ~114px, длинное название туда не влезет.
 const DEFAULT_TEMPLATES = [
-    { id: "tpl-blank", title: "Пустая доска", subtype: "Новое", variant: "template-thumb--blank", badge: "Новое" },
-    { id: "tpl-retro", title: "Канбан", subtype: "Шаблон", variant: "thumb-retro" },
-    { id: "tpl-year", title: "Планирование спринта", subtype: "Шаблон", variant: "thumb-year" },
-    { id: "tpl-brain", title: "Мозговой штурм", subtype: "Шаблон", variant: "thumb-brain" },
-    { id: "tpl-roadmap", title: "Дорожная карта", subtype: "Шаблон", variant: "thumb-roadmap" },
-    { id: "tpl-sprint", title: "Обучение", subtype: "Шаблон", variant: "thumb-sprint" },
-    { id: "tpl-study", title: "Обучение 2", subtype: "Шаблон", variant: "thumb-study" },
+    { id: "tpl-count", title: "Счёт до 10", subtype: "Шаблон", variant: "thumb-count" },
+    { id: "tpl-alphabet", title: "Алфавит", subtype: "Шаблон", variant: "thumb-alphabet" },
+    { id: "tpl-seasons", title: "Времена года", subtype: "Шаблон", variant: "thumb-seasons" },
+    { id: "tpl-shapes", title: "Геом. фигуры", subtype: "Шаблон", variant: "thumb-shapes" },
+    { id: "tpl-traffic", title: "ПДД для детей", subtype: "Шаблон", variant: "thumb-traffic" },
+    { id: "tpl-emotions", title: "Эмоции", subtype: "Шаблон", variant: "thumb-emotions" },
 ];
 
 export interface Template {
@@ -16,7 +17,6 @@ export interface Template {
     title: string;
     subtype?: string;
     variant?: string;
-    badge?: string;
 }
 
 interface TemplatesIslandProps {
@@ -61,14 +61,12 @@ export default function TemplatesIsland({
 
                 <div className="templates-row-wrap">
                     <ul className="templates-row ti-row" role="list">
-                        {templates.map((t, idx) => {
+                        {templates.map((t) => {
                             const variant = t.variant || "";
                             const legacyVariant =
                                 variant.startsWith("template-thumb--") ? variant : `template-thumb--${variant}`.replace(/template-thumb--thumb-/, "template-thumb--");
                             const tiVariant = variant.startsWith("thumb-") ? variant : variant.replace(/^template-thumb--/, "thumb-");
                             const thumbClass = ["template-thumb", "ti-thumb", legacyVariant, tiVariant].filter(Boolean).join(" ");
-
-                            const isFirst = idx === 0;
 
                             return (
                                 <li key={t.id} className="template-item ti-item" role="listitem" aria-hidden={false}>
@@ -82,15 +80,9 @@ export default function TemplatesIsland({
                                     >
                                         <div className={thumbClass}>
                                             <div className="template-thumb-inner ti-thumb-inner" aria-hidden>
-                                                {isFirst ? (
-                                                    <div className="ti-thumb-new-inner" aria-hidden>
-                                                        {t.badge || "Новое"}
-                                                    </div>
-                                                ) : (
-                                                    <div className="ti-thumb-caption-inner" aria-hidden>
-                                                        {t.title}
-                                                    </div>
-                                                )}
+                                                <div className="ti-thumb-caption-inner" aria-hidden>
+                                                    {t.title}
+                                                </div>
                                             </div>
                                         </div>
                                     </button>
