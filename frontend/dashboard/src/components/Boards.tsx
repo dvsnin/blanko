@@ -150,9 +150,7 @@ export default function Boards() {
   };
 
   const handleTemplateClick = (template: Template) => {
-    const title = template.id === "tpl-blank"
-      ? "Новая доска"
-      : `${template.title} (шаблон)`;
+    const title = `${template.title} (шаблон)`;
     void (async () => {
       const newBoard = await createBoard(title);
       if (newBoard) {

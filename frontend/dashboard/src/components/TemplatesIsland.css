@@ -127,13 +127,6 @@
     box-sizing: border-box;
 }
 
-/* first special */
-.ti-thumb-new-inner {
-    color: #071127;
-    font-weight: 800;
-    font-size: 13px;
-    text-align: center;
-}
 
 /* caption inside thumb for others */
 .ti-thumb-caption-inner {
@@ -145,14 +138,12 @@
 }
 
 /* variants */
-.template-thumb--blank,
-.thumb-blank { background: linear-gradient(180deg,#ffffff,#fafbff); border: 1px dashed rgba(99,102,241,0.12); }
-.thumb-retro, .template-thumb--retro { background: linear-gradient(135deg,#ffece7 0%, #ffd4cc 100%); }
-.thumb-year, .template-thumb--year { background: linear-gradient(135deg,#fff7ea 0%, #fff1d6 100%); }
-.thumb-brain, .template-thumb--brain { background: linear-gradient(135deg,#eafff7,#e6fff4); }
-.thumb-roadmap, .template-thumb--roadmap { background: linear-gradient(135deg,#eaf7ff,#def2ff); }
-.thumb-sprint, .template-thumb--sprint { background: linear-gradient(135deg,#fff4f2,#ffe9e4); }
-.thumb-study, .template-thumb--study { background: linear-gradient(135deg,#ecfeff,#e2f7ff); }
+.thumb-count, .template-thumb--count { background: linear-gradient(135deg,#eaf7ff,#def2ff); }
+.thumb-alphabet, .template-thumb--alphabet { background: linear-gradient(135deg,#fff7ea 0%, #fff1d6 100%); }
+.thumb-seasons, .template-thumb--seasons { background: linear-gradient(135deg,#eafff7,#e6fff4); }
+.thumb-shapes, .template-thumb--shapes { background: linear-gradient(135deg,#f3edff,#e9e0ff); }
+.thumb-traffic, .template-thumb--traffic { background: linear-gradient(135deg,#ffece7 0%, #ffd4cc 100%); }
+.thumb-emotions, .template-thumb--emotions { background: linear-gradient(135deg,#ffeef7,#ffe2f0); }
 
 /* responsive adjustments */
 @media (max-width: 980px) {
