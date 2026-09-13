@@ -94,9 +94,11 @@
             // IndexedDB-персист per-board: каждая доска автономна, переживает reload
             persistenceKey: "blanko-board-" + boardId,
             onMount: (editor) => {
-                // Начальное имя юзера в tldraw (влияет на подпись изменений и т.п.)
+                // Начальное имя юзера в tldraw (влияет на подпись изменений и т.п.).
+                // locale фиксируем явно: по умолчанию tldraw берёт язык из
+                // navigator.languages, а на чужой машине он может быть любым.
                 try {
-                    editor.user.updateUserPreferences({ name: profileName });
+                    editor.user.updateUserPreferences({ name: profileName, locale: "ru" });
                 } catch {}
             },
         }),
