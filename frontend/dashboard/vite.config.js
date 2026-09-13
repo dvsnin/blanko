@@ -5,7 +5,7 @@ import path from "path";
 export default defineConfig({
     plugins: [react()],
 
-    // Vite root — индекс и ресурсы лежат в apps/dashboard/src
+    // Vite root — индекс и ресурсы лежат в frontend/dashboard/src
     root: path.resolve(__dirname, "src"),
 
     server: {

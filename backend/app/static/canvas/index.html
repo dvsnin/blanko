@@ -35,13 +35,6 @@
 
         /* tldraw sets its own font family via .tl-container — подхватываем Inter */
         .tl-container { font-family: Inter, system-ui, -apple-system, sans-serif; }
-
-        /* Прячем watermark "Made with tldraw" — проект внутренний, не публичный.
-           Селекторы перекрываем с запасом: в разных версиях tldraw класс менялся. */
-        .tl-watermark_SEE-LICENSE,
-        .tlui-watermark,
-        .tl-watermark,
-        [class*="watermark"] { display: none !important; opacity: 0 !important; pointer-events: none !important; }
     </style>
 </head>
 <body>
@@ -75,6 +68,10 @@
     import React from "https://esm.sh/react@18.3.1";
     import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
     import { Tldraw } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
+
+    // licenseKey не передаём — используем tldraw по их публичной лицензии,
+    // которая требует оставлять watermark "Made with tldraw" видимым.
+    // Не скрывать его ни CSS-ом (.tl-watermark_SEE-LICENSE), ни через components.
 
     // boardId пробрасывается server-side (window.APP_UID),
     // dashData — то же, что на /app/dashboard (accountId/name/email).

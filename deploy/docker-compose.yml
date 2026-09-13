@@ -20,15 +20,15 @@ services:
   postgres_backend:
     image: postgres:17
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app
+      POSTGRES_USER: ${APP_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${APP_POSTGRES_DB}
     volumes:
       - pgdata_backend:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "${APP_POSTGRES_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -37,9 +37,9 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: keycloak
-      POSTGRES_DB: keycloak
+      POSTGRES_USER: ${KC_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${KC_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${KC_POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -50,11 +50,11 @@ services:
       - --import-realm
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KC_POSTGRES_DB}
+      KC_DB_USERNAME: ${KC_POSTGRES_USER}
+      KC_DB_PASSWORD: ${KC_POSTGRES_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
 
       KC_HOSTNAME: keycloak.localhost
       KC_HOSTNAME_STRICT: "false"
@@ -85,7 +85,7 @@ services:
       - --provider=oidc
       - --oidc-issuer-url=http://keycloak.localhost/realms/blanko
       - --client-id=blanko
-      - --client-secret=super-secret-pass
+      - --client-secret=${OIDC_CLIENT_SECRET}
       - --scope=openid profile email
       - --email-domain=*
       - --insecure-oidc-allow-unverified-email=true
@@ -97,7 +97,7 @@ services:
       - --upstream=http://backend:8080/
 
       # куки и режим за прокси
-      - --cookie-secret=1234567890123456abcd1234abcd5678
+      - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}
       - --cookie-secure=false
       # cookie_refresh должен быть МЕНЬШЕ access_token lifespan в Keycloak (сейчас 15m),
       # чтобы oauth2-proxy успевал проактивно рефрешить access_token по refresh_token.
@@ -131,7 +131,7 @@ services:
     build: ../backend/app
     environment:
       REDIS_ADDR: redis:6379
-      POSTGRES_DSN: postgres://postgres:postgres@postgres_backend:5432/app?sslmode=disable
+      POSTGRES_DSN: postgres://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@postgres_backend:5432/${APP_POSTGRES_DB}?sslmode=disable
     depends_on:
       redis:
         condition: service_started
