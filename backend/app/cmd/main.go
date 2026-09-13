@@ -39,7 +39,7 @@ func main() {
 	}
 
 	services := service.New(pool)
-	s := server.New(pool, services)
+	s := server.New(pool, services, cfg.TldrawLicenseKey)
 
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,

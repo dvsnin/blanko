@@ -132,6 +132,7 @@ services:
     environment:
       REDIS_ADDR: redis:6379
       POSTGRES_DSN: postgres://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@postgres_backend:5432/${APP_POSTGRES_DB}?sslmode=disable
+      TLDRAW_LICENSE_KEY: ${TLDRAW_LICENSE_KEY}
     depends_on:
       redis:
         condition: service_started

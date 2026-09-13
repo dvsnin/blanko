@@ -24,14 +24,18 @@ type Server struct {
 	api      *handler.API
 	pool     *pgxpool.Pool
 	services *service.Services
+	// tldrawLicenseKey прокидывается в canvas-страницу. Пустая строка —
+	// валидное состояние: локально tldraw работает без лицензии.
+	tldrawLicenseKey string
 }
 
 // New создаёт сервер, прикрученный к pgxpool и сервисам.
-func New(pool *pgxpool.Pool, services *service.Services) *Server {
+func New(pool *pgxpool.Pool, services *service.Services, tldrawLicenseKey string) *Server {
 	return &Server{
-		pool:     pool,
-		services: services,
-		api:      handler.NewAPI(services),
+		pool:             pool,
+		services:         services,
+		api:              handler.NewAPI(services),
+		tldrawLicenseKey: tldrawLicenseKey,
 	}
 }
 
@@ -247,14 +251,20 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
 
-	// Инжектим перед </head> две вещи:
+	// Инжектим перед </head> три вещи:
 	//   1. APP_UID — чтобы canvas знал, какая доска (используется в persistenceKey).
 	//   2. dashData — тот же payload, что на /app/dashboard. Нужен, чтобы
 	//      topbar доски показывал реальное имя/инициал пользователя, а не
 	//      заглушку "U".
+	//   3. TLDRAW_LICENSE_KEY — ключ лицензии из окружения. Пустая строка
+	//      означает "лицензии нет": локально это норма, tldraw считает
+	//      HTTP на loopback окружением разработки.
 	uidJSON, _ := json.Marshal(uid)
 	dashJSON := s.buildDashDataJSON(r)
-	injectTag := "<script>window.APP_UID = " + string(uidJSON) + "; window.dashData = " + dashJSON + ";</script>\n"
+	licenseJSON, _ := json.Marshal(s.tldrawLicenseKey)
+	injectTag := "<script>window.APP_UID = " + string(uidJSON) +
+		"; window.dashData = " + dashJSON +
+		"; window.TLDRAW_LICENSE_KEY = " + string(licenseJSON) + ";</script>\n"
 	indexHTML = strings.Replace(indexHTML, "</head>", injectTag+"</head>", 1)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
