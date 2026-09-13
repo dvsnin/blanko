@@ -14,7 +14,7 @@ services:
     networks:
       default:
         aliases:
-          - app.localhost
+          - blanko.localhost
           - keycloak.localhost
 
   postgres_backend:
@@ -91,7 +91,7 @@ services:
       - --insecure-oidc-allow-unverified-email=true
 
       # куда редиректить после логина
-      - --redirect-url=http://app.localhost/oauth2/callback
+      - --redirect-url=http://blanko.localhost/oauth2/callback
 
       # upstream = твой backend
       - --upstream=http://backend:8080/
@@ -120,8 +120,8 @@ services:
 
     labels:
       - "traefik.enable=true"
-      # весь трафик на app.localhost идёт в oauth2-proxy
-      - "traefik.http.routers.app.rule=Host(`app.localhost`)"
+      # весь трафик на blanko.localhost идёт в oauth2-proxy
+      - "traefik.http.routers.app.rule=Host(`blanko.localhost`)"
       - "traefik.http.routers.app.entrypoints=web"
       - "traefik.http.services.app.loadbalancer.server.port=4180"
       - "traefik.http.routers.app.middlewares=strip-gap-auth"
