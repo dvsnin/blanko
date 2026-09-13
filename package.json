@@ -2,9 +2,9 @@
   "name": "blanko-monorepo",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.24.0",
   "workspaces": [
-    "apps/*",
+    "frontend/*",
     "packages/*"
   ],
   "scripts": {

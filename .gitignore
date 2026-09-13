@@ -1,5 +1,5 @@
 # Root .gitignore for Blanko monorepo (Go backend + JS frontend apps + packages)
-# Tailored for: backend/ (Go), apps/* (dashboard, canvas), packages/* (shared UI/SDK)
+# Tailored for: backend/ (Go), frontend/* (dashboard), packages/* (shared UI/SDK)
 # Keep or adjust any lines that conflict with files you intentionally commit.
 
 ########################
@@ -77,8 +77,12 @@ dist/
 *.bundle.js
 
 # local env files
+# Внимание: gitignore не поддерживает комментарий в конце строки с паттерном —
+# всё, что справа, становится частью паттерна. Держим паттерны «голыми».
 .env
-.env.*        # dev/prod/local secrets
+.env.*
+# ...кроме шаблона конфигурации, он должен быть в репозитории:
+!.env.example
 
 # lockfiles created by editors / OS
 *.orig
@@ -92,13 +96,13 @@ dist/
 .cache/
 
 ########################
-# Frontend app artifacts (apps/*)
+# Frontend app artifacts (frontend/*)
 ########################
-# If Vite builds into apps/<app>/dist or backend static output, ignore those build outputs:
-apps/*/dist/
-apps/*/build/
-apps/*/out/
-apps/*/public/build/
+# If Vite builds into frontend/<app>/dist or backend static output, ignore those build outputs:
+frontend/*/dist/
+frontend/*/build/
+frontend/*/out/
+frontend/*/public/build/
 
 # If you configured builds to output into backend static paths, ignore them there too:
 # (allow overriding: if you intend to commit built static assets, remove these)
