@@ -80,7 +80,7 @@
 /* use subtle focus ring only (no outline that enlarges) */
 .menu-action:focus {
     outline: none;
-    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06), 0 0 0 3px rgba(37,100,255,0.08);
+    box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06), 0 0 0 3px rgba(31,138,133,0.08);
 }
 
 /* Prevent other CSS from injecting content */

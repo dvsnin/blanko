@@ -28,13 +28,13 @@
 .vt-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 22px rgba(46,80,170,0.06);
-    border-color: rgba(37,100,255,0.10);
+    border-color: rgba(31,138,133,0.10);
 }
 
 /* focus visible (keyboard) */
 .vt-btn:focus-visible {
-    box-shadow: 0 0 0 3px rgba(37,100,255,0.10), 0 10px 22px rgba(46,80,170,0.06);
-    border-color: rgba(37,100,255,0.12);
+    box-shadow: 0 0 0 3px rgba(31,138,133,0.10), 0 10px 22px rgba(46,80,170,0.06);
+    border-color: rgba(31,138,133,0.12);
 }
 
 /* icon inside button */
@@ -48,7 +48,7 @@
 .vt-active {
     background: var(--accent);
     border: none;
-    box-shadow: 0 12px 36px rgba(79,139,255,0.18);
+    box-shadow: 0 12px 36px rgba(31,138,133,0.18);
 }
 
 /* when active, icon should be white/solid */

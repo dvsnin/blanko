@@ -52,7 +52,7 @@
     justify-content: center;
     transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
-.notifications-close-btn:hover { background: #eef2ff; transform: translateY(-1px); }
+.notifications-close-btn:hover { background: var(--field); transform: translateY(-1px); }
 
 /* filter row */
 .notifications-row {

@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./BoardCover.css";
 import "./TeamSwitcher.css";
 import StarButton from "./StarButton";
-import TeamSettingsModal from "./TeamSettingsModal";
+import TeamSettingsModal, { NEW_TEAM } from "./TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { useToast } from "../hooks/useToast";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { navigate, useHashRoute } from "../hooks/useHashRoute";
 import { colorForId, initialsOf } from "../utils/cover";
@@ -18,7 +19,7 @@ import type { Team } from "../types";
   поиск, клавиатура, переключение. Всё состояние — из TeamsContext.
 */
 
-type Editing = Team | (Partial<Team> & { create: true });
+type Editing = Team | typeof NEW_TEAM;
 
 export default function TeamSwitcher() {
   const {
@@ -26,6 +27,7 @@ export default function TeamSwitcher() {
     createTeam, updateTeam, deleteTeam, leaveTeam, toggleStarTeam, loading,
   } = useTeams();
   const route = useHashRoute();
+  const { toastMessage, toastVisible, showToast } = useToast();
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -72,7 +74,7 @@ export default function TeamSwitcher() {
 
   function openCreate() {
     setOpen(false);
-    setEditing({ create: true, id: "", name: "" });
+    setEditing(NEW_TEAM);
   }
 
   function boardCount(t: Team): number {
@@ -201,19 +203,29 @@ export default function TeamSwitcher() {
 
       {editing && (
         <TeamSettingsModal
-          team={editing as Team}
+          team={editing}
           onClose={() => setEditing(null)}
-          onSave={(teamId, { name, ageGroup }) => {
-            if ("create" in editing && editing.create) {
-              createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
-            } else {
-              updateTeam(teamId, { name, ageGroup });
+          onSave={async (teamId, { name, ageGroup }) => {
+            try {
+              if ("create" in editing) {
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+              } else {
+                await updateTeam(teamId, { name, ageGroup });
+              }
+            } catch (e) {
+              showToast("Не удалось сохранить группу");
+              throw e;
             }
           }}
-          onDelete={(teamId) => { deleteTeam(teamId); }}
-          onLeave={(teamId) => { leaveTeam(teamId); setEditing(null); }}
+          onDelete={async (teamId) => {
+            try { await deleteTeam(teamId); } catch (e) { showToast("Не удалось удалить группу"); throw e; }
+          }}
+          onLeave={async (teamId) => {
+            try { await leaveTeam(teamId); } catch (e) { showToast("Не удалось выйти из группы"); throw e; }
+          }}
         />
       )}
+      {toastVisible && <div className="boards-toast">{toastMessage}</div>}
     </>
   );
 }

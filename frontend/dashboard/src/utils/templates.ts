@@ -12,7 +12,7 @@ export function templatesForAge(age?: AgeKey, limit = 5): Template[] {
 function matchesQuery(t: Template, q: string): boolean {
   const needle = q.trim().toLowerCase();
   if (!needle) return true;
-  return `${t.title} ${t.desc}`.toLowerCase().includes(needle);
+  return `${t.title} ${t.desc} ${topicStyle(t.topic).label}`.toLowerCase().includes(needle);
 }
 
 export function filterTemplates(q: string, age: AgeKey | "all", topic: TopicKey | "all"): Template[] {

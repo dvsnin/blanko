@@ -12,12 +12,15 @@ import type { Team, TeamRole } from "../types";
   If role is missing or invalid, we treat the team as broken and hide destructive actions.
 */
 
+export const NEW_TEAM = { create: true } as const;
+
 interface TeamSettingsModalProps {
   team: Partial<Team> & { create?: boolean };
   onClose: () => void;
-  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | "" }) => void;
-  onDelete: (teamId: string) => void;
-  onLeave: (teamId: string) => void;
+  /** May return a promise; if it rejects, the modal stays open. */
+  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | "" }) => void | Promise<unknown>;
+  onDelete: (teamId: string) => void | Promise<unknown>;
+  onLeave: (teamId: string) => void | Promise<unknown>;
 }
 
 export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onLeave }: TeamSettingsModalProps) {
@@ -57,21 +60,32 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     if (!tabs.includes(activeTab)) setActiveTab("main");
   }, [role]);
 
-  function handleSave() {
+  async function handleSave() {
     const val = (name || "").trim();
     if (!val) return;
-    onSave?.(team?.id || "", { name: val, ageGroup });
+    try {
+      await onSave?.(team?.id || "", { name: val, ageGroup });
+    } catch {
+      return;
+    }
     onClose?.();
   }
 
-  function handleDeleteConfirmed() {
+  async function handleDeleteConfirmed() {
     if (!team?.id) return;
-    if (isOwner) onDelete?.(team.id);
+    if (isOwner) {
+      try {
+        await onDelete?.(team.id);
+      } catch {
+        setShowDeleteConfirm(false);
+        return;
+      }
+    }
     setShowDeleteConfirm(false);
     onClose?.();
   }
 
-  function handleLeaveConfirmed() {
+  async function handleLeaveConfirmed() {
     if (!team?.id) {
       setShowLeaveConfirm(false);
       onClose?.();
@@ -79,7 +93,12 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     }
 
     if (!isOwner) {
-      try { onLeave?.(team.id); } catch {}
+      try {
+        await onLeave?.(team.id);
+      } catch {
+        setShowLeaveConfirm(false);
+        return;
+      }
     }
 
     setShowLeaveConfirm(false);

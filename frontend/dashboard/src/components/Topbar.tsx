@@ -37,6 +37,7 @@ export default function Topbar() {
         <span className="topbar__logo-mark" dangerouslySetInnerHTML={{ __html: LOGO_SVG }} />
         <span className="topbar__logo-text">Blanko</span>
       </a>
+      <span className="chip chip--teal">Free</span>
 
       <div className="topbar__switcher">
         <TeamSwitcher />

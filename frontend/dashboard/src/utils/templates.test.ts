@@ -68,3 +68,14 @@ describe('coverForBoard', () => {
     expect(c.topic).toBeUndefined();
   });
 });
+
+describe('поиск по названию темы', () => {
+  it('«математика» находит 4 шаблона темы', () => {
+    expect(filterTemplates('математика', 'all', 'all').length).toBe(4);
+  });
+  it('«речь» находит два речевых шаблона', () => {
+    const r = filterTemplates('речь', 'all', 'all');
+    expect(r).toHaveLength(2);
+    expect(r.every((t) => t.topic === 'speech')).toBe(true);
+  });
+});

@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import "../components/BoardCover.css";
 import "./GroupsPage.css";
 import StarButton from "../components/StarButton";
-import TeamSettingsModal from "../components/TeamSettingsModal";
+import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
+import { useToast } from "../hooks/useToast";
 import { navigate } from "../hooks/useHashRoute";
 import { colorForId, initialsOf } from "../utils/cover";
 import { plural } from "../utils/plural";
@@ -13,7 +14,7 @@ import type { Team, TeamRole } from "../types";
 
 /* GroupsPage — экран «Группы»: сетка карточек групп пользователя. */
 
-type Editing = Team | "create";
+type Editing = Team | typeof NEW_TEAM;
 
 const ROLE_LABEL: Record<TeamRole, string> = {
   owner: "Владелец",
@@ -26,6 +27,7 @@ export default function GroupsPage() {
     teams, setActiveTeamId, createTeam, updateTeam, deleteTeam, leaveTeam, toggleStarTeam, loading,
   } = useTeams();
   const [editing, setEditing] = useState<Editing | null>(null);
+  const { toastMessage, toastVisible, showToast } = useToast();
 
   const sorted = useMemo(() => {
     const byName = (a: Team, b: Team) => a.name.localeCompare(b.name, "ru");
@@ -52,7 +54,7 @@ export default function GroupsPage() {
           )}
         </div>
         {showBody && (
-          <button type="button" className="btn btn--primary" onClick={() => setEditing("create")}>
+          <button type="button" className="btn btn--primary" onClick={() => setEditing(NEW_TEAM)}>
             Создать группу
           </button>
         )}
@@ -109,7 +111,7 @@ export default function GroupsPage() {
             );
           })}
 
-          <button type="button" className="groups-new" onClick={() => setEditing("create")}>
+          <button type="button" className="groups-new" onClick={() => setEditing(NEW_TEAM)}>
             <span className="groups-new__plus" aria-hidden>+</span>
             <span className="groups-new__label">Новая группа</span>
           </button>
@@ -118,19 +120,29 @@ export default function GroupsPage() {
 
       {editing && (
         <TeamSettingsModal
-          team={editing === "create" ? ({ create: true, id: "", name: "" } as unknown as Team) : editing}
+          team={editing}
           onClose={() => setEditing(null)}
-          onSave={(teamId, { name, ageGroup }) => {
-            if (editing === "create") {
-              void createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
-            } else {
-              void updateTeam(teamId, { name, ageGroup });
+          onSave={async (teamId, { name, ageGroup }) => {
+            try {
+              if ("create" in editing) {
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+              } else {
+                await updateTeam(teamId, { name, ageGroup });
+              }
+            } catch (e) {
+              showToast("Не удалось сохранить группу");
+              throw e;
             }
           }}
-          onDelete={(teamId) => { void deleteTeam(teamId); }}
-          onLeave={(teamId) => { void leaveTeam(teamId); setEditing(null); }}
+          onDelete={async (teamId) => {
+            try { await deleteTeam(teamId); } catch (e) { showToast("Не удалось удалить группу"); throw e; }
+          }}
+          onLeave={async (teamId) => {
+            try { await leaveTeam(teamId); } catch (e) { showToast("Не удалось выйти из группы"); throw e; }
+          }}
         />
       )}
+      {toastVisible && <div className="boards-toast">{toastMessage}</div>}
     </main>
   );
 }

@@ -220,7 +220,7 @@
 
 .board-menu-btn:focus,
 .boards-row-menu-btn:focus {
-    outline: 3px solid rgba(37, 100, 255, 0.12);
+    outline: 3px solid rgba(31,138,133, 0.12);
     outline-offset: 2px;
 }
 

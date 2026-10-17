@@ -46,7 +46,7 @@
 .boards-list-row:hover {
     transform: translateY(-3px);
     box-shadow: 0 18px 40px rgba(6,22,34,0.07);
-    background: linear-gradient(180deg, var(--surface), #fbfdff);
+    background: linear-gradient(180deg, var(--surface), var(--field));
 }
 
 /* Name column: thumbnail + title + subline */
@@ -55,6 +55,7 @@
 /* Title and subtitle layout */
 .boards-name-text { display: flex; flex-direction: column; gap: 6px; }
 .board-row-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.board-row-topic { font-size: 12px; font-weight: 700; }
 .board-row-sub { color: var(--muted); font-size: 13px; }
 
 /* online / last opened / owner columns styling */
@@ -141,7 +142,7 @@
 
 /* Accessibility: ensure the overlay gets focus outline */
 .boards-actions-cell .menu-wrap .menu-action:focus {
-    outline: 3px solid rgba(37,100,255,0.12);
+    outline: 3px solid rgba(31,138,133,0.12);
     outline-offset: 2px;
 }
 

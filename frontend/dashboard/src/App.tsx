@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import Topbar from "./components/Topbar";
 import BoardsPage from "./pages/BoardsPage";
 import TemplatesPage from "./pages/TemplatesPage";
@@ -12,11 +13,12 @@ import { useHashRoute } from "./hooks/useHashRoute";
 
 export default function App() {
   const route = useHashRoute();
+  useEffect(() => { window.scrollTo(0, 0); }, [route.name, route.name === "templates" ? route.age : undefined]);
   return (
     <div className="app">
       <Topbar />
       {route.name === "boards" && <BoardsPage />}
-      {route.name === "templates" && <TemplatesPage initialAge={route.age} />}
+      {route.name === "templates" && <TemplatesPage key={route.age ?? "all"} initialAge={route.age} />}
       {route.name === "groups" && <GroupsPage />}
       {route.name === "profile" && <ProfilePage />}
     </div>

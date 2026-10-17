@@ -4,10 +4,12 @@ import { AGES, TOPICS, type AgeKey, type TopicKey, type Template } from "../cons
 import { filterTemplates, topicCounts, topicStyle } from "../utils/templates";
 import { openBoardWindow } from "../utils/openBoard";
 import { navigate } from "../hooks/useHashRoute";
+import { useToast } from "../hooks/useToast";
 import { useTeams } from "../contexts/TeamsContext";
 
 export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
   const { activeTeam, createBoard } = useTeams();
+  const { toastMessage, toastVisible, showToast } = useToast();
   const [q, setQ] = useState("");
   const [age, setAge] = useState<AgeKey | "all">(initialAge ?? "all");
   const [topic, setTopic] = useState<TopicKey | "all">("all");
@@ -25,6 +27,8 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
       if (board) {
         openBoardWindow(board);
         navigate({ name: "boards" });
+      } else {
+        showToast("Не удалось создать доску");
       }
     })();
   };
@@ -125,6 +129,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
           )}
         </section>
       </div>
+      {toastVisible && <div className="boards-toast">{toastMessage}</div>}
     </main>
   );
 }

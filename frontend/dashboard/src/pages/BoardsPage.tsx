@@ -10,7 +10,7 @@ import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
 import TemplatesStrip from "../components/TemplatesStrip";
-import TeamSettingsModal from "../components/TeamSettingsModal";
+import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
@@ -154,6 +154,8 @@ export default function BoardsPage() {
       if (newBoard) {
         showToast("Доска создана");
         openBoardWindow(newBoard);
+      } else {
+        showToast("Не удалось создать доску");
       }
     })();
   };
@@ -164,6 +166,8 @@ export default function BoardsPage() {
       if (b) {
         showToast(`Доска «${t.title}» создана`);
         openBoardWindow(b);
+      } else {
+        showToast("Не удалось создать доску");
       }
     })();
   };
@@ -445,6 +449,7 @@ export default function BoardsPage() {
                 {boards.map((b) => {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
+                  const cover = coverForBoard(b);
                   return (
                     <div
                       key={b.id}
@@ -467,7 +472,7 @@ export default function BoardsPage() {
                             {b.title}
                           </button>
                           <span className="visually-hidden">
-                            Владелец: {b.owner}.{coverForBoard(b).topic ? ` Тема: ${coverForBoard(b).topic?.label}.` : ""}
+                            Владелец: {b.owner}.{cover.topic ? ` Тема: ${cover.topic.label}.` : ""}
                           </span>
                           <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
                         </div>
@@ -510,6 +515,7 @@ export default function BoardsPage() {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const isLastRow = index === boards.length - 1;
+                  const cover = coverForBoard(b);
                   return (
                     <div
                       key={b.id}
@@ -521,6 +527,9 @@ export default function BoardsPage() {
                         <BoardCover board={b} size="small" />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>
+                          {cover.topic && (
+                            <div className="board-row-topic" style={{ color: cover.topic.color }}>{cover.topic.label}</div>
+                          )}
                           <div className="board-row-sub">Изменено: {b.owner}, {formatRelative(b.updatedAt, now)}</div>
                         </div>
                       </div>
@@ -597,17 +606,26 @@ export default function BoardsPage() {
 
       {teamModal && (teamModal === "create" || activeTeam) && (
         <TeamSettingsModal
-          team={teamModal === "create" ? ({ create: true, id: "", name: "" } as unknown as Team) : (activeTeam as Team)}
+          team={teamModal === "create" ? NEW_TEAM : activeTeam!}
           onClose={() => setTeamModal(null)}
-          onSave={(teamId, { name, ageGroup }) => {
-            if (teamModal === "create") {
-              void createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
-            } else {
-              void updateTeam(teamId, { name, ageGroup });
+          onSave={async (teamId, { name, ageGroup }) => {
+            try {
+              if (teamModal === "create") {
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+              } else {
+                await updateTeam(teamId, { name, ageGroup });
+              }
+            } catch (e) {
+              showToast("Не удалось сохранить группу");
+              throw e;
             }
           }}
-          onDelete={(teamId) => { void deleteTeam(teamId); }}
-          onLeave={(teamId) => { void leaveTeam(teamId); setTeamModal(null); }}
+          onDelete={async (teamId) => {
+            try { await deleteTeam(teamId); } catch (e) { showToast("Не удалось удалить группу"); throw e; }
+          }}
+          onLeave={async (teamId) => {
+            try { await leaveTeam(teamId); } catch (e) { showToast("Не удалось выйти из группы"); throw e; }
+          }}
         />
       )}
 

@@ -68,7 +68,7 @@
 .board-card-menu .board-card-menu-item:hover,
 .portal-wrapper .board-card-menu .board-card-menu-item:focus,
 .board-card-menu .board-card-menu-item:focus {
-    background: #f3f6ff;
+    background: var(--field);
     color: var(--ink);
     outline: none;
     transform: translateY(-1px);
@@ -77,7 +77,7 @@
 /* keyboard focus */
 .portal-wrapper .board-card-menu .board-card-menu-item:focus-visible,
 .board-card-menu .board-card-menu-item:focus-visible {
-    box-shadow: 0 0 0 4px rgba(37, 100, 255, 0.10);
+    box-shadow: 0 0 0 4px rgba(31,138,133, 0.10);
     border-radius: 8px;
 }
 

@@ -32,7 +32,7 @@
 .profile-avatar-btn:hover,
 .topbar-avatar:hover {
     box-shadow: 0 10px 22px rgba(46,80,170,0.06);
-    border-color: rgba(37,100,255,0.08);
+    border-color: rgba(31,138,133,0.08);
 }
 
 /* Active: slightly pressed look */
@@ -45,8 +45,8 @@
 .profile-avatar-btn:focus-visible,
 .topbar-avatar:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(37,100,255,0.10), 0 10px 24px rgba(46,80,170,0.06);
-    border-color: rgba(37,100,255,0.12);
+    box-shadow: 0 0 0 3px rgba(31,138,133,0.10), 0 10px 24px rgba(46,80,170,0.06);
+    border-color: rgba(31,138,133,0.12);
 }
 
 /* initials styling inside avatar */
