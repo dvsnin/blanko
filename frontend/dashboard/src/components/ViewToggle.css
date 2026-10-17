@@ -40,7 +40,7 @@
 /* icon inside button */
 .vt-icon {
     display: block;
-    color: #4b5563; /* muted icon color */
+    color: var(--muted); /* muted icon color */
     stroke: currentColor;
 }
 
@@ -53,7 +53,7 @@
 
 /* when active, icon should be white/solid */
 .vt-active .vt-icon {
-    color: #ffffff;
+    color: var(--accent-ink);
 }
 
 /* slightly bigger active target for touch */

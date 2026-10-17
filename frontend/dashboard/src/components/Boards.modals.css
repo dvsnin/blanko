@@ -49,8 +49,8 @@
 }
 .boards-modal-title {
     margin: 0;
-    font-size: 22px;
-    line-height: 1;
+    font-size: 20px;
+    line-height: 1.2;
     font-weight: 800;
     color: var(--ink);
     flex: 1 1 auto;
@@ -78,9 +78,10 @@
 /* ===== Body ===== */
 .boards-modal-body {
     padding: 20px 24px;
-    color: #374151;
+    color: var(--ink);
     font-size: 15px;
-    line-height: 1.45;
+    font-weight: 500;
+    line-height: 1.5;
     overflow: auto;
     flex: 1 1 auto;
     box-sizing: border-box;
@@ -91,14 +92,14 @@
 .teams-modal-input {
     width: 100%;
     box-sizing: border-box;
-    padding: 12px 16px;
-    height: 48px;
-    border-radius: 10px;
+    padding: 0 14px;
+    height: 44px;
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--ink);
-    font-size: 16px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     outline: none;
     transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
     margin: 4px 0 0 0;
@@ -106,9 +107,9 @@
 }
 .boards-modal-input::placeholder,
 .teams-modal-input::placeholder {
-    color: #8b949e;
+    color: var(--muted);
     opacity: 1;
-    font-weight: 500;
+    font-weight: 600;
 }
 .boards-modal-input:focus,
 .teams-modal-input:focus {
@@ -131,10 +132,11 @@
     background: var(--accent);
     color: var(--accent-ink);
     border: none;
-    padding: 10px 16px;
+    height: 44px;
+    padding: 0 16px;
     border-radius: var(--radius-md);
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14px;
     cursor: pointer;
     box-shadow: 0 8px 26px rgba(31,138,133,0.12);
     transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
@@ -155,11 +157,13 @@
 .secondary-btn {
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 9px 14px;
+    height: 44px;
+    padding: 0 16px;
     border-radius: var(--radius-md);
     color: var(--ink);
     cursor: pointer;
     font-size: 14px;
+    font-weight: 700;
     min-width: 72px;
     transition: transform 140ms ease, box-shadow 140ms ease;
 }
@@ -169,7 +173,8 @@
     background: #fff5f6;
     border: 1px solid rgba(191,30,46,0.08);
     color: var(--danger);
-    padding: 9px 14px;
+    height: 44px;
+    padding: 0 16px;
     border-radius: var(--radius-md);
     cursor: pointer;
     font-weight: 700;
@@ -238,16 +243,16 @@
 .team-settings-body { display: flex; height: calc(100% - 72px); min-height: 360px; box-sizing: border-box; }
 .team-settings-sidebar { flex: 0 0 200px; width: 200px; border-right: 1px solid #f0f2f6; background: #fbfcfd; padding: 18px 12px; box-sizing: border-box; }
 .team-settings-sidebar ul { list-style: none; margin: 0; padding: 0; }
-.ts-nav-item { padding: 12px; border-radius: 8px; cursor: pointer; color: #4b5563; font-weight: 400; margin-bottom: 6px; transition: background 120ms ease, color 120ms ease; }
+.ts-nav-item { padding: 12px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 700; font-size: 14px; margin-bottom: 6px; transition: background 120ms ease, color 120ms ease; }
 .ts-nav-item:hover { background: rgba(15,23,42,0.03); }
 .ts-nav-item.active { background: rgba(15,23,42,0.03); color: var(--ink); }
 .team-settings-content { flex: 1 1 auto; padding: 22px 30px; overflow: auto; min-height: 0; }
 
 /* ===== Misc helpers ===== */
 .ts-section { margin-bottom: 18px; }
-.ts-section-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 400; }
-.ts-section-title { margin: 0 0 8px 0; font-size: 18px; color: var(--ink); font-weight: 500; }
-.ts-section-text { margin: 0; color: var(--muted); line-height: 1.5; font-size: 15px; }
+.ts-section-label { margin-bottom: 8px; }
+.ts-section-title { margin: 0 0 8px 0; font-size: 18px; color: var(--ink); font-weight: 800; }
+.ts-section-text { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; font-weight: 600; }
 .ts-divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 .ts-placeholder { padding: 18px; border-radius: 8px; background: var(--field); border: 1px solid var(--chip); color: var(--muted); }
 

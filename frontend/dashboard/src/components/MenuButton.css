@@ -16,7 +16,7 @@
     user-select: none;
     line-height: 1;
     cursor: default;
-    color: #39404a;
+    color: var(--muted);
 }
 
 /* ensure consistent wrapper sizing in list/grid variants */

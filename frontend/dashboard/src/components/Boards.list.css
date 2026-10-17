@@ -54,7 +54,7 @@
 
 /* Title and subtitle layout */
 .boards-name-text { display: flex; flex-direction: column; gap: 6px; }
-.board-row-title { font-weight: 700; color: var(--ink); font-size: 15px; }
+.board-row-title { font-weight: 800; color: var(--ink); font-size: 16px; }
 .board-row-topic { font-size: 12px; font-weight: 700; }
 .board-row-sub { color: var(--muted); font-size: 13px; }
 
@@ -77,7 +77,7 @@
 /* Make sure the small visible menu icon in the list inherits a visible color */
 .boards-actions-cell .menu-wrap,
 .boards-actions-cell .menu-wrap .menu-icon {
-    color: #39404a; /* subtle dark, same as star glyph */
+    color: var(--muted); /* subtle dark, same as star glyph */
 }
 
 /* -----------------------------
@@ -129,7 +129,7 @@
 /* visible icon color fix for list menu glyph - uses currentColor above */
 .board-menu-wrapper .menu-icon,
 .boards-actions-cell .menu-icon {
-    color: #39404a !important;
+    color: var(--muted) !important;
 }
 
 /* Overlay reveal: only when the menu wrapper itself is hovered/focused (same UX as StarButton).

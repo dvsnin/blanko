@@ -160,11 +160,11 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
               aria-label="Название группы"
             />
             <div className="ts-section" style={{ marginTop: 12 }}>
-              <label className="ts-section-label">Возраст детей</label>
+              <label className="field-label ts-section-label">Возраст детей</label>
               {ageSelect}
             </div>
             <div className="ts-section" style={{ marginTop: 12 }}>
-              <label className="ts-section-label">Воспитатели</label>
+              <label className="field-label ts-section-label">Воспитатели</label>
               {teachersField}
             </div>
           </div>
@@ -214,7 +214,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
               {activeTab === "main" && (
                 <>
                   <div className="ts-section">
-                    <label className="ts-section-label">Название группы</label>
+                    <label className="field-label ts-section-label">Название группы</label>
                     <input
                       className={`boards-modal-input ${isEmpty ? "boards-modal-input--empty" : ""}`}
                       value={name}
@@ -227,12 +227,12 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                   </div>
 
                   <div className="ts-section">
-                    <label className="ts-section-label">Возраст детей</label>
+                    <label className="field-label ts-section-label">Возраст детей</label>
                     {ageSelect}
                   </div>
 
                   <div className="ts-section">
-                    <label className="ts-section-label">Воспитатели</label>
+                    <label className="field-label ts-section-label">Воспитатели</label>
                     {teachersField}
                   </div>
 

@@ -28,6 +28,11 @@ body {
     font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
 }
 
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.text-body { font-size: 15px; font-weight: 500; line-height: 1.5; color: var(--ink); }
+.field-label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); }
+
 /* ====== PAGE ====== */
 
 .page {
@@ -104,8 +109,11 @@ body {
     background: var(--surface);
     color: var(--ink);
     font: inherit;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 600;
 }
+
+.input::placeholder { color: var(--muted); opacity: 1; font-weight: 600; }
 
 .input:focus,
 .input:focus-within { outline: 2px solid var(--teal); outline-offset: 0; }
@@ -231,7 +239,7 @@ body {
 
 .profile-menu .menu-item.small {
     font-size: 12px;
-    color: #555;
+    color: var(--muted);
 }
 
 .profile-menu .menu-item:hover {
@@ -253,7 +261,7 @@ body {
 
 .input-disabled {
     background: #f2f2f2;
-    color: #777;
+    color: var(--muted);
     cursor: not-allowed;
 }
 

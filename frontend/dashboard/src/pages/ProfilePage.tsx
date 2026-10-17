@@ -81,11 +81,11 @@ export default function ProfilePage() {
           }}
         >
           <div className="profile__field">
-            <label htmlFor="profile-name">Имя</label>
+            <label className="field-label" htmlFor="profile-name">Имя</label>
             <input id="profile-name" className="input" value={draft} onChange={(e) => setDraft(e.target.value)} />
           </div>
           <div className="profile__field">
-            <label htmlFor="profile-email">Электронная почта</label>
+            <label className="field-label" htmlFor="profile-email">Электронная почта</label>
             <input id="profile-email" className="input input-disabled" value={user.email} readOnly />
           </div>
           <div className="profile__footer">

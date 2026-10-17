@@ -36,6 +36,7 @@
 .notifications-title {
     margin: 0;
     font-size: 20px;
+    font-weight: 800;
     color: var(--ink);
 }
 .notifications-close-btn {
@@ -132,7 +133,7 @@
 }
 
 /* empty content */
-.notifications-empty-title { margin-top: 12px; margin-bottom: 8px; font-size:18px; color:var(--ink); }
+.notifications-empty-title { margin-top: 12px; margin-bottom: 8px; font-size:18px; font-weight:800; color:var(--ink); }
 
 /* responsive */
 @media (max-width: 480px) {

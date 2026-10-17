@@ -87,7 +87,7 @@ export default function ConfirmModal({
           </div>
 
           <div className="boards-modal-body">
-            <div style={{ color: "#374151", fontSize: 15, lineHeight: 1.55 }}>{message}</div>
+            <div className="text-body">{message}</div>
           </div>
 
           <div className="boards-modal-footer confirm-footer" style={{ marginTop: 18 }}>

@@ -25,7 +25,7 @@
     line-height: 1;
     display: inline-block;
     pointer-events: none;
-    color: #39404a;
+    color: var(--muted);
 }
 
 /* filled glyph color */
