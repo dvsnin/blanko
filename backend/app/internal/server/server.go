@@ -249,6 +249,9 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 		if name := strings.TrimSpace(board.Name); name != "" {
 			title = name
 		}
+		if err := s.services.Board.MarkOpened(r.Context(), uid); err != nil {
+			log.Printf("board mark opened %s: %v", uid, err)
+		}
 	}
 	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
 

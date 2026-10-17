@@ -306,6 +306,19 @@ func (s *BoardService) GetByPublicID(ctx context.Context, publicID string) (*mod
 	return board, nil
 }
 
+// MarkOpened фиксирует открытие доски (last_opened_at = now()).
+func (s *BoardService) MarkOpened(ctx context.Context, publicID string) error {
+	repo := repository.NewBoardRepo(s.pool)
+	board, err := repo.GetByPublicID(ctx, publicID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return ErrNotFound
+		}
+		return err
+	}
+	return repo.TouchLastOpened(ctx, board.ID)
+}
+
 // ListByTeam возвращает доски команды. Пользователь должен быть участником команды.
 func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.BoardView, error) {
 	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {

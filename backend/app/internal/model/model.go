@@ -64,6 +64,7 @@ type Board struct {
 	TemplateID        *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	LastOpenedAt      *time.Time
 }
 
 // BoardView — доска с дополнительной информацией для UI.

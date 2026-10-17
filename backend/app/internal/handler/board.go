@@ -25,12 +25,17 @@ type BoardDTO struct {
 	TemplateID        string    `json:"templateId"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
+	LastOpenedAt      string    `json:"lastOpenedAt"`
 }
 
 func boardViewToDTO(v model.BoardView) BoardDTO {
 	templateID := ""
 	if v.Board.TemplateID != nil {
 		templateID = *v.Board.TemplateID
+	}
+	lastOpened := ""
+	if v.Board.LastOpenedAt != nil {
+		lastOpened = v.Board.LastOpenedAt.Format(time.RFC3339)
 	}
 	return BoardDTO{
 		ID:                v.Board.ID.String(),
@@ -45,6 +50,7 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 		TemplateID:        templateID,
 		CreatedAt:         v.Board.CreatedAt,
 		UpdatedAt:         v.Board.UpdatedAt,
+		LastOpenedAt:      lastOpened,
 	}
 }
 
