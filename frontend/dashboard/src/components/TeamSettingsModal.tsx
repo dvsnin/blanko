@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import "./TeamsPanel.css";
 import "./Boards.modals.css";
 import ConfirmModal from "./ConfirmModal";
 import { useEscapeKey } from "../hooks/useEscapeKey";

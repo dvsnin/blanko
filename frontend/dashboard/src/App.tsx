@@ -1,19 +1,24 @@
-import TeamsPanel from "./components/TeamsPanel";
-import Boards from "./components/Boards";
+import Topbar from "./components/Topbar";
+import BoardsPage from "./pages/BoardsPage";
+import TemplatesPage from "./pages/TemplatesPage";
+import GroupsPage from "./pages/GroupsPage";
+import ProfilePage from "./pages/ProfilePage";
+import { useHashRoute } from "./hooks/useHashRoute";
 
 /*
-  App.tsx — layout shell.
-  All teams/boards state lives in TeamsContext (provided in main.tsx).
-  All user state lives in UserContext (provided in main.tsx).
+  App.tsx — shell: Topbar + the page for the current hash route.
+  Teams/boards state lives in TeamsContext, user state in UserContext (main.tsx).
 */
 
 export default function App() {
+  const route = useHashRoute();
   return (
-    <div className="app-layout">
-      <TeamsPanel />
-      <div className="content">
-        <Boards />
-      </div>
+    <div className="app">
+      <Topbar />
+      {route.name === "boards" && <BoardsPage />}
+      {route.name === "templates" && <TemplatesPage initialAge={route.age} />}
+      {route.name === "groups" && <GroupsPage />}
+      {route.name === "profile" && <ProfilePage />}
     </div>
   );
 }

@@ -265,23 +265,6 @@ body {
     flex-direction: column;
 }
 
-/* legacy aliases: App.tsx renders these until the shell rewrite */
-.app-layout {
-    display: flex;
-    height: 100vh;
-    width: 100%;
-    overflow-x: visible;
-    overflow-y: hidden;
-}
-
-.content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: visible !important;
-    position: relative;
-    min-width: 0;
-}
-
 /* ====== OVERFLOW FIXES ====== */
 
 .boards-wrapper,

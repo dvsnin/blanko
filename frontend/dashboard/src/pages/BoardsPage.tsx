@@ -1,19 +1,13 @@
 import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
-import "./Boards.css";
-import "./BoardMenu.css";
-import "./Boards.modals.css";
-import "./Boards.list.css";
-import BoardCover from "./BoardCover";
-import StarButton from "./StarButton";
-import MenuButton from "./MenuButton";
-import ProfileMenu from "./ProfileMenu";
-import ProfileModal from "./ProfileModal";
-import MenuPortal from "./MenuPortal";
-import NotificationsPanel from "./NotificationsPanel";
-import TemplatesIsland, { Template } from "./TemplatesIsland";
-import NotificationButton from "./NotificationButton";
-import ProfileButton from "./ProfileButton";
-import ViewToggle from "./ViewToggle";
+import "../components/Boards.css";
+import "../components/BoardMenu.css";
+import "../components/Boards.modals.css";
+import "../components/Boards.list.css";
+import BoardCover from "../components/BoardCover";
+import StarButton from "../components/StarButton";
+import MenuButton from "../components/MenuButton";
+import MenuPortal from "../components/MenuPortal";
+import ViewToggle from "../components/ViewToggle";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
@@ -30,7 +24,7 @@ function openBoardWindow(board: { publicId: string }) {
   try { w.focus(); } catch {}
 }
 
-export default function Boards() {
+export default function BoardsPage() {
   const {
     teams,
     activeTeamId,
@@ -44,7 +38,7 @@ export default function Boards() {
     loading,
   } = useTeams();
 
-  const { user, setUser, updateName, userInitial } = useUser();
+  const { user } = useUser();
 
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -57,8 +51,6 @@ export default function Boards() {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Режим отображения досок (grid/list) сохраняем в localStorage,
   // чтобы не сбрасывался на grid после перезагрузки.
@@ -92,10 +84,6 @@ export default function Boards() {
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const [menuPlacement, setMenuPlacement] = useState("left");
 
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [unreadCount] = useState(0);
-  const notificationsRef = useRef<HTMLDivElement | null>(null);
-  const notificationsAnchorRef = useRef<HTMLElement | null>(null);
 
   const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -156,17 +144,6 @@ export default function Boards() {
       const newBoard = await createBoard("Новая доска");
       if (newBoard) {
         showToast("Доска создана");
-        openBoardWindow(newBoard);
-      }
-    })();
-  };
-
-  const handleTemplateClick = (template: Template) => {
-    const title = `${template.title} (шаблон)`;
-    void (async () => {
-      const newBoard = await createBoard(title);
-      if (newBoard) {
-        showToast(`Доска создана из шаблона «${template.title}»`);
         openBoardWindow(newBoard);
       }
     })();
@@ -320,19 +297,11 @@ export default function Boards() {
           closeMenu();
         }
       }
-      if (isNotificationsOpen) {
-        const notifEl = notificationsRef.current;
-        const notifAnchorEl = notificationsAnchorRef.current;
-        if (!isEventInside(e, notifEl) && !isEventInside(e, notifAnchorEl)) {
-          setIsNotificationsOpen(false);
-        }
-      }
     }
 
     function handleKeydown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         closeMenu();
-        setIsNotificationsOpen(false);
       }
     }
 
@@ -342,7 +311,7 @@ export default function Boards() {
       document.removeEventListener("click", handleClickOutside);
       document.removeEventListener("keydown", handleKeydown);
     };
-  }, [menuBoardId, isNotificationsOpen]);
+  }, [menuBoardId]);
 
   const renderContextMenu = (b: { id: string; title: string }, variant: "grid" | "list") => (
     <div
@@ -364,53 +333,7 @@ export default function Boards() {
   );
 
   return (
-    <div className="boards-page">
-      <header className="topbar">
-        <div className="topbar-left">
-          <div className="topbar-logo-wrap">
-            <span className="topbar-logo">Blanko</span>
-            <span className="topbar-badge">Free</span>
-          </div>
-        </div>
-
-        <div className="topbar-center" aria-hidden />
-
-        <div className="topbar-right">
-          <NotificationButton
-            unreadCount={unreadCount}
-            onClick={(e) => {
-              notificationsAnchorRef.current = e.currentTarget;
-              setIsNotificationsOpen((v) => !v);
-            }}
-          />
-
-          <ProfileButton userInitial={userInitial} onClick={() => setIsProfileMenuOpen((prev) => !prev)} />
-
-          {isProfileMenuOpen && (
-            <ProfileMenu
-              name={user.name || "Пользователь"}
-              email={user.email || "user@example.com"}
-              onSettings={() => {
-                setIsProfileMenuOpen(false);
-                setIsProfileModalOpen(true);
-              }}
-              onLogout={() => {
-                window.location.href = "/app/logout";
-              }}
-              onClose={() => setIsProfileMenuOpen(false)}
-            />
-          )}
-        </div>
-      </header>
-
-      <NotificationsPanel ref={notificationsRef} isOpen={isNotificationsOpen} onClose={() => setIsNotificationsOpen(false)} />
-
-      <div className="topbar-divider" />
-
-      <TemplatesIsland onTemplateClick={handleTemplateClick} />
-
-      <div className="templates-bottom-divider" />
-
+    <main className="page boards-page">
       <div className="boards-wrapper">
         <div className="boards-header-line">
           <button
@@ -655,30 +578,6 @@ export default function Boards() {
         </div>
       )}
 
-      {isProfileModalOpen && (
-        <ProfileModal
-          name={user.name}
-          email={user.email}
-          onClose={() => setIsProfileModalOpen(false)}
-          onSave={(newName: string) => {
-            const trimmed = newName.trim();
-            if (!trimmed) {
-              setIsProfileModalOpen(false);
-              return;
-            }
-            // оптимистичное обновление локально
-            setUser({ ...user, name: trimmed });
-            setIsProfileModalOpen(false);
-            void updateName(trimmed)
-              .then(() => showToast("Имя обновлено"))
-              .catch(() => {
-                // откат
-                setUser({ ...user });
-                showToast("Не удалось сохранить имя");
-              });
-          }}
-        />
-      )}
-    </div>
+    </main>
   );
 }

@@ -1,11 +1,11 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import "./NotificationsPanel.css";
 
-const NotificationsPanel = forwardRef(function NotificationsPanel({ isOpen, onClose }, ref) {
+const NotificationsPanel = forwardRef<HTMLDivElement, { isOpen: boolean; onClose: () => void }>(function NotificationsPanel({ isOpen, onClose }, ref) {
     const [filterOpen, setFilterOpen] = useState(false);
     const [filter, setFilter] = useState("unread"); // "unread" | "all"
-    const filterButtonRef = useRef(null);
-    const filterMenuRef = useRef(null);
+    const filterButtonRef = useRef<HTMLButtonElement | null>(null);
+    const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
     // close filter when panel closes
     useEffect(() => {
@@ -15,12 +15,12 @@ const NotificationsPanel = forwardRef(function NotificationsPanel({ isOpen, onCl
     // filter menu outside click handling
     useEffect(() => {
         if (!filterOpen) return;
-        function onDocDown(e) {
-            if (filterMenuRef.current && filterMenuRef.current.contains(e.target)) return;
-            if (filterButtonRef.current && filterButtonRef.current.contains(e.target)) return;
+        function onDocDown(e: MouseEvent) {
+            if (filterMenuRef.current && filterMenuRef.current.contains(e.target as Node)) return;
+            if (filterButtonRef.current && filterButtonRef.current.contains(e.target as Node)) return;
             setFilterOpen(false);
         }
-        function onEsc(e) {
+        function onEsc(e: KeyboardEvent) {
             if (e.key === "Escape") setFilterOpen(false);
         }
         document.addEventListener("mousedown", onDocDown);
