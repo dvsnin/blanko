@@ -4,7 +4,7 @@ import "../components/BoardMenu.css";
 import "../components/Boards.modals.css";
 import "../components/Boards.list.css";
 import BoardCover from "../components/BoardCover";
-import StarButton from "../components/StarButton";
+import StarToggle from "../components/StarToggle";
 import MenuButton from "../components/MenuButton";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
@@ -157,11 +157,7 @@ export default function BoardsPage() {
     [teams, activeTeamId, q, colouredByTeam],
   );
 
-  const handleStarClick = (board: { id: string; isStarred?: boolean }) => {
-    const willStar = !board.isStarred;
-    void toggleStarBoard(board.id);
-    showToast(willStar ? "Доска добавлена в избранное" : "Убрана из избранного");
-  };
+  // Звезда на карточке и в списке — общий StarToggle с нейтральными тостами
 
   const handleCreateBoard = () => {
     void (async () => {
@@ -496,7 +492,7 @@ export default function BoardsPage() {
                           <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
                         </div>
                         <div className="board-card-actions" onClick={(e) => e.stopPropagation()}>
-                          <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
+                          <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="grid" />
                           <div className="board-menu-wrapper">
                             <MenuButton
                               variant="grid"
@@ -559,7 +555,7 @@ export default function BoardsPage() {
 
                       <div className="boards-actions-cell" onClick={(e) => e.stopPropagation()}>
                         <div onClick={(e) => { e.stopPropagation(); }}>
-                          <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="list" />
+                          <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
                         </div>
 
                         <div style={{ position: "relative" }} className="board-menu-wrapper" onClick={(e) => e.stopPropagation()}>

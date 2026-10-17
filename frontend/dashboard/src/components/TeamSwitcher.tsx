@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./BoardCover.css";
 import "./TeamSwitcher.css";
-import StarButton from "./StarButton";
+import StarToggle from "./StarToggle";
 import TeamSettingsModal, { NEW_TEAM } from "./TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useClickOutside } from "../hooks/useClickOutside";
@@ -186,10 +186,10 @@ export default function TeamSwitcher() {
                       <span className="team-switcher__sub">{subline(team)}</span>
                     </span>
                     <span className="team-switcher__icons" onClick={(e) => e.stopPropagation()}>
-                      <StarButton
+                      <StarToggle
                         isStarred={!!team.isStarred}
                         onToggle={() => toggleStarTeam(team.id)}
-                        ariaLabel={team.isStarred ? "Убрать группу из избранного" : "Добавить группу в избранное"}
+                        notify={showToast}
                         variant="list"
                         size={28}
                       />

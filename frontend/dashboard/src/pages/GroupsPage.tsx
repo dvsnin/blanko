@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import "../components/BoardCover.css";
 import "./GroupsPage.css";
 import ConfirmModal from "../components/ConfirmModal";
-import StarButton from "../components/StarButton";
+import StarToggle, { starMessage, STAR_LABEL } from "../components/StarToggle";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { VALID_ROLES } from "../constants/roles";
 import { useTeams } from "../contexts/TeamsContext";
@@ -84,7 +84,7 @@ function GroupMenu({ team, onSettings, onToggleStar, onLeave }: GroupMenuProps) 
             </button>
           )}
           <button type="button" role="menuitem" className="group-card__menu-item" onClick={() => run(onToggleStar)}>
-            {team.isStarred ? "Убрать из избранного" : "В избранное"}
+            {team.isStarred ? STAR_LABEL.remove : STAR_LABEL.add}
           </button>
           {canLeave && (
             <button
@@ -111,6 +111,13 @@ export default function GroupsPage() {
   const [q, setQ] = useState("");
   const [now] = useState(() => new Date());
   const { toastMessage, toastVisible, showToast } = useToast();
+
+  // Пункт меню «В избранное»: тот же тост, что у звезды (StarToggle)
+  const starTeam = (team: Team) => {
+    const willStar = !team.isStarred;
+    void toggleStarTeam(team.id);
+    showToast(starMessage(willStar));
+  };
 
   const sorted = useMemo(() => {
     const byName = (a: Team, b: Team) => a.name.localeCompare(b.name, "ru");
@@ -236,17 +243,17 @@ export default function GroupsPage() {
                   <span className="group-card__role">{ROLE_TEXT[team.role] ?? ""}</span>
                 </button>
                 <div className="group-card__actions">
-                  <StarButton
+                  <StarToggle
                     isStarred={!!team.isStarred}
                     onToggle={() => toggleStarTeam(team.id)}
-                    ariaLabel={team.isStarred ? "Убрать группу из избранного" : "Добавить группу в избранное"}
+                    notify={showToast}
                     variant="list"
                     size={36}
                   />
                   <GroupMenu
                     team={team}
                     onSettings={() => setEditing(team)}
-                    onToggleStar={() => toggleStarTeam(team.id)}
+                    onToggleStar={() => starTeam(team)}
                     onLeave={() => setLeaving(team)}
                   />
                 </div>
