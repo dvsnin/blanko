@@ -128,10 +128,9 @@ export default function BoardsPage() {
       });
     }
 
-    // избранные наверх (внутри каждой группы текущий sort сохраняется)
-    const starred = sorted.filter((b) => b.isStarred);
-    const others = sorted.filter((b) => !b.isStarred);
-    return [...starred, ...others];
+    // Избранные не закрепляются наверху: порядок задаёт только сортировка,
+    // а избранное смотрят через сегмент «Избранные».
+    return sorted;
   }, [activeBoards, segment, q, sortBy, user.id]);
 
   const canCreateBoard = Boolean(activeTeamId);
