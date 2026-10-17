@@ -1,0 +1,118 @@
+.cover--butter { --cover-bg: #FFF3D6; --cover-accent: #F2B134; --cover-ink: #7A4E00; }
+.cover--peach { --cover-bg: #FDE8DF; --cover-accent: #F7A08C; --cover-ink: #8A2E14; }
+.cover--lime { --cover-bg: #E8F6E4; --cover-accent: #8FD36E; --cover-ink: #255F15; }
+.cover--mint { --cover-bg: #E6F4F3; --cover-accent: #2BA7A0; --cover-ink: #115955; }
+.cover--sky { --cover-bg: #EAF1FF; --cover-accent: #8FB0FF; --cover-ink: #24409A; }
+.cover--lavender { --cover-bg: #F3E8FF; --cover-accent: #C9A6F5; --cover-ink: #5B2E9E; }
+.cover--rose { --cover-bg: #FFE9F2; --cover-accent: #F28CB8; --cover-ink: #8C1F4F; }
+.cover--apricot { --cover-bg: #FFF0E0; --cover-accent: #F9A95C; --cover-ink: #7D4300; }
+.cover--olive { --cover-bg: #F0F7D9; --cover-accent: #C5DB5A; --cover-ink: #4A5A00; }
+.cover--aqua { --cover-bg: #DDF5F0; --cover-accent: #5CCFB6; --cover-ink: #0F5C4C; }
+.cover--cobalt { --cover-bg: #E3F0FF; --cover-accent: #6FB5FF; --cover-ink: #1A4B8F; }
+.cover--violet { --cover-bg: #ECE8FF; --cover-accent: #A596F0; --cover-ink: #3F2E9A; }
+.cover--cherry { --cover-bg: #FFE6EC; --cover-accent: #F58CA0; --cover-ink: #8E1E36; }
+.cover--lemon { --cover-bg: #FFF8DB; --cover-accent: #F5D54A; --cover-ink: #6B5300; }
+.cover--grass { --cover-bg: #E6F7E9; --cover-accent: #6FCF8A; --cover-ink: #1F6B36; }
+.cover--ice { --cover-bg: #DFF4F9; --cover-accent: #6CC7E3; --cover-ink: #0F5A70; }
+.cover--periwinkle { --cover-bg: #E9EEFF; --cover-accent: #9AA9FF; --cover-ink: #2C3A9C; }
+.cover--orchid { --cover-bg: #F7E9FB; --cover-accent: #D79BE8; --cover-ink: #6B2B80; }
+.cover--clay { --cover-bg: #FBEBE3; --cover-accent: #E8A58A; --cover-ink: #7D3A1F; }
+.cover--sand { --cover-bg: #F2EFE6; --cover-accent: #C8B68E; --cover-ink: #5A4A22; }
+.cover--sage { --cover-bg: #E4F4EC; --cover-accent: #7BCBA2; --cover-ink: #1F5E41; }
+.cover--steel { --cover-bg: #E6F1F7; --cover-accent: #8FB8D4; --cover-ink: #244D6A; }
+.cover--plum { --cover-bg: #F0E9F6; --cover-accent: #B6A1D1; --cover-ink: #4A3270; }
+.cover--coral { --cover-bg: #FBE7E7; --cover-accent: #E89A9A; --cover-ink: #7F2A2A; }
+
+.board-cover {
+  position: relative;
+  overflow: hidden;
+  background: var(--cover-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-cover--card {
+  height: 140px;
+  border-radius: 12px 12px 0 0;
+}
+
+.board-cover--small {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+
+.board-cover__shape {
+  position: absolute;
+  opacity: 0.55;
+  background: var(--cover-accent);
+}
+
+.board-cover__shape--circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+}
+
+.board-cover__shape--square {
+  width: 104px;
+  height: 104px;
+  border-radius: 26px;
+  transform: rotate(14deg);
+}
+
+.board-cover__shape--triangle {
+  width: 0;
+  height: 0;
+  background: none;
+  border-left: 64px solid transparent;
+  border-right: 64px solid transparent;
+  border-bottom: 110px solid var(--cover-accent);
+}
+
+.board-cover__shape--corner-0 { top: -34px; left: -18px; }
+.board-cover__shape--corner-1 { top: -34px; right: -18px; }
+.board-cover__shape--corner-2 { bottom: -34px; left: -18px; }
+.board-cover__shape--corner-3 { bottom: -34px; right: -18px; }
+
+.board-cover__glyph {
+  position: relative;
+  font-size: 58px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--cover-ink);
+}
+
+.board-cover__author {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--cover-ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* small: shapes scaled by 0.35 */
+.board-cover--small .board-cover__glyph { font-size: 16px; }
+
+.board-cover--small .board-cover__shape--circle { width: 42px; height: 42px; }
+.board-cover--small .board-cover__shape--square { width: 36px; height: 36px; border-radius: 9px; }
+.board-cover--small .board-cover__shape--triangle {
+  border-left-width: 22px;
+  border-right-width: 22px;
+  border-bottom-width: 38px;
+}
+
+.board-cover--small .board-cover__shape--corner-0 { top: -12px; left: -6px; }
+.board-cover--small .board-cover__shape--corner-1 { top: -12px; right: -6px; }
+.board-cover--small .board-cover__shape--corner-2 { bottom: -12px; left: -6px; }
+.board-cover--small .board-cover__shape--corner-3 { bottom: -12px; right: -6px; }
