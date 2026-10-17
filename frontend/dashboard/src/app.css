@@ -93,6 +93,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .btn--ghost { background: var(--surface); border-color: var(--border); color: var(--ink); }
 .btn--ghost:hover { background: var(--chip); }
 
+/* Мягкий акцент: светло-бирюзовая заливка, бирюзовый текст, без рамки. Для главного действия страницы. */
+.btn--soft { background: var(--teal-bg); border-color: transparent; color: var(--teal); }
+.btn--soft:hover { background: #D6ECEA; }
+
 .btn--icon { width: 44px; padding: 0; }
 
 .btn--danger-ghost { background: var(--surface); border-color: var(--border); color: var(--danger); }
