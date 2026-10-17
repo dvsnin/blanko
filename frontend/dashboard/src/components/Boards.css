@@ -46,9 +46,10 @@
 }
 
 .sort-control:hover { background: var(--field); }
-/* Без рамки фокуса; при навигации с клавиатуры граница становится темнее */
-.sort-control:has(.sort-control__select:focus-visible) { border-color: var(--ink); }
-.sort-control__select:focus { outline: none; }
+/* Никакого состояния фокуса у кнопки: только наведение. Фокус после клика снимается в BoardsPage. */
+.sort-control:focus-within { border-color: var(--border); box-shadow: none; outline: none; }
+.sort-control__select:focus,
+.sort-control__select:focus-visible { outline: none; box-shadow: none; }
 
 .sort-control__icon { flex: 0 0 auto; color: var(--muted); }
 
