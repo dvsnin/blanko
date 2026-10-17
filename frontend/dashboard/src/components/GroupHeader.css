@@ -5,6 +5,7 @@
     padding: 20px 24px;
     border-radius: var(--radius-xl);
     flex-wrap: wrap;
+    margin-bottom: 36px;
 }
 
 .group-header--empty {
