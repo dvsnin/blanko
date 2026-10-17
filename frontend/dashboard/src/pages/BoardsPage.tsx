@@ -9,6 +9,7 @@ import MenuButton from "../components/MenuButton";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
+import TemplatesStrip from "../components/TemplatesStrip";
 import TeamSettingsModal from "../components/TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
@@ -19,7 +20,7 @@ import { colorForId } from "../utils/cover";
 import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
 import type { Team } from "../types";
-import type { AgeKey } from "../constants/templates";
+import type { AgeKey, Template } from "../constants/templates";
 
 function openBoardWindow(board: { publicId: string }) {
   const url = `/app/board/${encodeURIComponent(board.publicId)}`;
@@ -162,6 +163,16 @@ export default function BoardsPage() {
       if (newBoard) {
         showToast("Доска создана");
         openBoardWindow(newBoard);
+      }
+    })();
+  };
+
+  const handleTemplate = (t: Template) => {
+    void (async () => {
+      const b = await createBoard(t.title, t.id);
+      if (b) {
+        showToast(`Доска «${t.title}» создана`);
+        openBoardWindow(b);
       }
     })();
   };
@@ -361,6 +372,10 @@ export default function BoardsPage() {
             onCreateBoard={handleCreateBoard}
             onCreateTeam={() => setTeamModal("create")}
           />
+        )}
+
+        {activeTeam && (
+          <TemplatesStrip age={activeTeam.ageGroup || undefined} onBlank={handleCreateBoard} onTemplate={handleTemplate} />
         )}
 
         {/* If user has no teams, show minimal centered hint */}
