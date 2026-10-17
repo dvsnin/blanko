@@ -4,6 +4,7 @@ import "./Boards.colors.css";
 import "./BoardMenu.css";
 import "./Boards.modals.css";
 import "./Boards.list.css";
+import BoardCover from "./BoardCover";
 import StarButton from "./StarButton";
 import MenuButton from "./MenuButton";
 import ProfileMenu from "./ProfileMenu";
@@ -17,7 +18,7 @@ import ViewToggle from "./ViewToggle";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
-import { COLOR_KEYS, assignColors } from "../utils/colors";
+import { assignColors } from "../utils/colors";
 
 function openBoardWindow(board: { publicId: string }) {
   const url = `/app/board/${encodeURIComponent(board.publicId)}`;
@@ -471,10 +472,9 @@ export default function Boards() {
               </div>
             ) : view === "grid" ? (
               <div className="boards-grid">
-                {boards.map((b, index) => {
+                {boards.map((b) => {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
-                  const colorKey = b.colorKey ?? COLOR_KEYS[index % COLOR_KEYS.length];
                   return (
                     <div
                       key={b.id}
@@ -484,18 +484,24 @@ export default function Boards() {
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                       onClick={() => openBoardWindow(b)}
                     >
-                      <div className={`board-header board-header--${colorKey}`}>
-                        <div className="board-preview" />
-                        <div className="board-card-controls" aria-hidden onClick={(e) => e.stopPropagation()}>
+                      <BoardCover board={b} size="card" />
+
+                      <div className="board-info">
+                        <div className="board-info-text">
+                          <div className="board-title">{b.title}</div>
+                          <div className="board-sub">Изменено: {b.updated}</div>
+                        </div>
+                        <div className="board-card-actions" onClick={(e) => e.stopPropagation()}>
+                          <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
                           <div className="board-menu-wrapper">
                             <MenuButton
                               variant="grid"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
-                menuAnchorRef.current = e.currentTarget;
-                setMenuPlacement("left");
-                handleMenuToggle(b.id);
+                                menuAnchorRef.current = e.currentTarget;
+                                setMenuPlacement("left");
+                                handleMenuToggle(b.id);
                               }}
                             />
                             {menuBoardId === b.id && (
@@ -504,17 +510,7 @@ export default function Boards() {
                               </MenuPortal>
                             )}
                           </div>
-
-                          <div className={`board-star-wrapper ${isStarred ? "board-star-wrapper--active" : ""}`} onClick={(e) => e.stopPropagation()}>
-                            <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
-                          </div>
                         </div>
-                      </div>
-
-                      <div className="board-info">
-                        <div className="board-title">{b.title}</div>
-                        <div className="line"><span className="label">Владелец:</span> {b.owner}</div>
-                        <div className="line"><span className="label">Открыта:</span> {b.lastOpened}</div>
                       </div>
                     </div>
                   );
@@ -534,7 +530,7 @@ export default function Boards() {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const isLastRow = index === boards.length - 1;
-                  const colorKey = b.colorKey ?? COLOR_KEYS[index % COLOR_KEYS.length];
+                  const colorKey = b.colorKey ?? "";
                   return (
                     <div
                       key={b.id}

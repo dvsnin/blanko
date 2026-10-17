@@ -182,48 +182,49 @@
 
 /* Card */
 .board-card {
-    background: transparent;
+    background: #fff;
     border-radius: 12px;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
-}
-
-.board-header {
-    height: 70px;
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    position: relative;
+    box-shadow: 0 10px 30px rgba(6, 22, 34, 0.06);
 }
 
 .board-info {
-    background: #ffffff;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-    padding: 18px;
-    box-shadow: 0 10px 30px rgba(6, 22, 34, 0.06);
-    margin-top: -6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 10px 14px 16px;
+    margin: 0;
+    box-shadow: none;
 }
 
-/* gradients */
-.board-header--mintBlue {
-    background: linear-gradient(135deg, #c4f0c2, #8fd5ff);
+.board-info-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.board-header--peach {
-    background: linear-gradient(135deg, #ffd2a0, #ff9fb2);
-}
-
-/* small UI */
 .board-title {
     font-size: 16px;
     font-weight: 700;
+    line-height: 1.3;
     color: #0f1724;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-.line {
+.board-sub {
     font-size: 13px;
     color: #6b7280;
-    margin-top: 8px;
+}
+
+.board-card-actions {
+    display: flex;
+    align-items: center;
 }
 
 /* Lists */
@@ -240,71 +241,6 @@
     padding: 12px 16px;
     margin-bottom: 8px;
     box-shadow: 0 8px 28px rgba(6, 22, 34, 0.04);
-}
-
-/* Controls container */
-.board-card-controls {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    gap: 8px;
-    z-index: 5;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-2px);
-    transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
-}
-
-.board-card:hover .board-card-controls,
-.board-card--menu-open .board-card-controls,
-.board-card--starred .board-card-controls {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-/* menu wrapper show/hide */
-.board-menu-wrapper {
-    opacity: 0;
-    transform: translateY(-2px);
-    transition: opacity 160ms ease, transform 160ms ease;
-}
-
-.board-card:hover .board-menu-wrapper,
-.board-card--menu-open .board-menu-wrapper {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* star wrapper */
-.board-star-wrapper {
-    opacity: 0;
-    transform: translateY(-2px);
-    transition: opacity 160ms ease, transform 160ms ease;
-    align-items: center;
-    display: inline-flex;
-    justify-content: center;
-}
-
-.board-card:hover .board-star-wrapper,
-.board-card--starred .board-star-wrapper {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* order: menu first, star last */
-.board-card-controls {
-    flex-direction: row;
-    align-items: center;
-}
-
-.board-menu-wrapper {
-    order: 0;
-}
-
-.board-star-wrapper {
-    order: 1;
 }
 
 /* STAR button (used both for filled and outline states)
