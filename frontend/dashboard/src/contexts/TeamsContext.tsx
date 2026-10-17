@@ -46,6 +46,8 @@ export interface TeamsContextValue {
   renameBoard: (boardId: string, newTitle: string) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
+  /** Оптимистично помечает доску открытой сейчас (сервер сам обновляет при открытии). */
+  markBoardOpened: (boardId: string) => void;
   refresh: () => Promise<void>;
 }
 
@@ -62,9 +64,10 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     title: dto.name,
     owner: dto.ownerName,
     ownerId: dto.ownerId,
-    lastOpened: formatLastOpened(dto.updatedAt),
+    lastOpened: formatLastOpened(dto.lastOpenedAt || dto.updatedAt),
     updated: formatRelative(dto.updatedAt),
     updatedAt: dto.updatedAt,
+    lastOpenedAt: dto.lastOpenedAt || dto.updatedAt,
     colorKey,
     isStarred: dto.isStarred,
     templateId: dto.templateId || undefined,
@@ -335,6 +338,18 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, []);
 
+  const markBoardOpened = useCallback((boardId: string) => {
+    const now = new Date().toISOString();
+    setTeams((prev) =>
+      prev.map((team) => ({
+        ...team,
+        boards: (team.boards || []).map((b) =>
+          b.id === boardId ? { ...b, lastOpenedAt: now, lastOpened: formatLastOpened(now) } : b,
+        ),
+      })),
+    );
+  }, []);
+
   const value = useMemo<TeamsContextValue>(
     () => ({
       teams,
@@ -353,6 +368,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       renameBoard,
       deleteBoard,
       toggleStarBoard,
+      markBoardOpened,
       refresh,
     }),
     [
@@ -371,6 +387,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       renameBoard,
       deleteBoard,
       toggleStarBoard,
+      markBoardOpened,
       refresh,
     ],
   );

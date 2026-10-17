@@ -9,7 +9,7 @@ const team = { id: 't1', name: 'Ромашки', role: 'owner', boards: [], isSt
 function setup() {
   const value = {
     teams: [team], activeTeamId: 't1', activeTeam: team, activeBoards: [],
-    loading: false, error: null, createBoard: vi.fn(),
+    loading: false, error: null, createBoard: vi.fn(), markBoardOpened: vi.fn(),
   } as unknown as TeamsContextValue;
   return render(
     <TeamsContext.Provider value={value}><TemplatesPage initialAge="6-7" /></TeamsContext.Provider>,

@@ -10,7 +10,7 @@ import { useToast } from "../hooks/useToast";
 import { useTeams } from "../contexts/TeamsContext";
 
 export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
-  const { activeTeam, createBoard } = useTeams();
+  const { activeTeam, createBoard, markBoardOpened } = useTeams();
   const { toastMessage, toastVisible, showToast } = useToast();
   const [q, setQ] = useState("");
   const [age, setAge] = useState<AgeKey | "all">(initialAge ?? "all");
@@ -27,6 +27,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
     void (async () => {
       const board = await createBoard(t.title, t.id);
       if (board) {
+        markBoardOpened(board.id);
         openBoardWindow(board);
         navigate({ name: "boards" });
       } else {

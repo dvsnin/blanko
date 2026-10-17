@@ -14,7 +14,7 @@ function fake(teams: Team[]): TeamsContextValue {
     loading: false, error: null,
     setActiveTeamId: vi.fn(), createTeam: vi.fn(), updateTeam: vi.fn(), deleteTeam: vi.fn(),
     leaveTeam: vi.fn(), toggleStarTeam: vi.fn(), createBoard: vi.fn(), renameBoard: vi.fn(),
-    deleteBoard: vi.fn(), toggleStarBoard: vi.fn(), refresh: vi.fn(),
+    deleteBoard: vi.fn(), toggleStarBoard: vi.fn(), markBoardOpened: vi.fn(), refresh: vi.fn(),
   } as TeamsContextValue;
 }
 

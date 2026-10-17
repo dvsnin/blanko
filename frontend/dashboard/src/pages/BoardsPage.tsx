@@ -31,6 +31,7 @@ export default function BoardsPage() {
     activeTeam,
     activeBoards,
     createBoard,
+    markBoardOpened,
     createTeam,
     updateTeam,
     deleteTeam,
@@ -71,14 +72,14 @@ export default function BoardsPage() {
   const [menuBoardId, setMenuBoardId] = useState<string | null>(null);
 
   // Фильтры / сортировка панели "boards-toolbar".
-  type SortBy = "last-opened" | "name" | "updated";
+  type SortBy = "recent" | "updated" | "name";
   const SORT_LABELS: Record<SortBy, string> = {
-    "last-opened": "Недавние",
-    name: "По названию",
+    recent: "Недавние",
     updated: "По дате изменения",
+    name: "По названию",
   };
   const [segment, setSegment] = useState<Segment>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("last-opened");
+  const [sortBy, setSortBy] = useState<SortBy>("recent");
   // true, если взаимодействие с селектом сортировки началось с мыши/тача
   const sortByPointer = useRef(false);
   // Поисковый запрос не сохраняем между сессиями.
@@ -120,12 +121,11 @@ export default function BoardsPage() {
     if (sortBy === "name") {
       sorted.sort((a, b) => a.title.localeCompare(b.title, "ru"));
     } else {
-      // last-opened и updated — по updatedAt desc (пока нет отдельного lastOpenedAt)
-      sorted.sort((a, b) => {
-        const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
-        const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
-        return tb - ta;
-      });
+      // recent — по lastOpenedAt desc (фолбэк updatedAt); updated — по updatedAt desc
+      const ts = (iso?: string) => (iso ? Date.parse(iso) : 0);
+      const key = (x: (typeof sorted)[number]) =>
+        sortBy === "recent" ? ts(x.lastOpenedAt || x.updatedAt) : ts(x.updatedAt);
+      sorted.sort((a, b) => key(b) - key(a));
     }
 
     // Избранные не закрепляются наверху: порядок задаёт только сортировка,
@@ -168,6 +168,7 @@ export default function BoardsPage() {
       const newBoard = await createBoard("Новая доска");
       if (newBoard) {
         showToast("Доска создана");
+        markBoardOpened(newBoard.id);
         openBoardWindow(newBoard);
       } else {
         showToast("Не удалось создать доску");
@@ -446,9 +447,9 @@ export default function BoardsPage() {
                   }}
                   onBlur={() => { sortByPointer.current = false; }}
                 >
-                  <option value="last-opened">{SORT_LABELS["last-opened"]}</option>
-                  <option value="name">{SORT_LABELS.name}</option>
+                  <option value="recent">{SORT_LABELS.recent}</option>
                   <option value="updated">{SORT_LABELS.updated}</option>
+                  <option value="name">{SORT_LABELS.name}</option>
                 </select>
               </div>
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
@@ -475,7 +476,7 @@ export default function BoardsPage() {
                       data-board-id={b.id}
                       ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
-                      onClick={() => openBoardWindow(b)}
+                      onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
                     >
                       <BoardCover board={b} size="card" />
 
@@ -485,7 +486,7 @@ export default function BoardsPage() {
                             type="button"
                             className="board-title"
                             title={b.title}
-                            onClick={(e) => { e.stopPropagation(); openBoardWindow(b); }}
+                            onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); openBoardWindow(b); }}
                           >
                             {b.title}
                           </button>
@@ -541,7 +542,7 @@ export default function BoardsPage() {
                       className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""}`}
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                     >
-                      <div className="boards-name-cell" onClick={() => openBoardWindow(b)}>
+                      <div className="boards-name-cell" onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}>
                         <BoardCover board={b} size="small" />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>

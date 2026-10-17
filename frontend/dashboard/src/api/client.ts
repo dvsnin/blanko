@@ -99,6 +99,7 @@ export interface BoardDTO {
   isStarred: boolean;
   createdAt: string;
   updatedAt: string;
+  lastOpenedAt: string;
 }
 
 interface List<T> {

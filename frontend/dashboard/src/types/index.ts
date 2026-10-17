@@ -11,6 +11,8 @@ export interface Board {
   updated?: string;
   /** Сырой ISO-timestamp последнего изменения — нужен для сортировки. */
   updatedAt?: string;
+  /** Raw ISO: когда доску открывали в последний раз (для сортировки «Недавние») */
+  lastOpenedAt?: string;
   lastOpened: string;
   colorKey?: string;
   isStarred?: boolean;
