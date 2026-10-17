@@ -28,6 +28,8 @@ export default defineConfig({
 
     test: {
         environment: 'jsdom',
+        // vitest stubs css to '' by default, including ?raw; the palette test needs the real text
+        css: { include: [/BoardCover\.css/] },
         include: ['**/*.test.{ts,tsx}']
     },
 });

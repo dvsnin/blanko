@@ -1,8 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, cleanup } from '@testing-library/react';
-// @ts-expect-error: no @types/node in this project; vitest runs on node
-import { readFileSync } from 'node:fs';
 import BoardCover from './BoardCover';
+import css from './BoardCover.css?raw';
 import { COVER_KEYS, coverFor, colorForId } from '../utils/cover';
 
 const board = { id: 'b1', title: 'Счёт до 5', owner: 'Анна Петрова', ownerId: 'u1' };
@@ -32,8 +31,6 @@ describe('BoardCover', () => {
     expect(getByTitle('Анна Петрова').className).toContain(`cover--${colorForId('Анна Петрова')}`);
   });
   it('палитра в CSS совпадает с COVER_KEYS', () => {
-    // jsdom makes import.meta.url non-file, so resolve via cwd (vitest runs from frontend/dashboard)
-    const css = readFileSync('src/components/BoardCover.css', 'utf8');
     for (const key of COVER_KEYS) expect(css).toMatch(new RegExp(`\\.cover--${key}\\s*\\{[^}]*--cover-bg[^}]*--cover-accent[^}]*--cover-ink`));
   });
 });

@@ -248,7 +248,18 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
           prev.map((team) => ({
             ...team,
             boards: (team.boards || []).map((b) =>
-              b.id === boardId ? { ...b, title: updated.name } : b,
+              b.id === boardId
+                ? (() => {
+                    const fresh = boardFromDTO(updated, b.colorKey);
+                    return {
+                      ...b,
+                      title: fresh.title,
+                      updated: fresh.updated,
+                      updatedAt: fresh.updatedAt,
+                      lastOpened: fresh.lastOpened,
+                    };
+                  })()
+                : b,
             ),
           })),
         );

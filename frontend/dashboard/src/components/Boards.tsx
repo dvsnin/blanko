@@ -18,6 +18,7 @@ import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
 import { assignColors } from "../utils/colors";
+import { formatRelative } from "../utils/relativeTime";
 
 function openBoardWindow(board: { publicId: string }) {
   const url = `/app/board/${encodeURIComponent(board.publicId)}`;
@@ -45,6 +46,17 @@ export default function Boards() {
 
   const { user, setUser, updateName, userInitial } = useUser();
 
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const id = setInterval(tick, 60_000);
+    const onVisible = () => { if (document.visibilityState === "visible") tick(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -487,8 +499,9 @@ export default function Boards() {
 
                       <div className="board-info">
                         <div className="board-info-text">
-                          <div className="board-title">{b.title}</div>
-                          <div className="board-sub">Изменено: {b.updated}</div>
+                          <div className="board-title" title={b.title}>{b.title}</div>
+                          <span className="visually-hidden">Владелец: {b.owner}</span>
+                          <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
                         </div>
                         <div className="board-card-actions" onClick={(e) => e.stopPropagation()}>
                           <StarButton isStarred={isStarred} onToggle={() => handleStarClick(b)} variant="grid" />
@@ -540,7 +553,7 @@ export default function Boards() {
                         <BoardCover board={b} size="small" />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>
-                          <div className="board-row-sub">Изменено: {b.owner}, {b.updated}</div>
+                          <div className="board-row-sub">Изменено: {b.owner}, {formatRelative(b.updatedAt, now)}</div>
                         </div>
                       </div>
 

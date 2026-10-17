@@ -14,5 +14,10 @@ describe('formatRelative', () => {
   it('27 дней → 3 недели назад', () => expect(formatRelative(at(20, 10, 20, 8), now)).toBe('3 недели назад'));
   it('29 дней → 4 недели назад', () => expect(formatRelative(at(18, 10, 20, 8), now)).toBe('4 недели назад'));
   it('30 дней и больше → D месяца', () => expect(formatRelative(at(17, 10, 20, 8), now)).toBe('17 сентября'));
+  it('будущая метка (+2 дня) → только что', () => expect(formatRelative(at(19), now)).toBe('только что'));
+  it('граница 60 с: 59 с → только что, 60 с → сегодня, HH:MM', () => {
+    expect(formatRelative(new Date(2026, 9, 17, 11, 59, 1).toISOString(), now)).toBe('только что');
+    expect(formatRelative(new Date(2026, 9, 17, 11, 59, 0).toISOString(), now)).toBe('сегодня, 11:59');
+  });
   it('невалидная → пустая строка', () => { expect(formatRelative('nope', now)).toBe(''); expect(formatRelative(undefined, now)).toBe(''); });
 });
