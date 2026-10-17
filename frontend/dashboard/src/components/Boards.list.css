@@ -51,7 +51,6 @@
 
 /* Name column: thumbnail + title + subline */
 .boards-name-cell { display: flex; gap: 12px; align-items: center; }
-.board-image-small { width: 44px; height: 44px; border-radius: 8px; flex: 0 0 44px; box-shadow: 0 6px 18px rgba(6,22,34,0.04); }
 
 /* Title and subtitle layout */
 .boards-name-text { display: flex; flex-direction: column; gap: 6px; }

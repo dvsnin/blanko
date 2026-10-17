@@ -1,6 +1,5 @@
 import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
 import "./Boards.css";
-import "./Boards.colors.css";
 import "./BoardMenu.css";
 import "./Boards.modals.css";
 import "./Boards.list.css";
@@ -530,16 +529,15 @@ export default function Boards() {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const isLastRow = index === boards.length - 1;
-                  const colorKey = b.colorKey ?? "";
                   return (
                     <div
                       key={b.id}
                       data-board-id={b.id}
-                      className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""} ${isStarred ? "board-card--starred" : ""}`}
+                      className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""}`}
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                     >
                       <div className="boards-name-cell" onClick={() => openBoardWindow(b)}>
-                        <div className={`board-image-small board-image-small--${colorKey}`} aria-hidden />
+                        <BoardCover board={b} size="small" />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>
                           <div className="board-row-sub">Изменено: {b.owner}, {b.updated}</div>
