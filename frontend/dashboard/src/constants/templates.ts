@@ -1,9 +1,9 @@
 export type AgeKey = "3-4" | "4-5" | "5-6" | "6-7";
 export const AGES: ReadonlyArray<{ key: AgeKey; label: string }> = [
-  { key: "3-4", label: "3–4 года" },
-  { key: "4-5", label: "4–5 лет" },
-  { key: "5-6", label: "5–6 лет" },
-  { key: "6-7", label: "6–7 лет" },
+  { key: "3-4", label: "3-4 года" },
+  { key: "4-5", label: "4-5 лет" },
+  { key: "5-6", label: "5-6 лет" },
+  { key: "6-7", label: "6-7 лет" },
 ];
 
 export type TopicKey = "math" | "literacy" | "world" | "speech" | "logic" | "drawing" | "sensory" | "routine";

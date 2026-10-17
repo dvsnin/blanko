@@ -23,7 +23,7 @@ describe('TemplatesPage', () => {
 
   it('initialAge выбирает возраст и фильтрует', () => {
     setup();
-    expect(screen.getByRole('button', { name: '6–7 лет' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '6-7 лет' }).getAttribute('aria-pressed')).toBe('true');
     expect(found()).toBe(`Найдено: ${filterTemplates('', '6-7', 'all').length}`);
   });
 
@@ -48,6 +48,6 @@ describe('TemplatesPage', () => {
   it('«Как у группы» ставит возраст группы', () => {
     setup();
     fireEvent.click(screen.getByRole('button', { name: /Как у группы «Ромашки»/ }));
-    expect(screen.getByRole('button', { name: '4–5 лет' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: '4-5 лет' }).getAttribute('aria-pressed')).toBe('true');
   });
 });

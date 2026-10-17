@@ -214,7 +214,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
 
                   {!hasValidRole && (
                     <div className="ts-section">
-                      <p className="ts-section-text">Неверные данные группы — отсутствует role. Обратитесь к бэкенду.</p>
+                      <p className="ts-section-text">Неверные данные группы - отсутствует role. Обратитесь к бэкенду.</p>
                     </div>
                   )}
 

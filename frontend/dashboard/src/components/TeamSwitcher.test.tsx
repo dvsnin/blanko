@@ -35,7 +35,7 @@ function setup(value: TeamsContextValue) {
 describe('TeamSwitcher', () => {
   afterEach(cleanup);
 
-  it('пока грузится и нет активной группы — disabled-плейсхолдер', () => {
+  it('пока грузится и нет активной группы - disabled-плейсхолдер', () => {
     setup(fake([], { loading: true, activeTeam: null, activeTeamId: null }));
     const b = screen.getByRole('button', { name: /Группы…/ }) as HTMLButtonElement;
     expect(b.disabled).toBe(true);
@@ -52,7 +52,7 @@ describe('TeamSwitcher', () => {
   it('возраст группы показан в триггере', () => {
     setup(fake([mk('t1', 'Ягодки', false, { ageGroup: '4-5' })]));
     expect(screen.getByText('Ягодки')).toBeTruthy();
-    expect(screen.getByText('4–5 лет')).toBeTruthy();
+    expect(screen.getByText('4-5 лет')).toBeTruthy();
   });
 
   it('триггер показывает имя активной группы', () => {
@@ -68,7 +68,7 @@ describe('TeamSwitcher', () => {
     const opts = screen.getAllByRole('option');
     expect(opts).toHaveLength(3);
     expect(opts[0].textContent).toContain('Ягодки');
-    expect(opts[0].textContent).toContain('4–5 лет · 0 досок');
+    expect(opts[0].textContent).toContain('4-5 лет · 0 досок');
   });
 
   it('поиск «ром» оставляет одну группу', () => {

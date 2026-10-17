@@ -27,7 +27,7 @@ describe('GroupHeader', () => {
 
   it('возраст группы показывается в meta', () => {
     render(<GroupHeader {...base} team={team({ ageGroup: '3-4' })} role="owner" />);
-    expect(screen.getByText('3–4 года')).toBeTruthy();
+    expect(screen.getByText('3-4 года')).toBeTruthy();
   });
 
   it('team=null: «Создать группу» вызывает onCreateTeam', () => {

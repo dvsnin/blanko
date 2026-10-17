@@ -8,7 +8,7 @@ describe('реестр', () => {
   it('18 шаблонов, 8 тем, 4 возраста', () => {
     expect(TEMPLATES).toHaveLength(18);
     expect(TOPICS).toHaveLength(8);
-    expect(AGES.map((a) => a.label)).toEqual(['3–4 года', '4–5 лет', '5–6 лет', '6–7 лет']);
+    expect(AGES.map((a) => a.label)).toEqual(['3-4 года', '4-5 лет', '5-6 лет', '6-7 лет']);
   });
 });
 
@@ -19,7 +19,7 @@ describe('templatesForAge', () => {
     expect(r.every((t) => t.ages.includes('3-4'))).toBe(true);
     expect(r).toEqual(TEMPLATES.filter((t) => t.ages.includes('3-4')).slice(0, 5));
   });
-  it('без возраста — первые 5', () => {
+  it('без возраста - первые 5', () => {
     expect(templatesForAge(undefined)).toEqual(TEMPLATES.slice(0, 5));
   });
 });
@@ -51,7 +51,7 @@ describe('lookups', () => {
   });
   it('topicStyle / ageLabel', () => {
     expect(topicStyle('literacy').label).toBe('Грамота');
-    expect(ageLabel('4-5')).toBe('4–5 лет');
+    expect(ageLabel('4-5')).toBe('4-5 лет');
     expect(ageLabel(undefined)).toBeUndefined();
   });
 });
@@ -62,7 +62,7 @@ describe('coverForBoard', () => {
     expect(c.glyph).toBe('А');
     expect(c.topic?.key).toBe('literacy');
   });
-  it('неизвестный шаблон — как без шаблона', () => {
+  it('неизвестный шаблон - как без шаблона', () => {
     const c = coverForBoard({ id: 'x', title: 'Счёт до 5', templateId: 'ghost' });
     expect(c.glyph).toBe('5');
     expect(c.topic).toBeUndefined();
