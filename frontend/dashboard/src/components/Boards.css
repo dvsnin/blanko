@@ -59,23 +59,21 @@
     pointer-events: none;
 }
 
-.sort-control__select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    min-width: 0;
-    width: auto;
-    font: inherit;
-    color: inherit;
-    cursor: pointer;
-    outline: none;
-}
+.sort-control__value { white-space: nowrap; }
 
-.sort-control__select::-ms-expand { display: none; }
+/* Сам select невидим и растянут на всю пилюлю: любой клик открывает системный список */
+.sort-control__select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+    font: inherit;
+}
 
 /* view toggle */
 .boards-view-toggle {

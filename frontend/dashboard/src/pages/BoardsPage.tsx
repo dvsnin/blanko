@@ -72,6 +72,11 @@ export default function BoardsPage() {
 
   // Фильтры / сортировка панели "boards-toolbar".
   type SortBy = "last-opened" | "name" | "updated";
+  const SORT_LABELS: Record<SortBy, string> = {
+    "last-opened": "Недавние",
+    name: "По названию",
+    updated: "По дате изменения",
+  };
   const [segment, setSegment] = useState<Segment>("all");
   const [sortBy, setSortBy] = useState<SortBy>("last-opened");
   // Поисковый запрос не сохраняем между сессиями.
@@ -414,10 +419,15 @@ export default function BoardsPage() {
                   </button>
                 ))}
               </div>
-              <label className="sort-control" title="Сортировка">
+              {/* Невидимый select накрывает всю пилюлю: клик в любое место открывает список */}
+              <div className="sort-control" title="Сортировка">
                 <svg className="sort-control__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M7 4v16M7 20l-3-3M7 20l3-3" />
                   <path d="M17 20V4M17 4l-3 3M17 4l3 3" />
+                </svg>
+                <span className="sort-control__value" aria-hidden="true">{SORT_LABELS[sortBy]}</span>
+                <svg className="sort-control__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
                 </svg>
                 <select
                   className="sort-control__select"
@@ -425,14 +435,11 @@ export default function BoardsPage() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortBy)}
                 >
-                  <option value="last-opened">Недавние</option>
-                  <option value="name">По названию</option>
-                  <option value="updated">По дате изменения</option>
+                  <option value="last-opened">{SORT_LABELS["last-opened"]}</option>
+                  <option value="name">{SORT_LABELS.name}</option>
+                  <option value="updated">{SORT_LABELS.updated}</option>
                 </select>
-                <svg className="sort-control__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </label>
+              </div>
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
             </div>
 
