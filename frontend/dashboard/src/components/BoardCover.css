@@ -1,27 +1,15 @@
-.cover--butter { --cover-bg: #FFF3D6; --cover-accent: #F2B134; --cover-ink: #7A4E00; }
-.cover--peach { --cover-bg: #FDE8DF; --cover-accent: #F7A08C; --cover-ink: #8A2E14; }
-.cover--lime { --cover-bg: #E8F6E4; --cover-accent: #8FD36E; --cover-ink: #255F15; }
-.cover--mint { --cover-bg: #E6F4F3; --cover-accent: #2BA7A0; --cover-ink: #115955; }
-.cover--sky { --cover-bg: #EAF1FF; --cover-accent: #8FB0FF; --cover-ink: #24409A; }
-.cover--lavender { --cover-bg: #F3E8FF; --cover-accent: #C9A6F5; --cover-ink: #5B2E9E; }
-.cover--rose { --cover-bg: #FFE9F2; --cover-accent: #F28CB8; --cover-ink: #8C1F4F; }
-.cover--apricot { --cover-bg: #FFF0E0; --cover-accent: #F9A95C; --cover-ink: #7D4300; }
-.cover--olive { --cover-bg: #F0F7D9; --cover-accent: #C5DB5A; --cover-ink: #4A5A00; }
-.cover--aqua { --cover-bg: #DDF5F0; --cover-accent: #5CCFB6; --cover-ink: #0F5C4C; }
-.cover--cobalt { --cover-bg: #E3F0FF; --cover-accent: #6FB5FF; --cover-ink: #1A4B8F; }
-.cover--violet { --cover-bg: #ECE8FF; --cover-accent: #A596F0; --cover-ink: #3F2E9A; }
-.cover--cherry { --cover-bg: #FFE6EC; --cover-accent: #F58CA0; --cover-ink: #8E1E36; }
-.cover--lemon { --cover-bg: #FFF8DB; --cover-accent: #F5D54A; --cover-ink: #6B5300; }
-.cover--grass { --cover-bg: #E6F7E9; --cover-accent: #6FCF8A; --cover-ink: #1F6B36; }
-.cover--ice { --cover-bg: #DFF4F9; --cover-accent: #6CC7E3; --cover-ink: #0F5A70; }
-.cover--periwinkle { --cover-bg: #E9EEFF; --cover-accent: #9AA9FF; --cover-ink: #2C3A9C; }
-.cover--orchid { --cover-bg: #F7E9FB; --cover-accent: #D79BE8; --cover-ink: #6B2B80; }
-.cover--clay { --cover-bg: #FBEBE3; --cover-accent: #E8A58A; --cover-ink: #7D3A1F; }
-.cover--sand { --cover-bg: #F2EFE6; --cover-accent: #C8B68E; --cover-ink: #5A4A22; }
-.cover--sage { --cover-bg: #E4F4EC; --cover-accent: #7BCBA2; --cover-ink: #1F5E41; }
-.cover--steel { --cover-bg: #E6F1F7; --cover-accent: #8FB8D4; --cover-ink: #244D6A; }
-.cover--plum { --cover-bg: #F0E9F6; --cover-accent: #B6A1D1; --cover-ink: #4A3270; }
-.cover--coral { --cover-bg: #FBE7E7; --cover-accent: #E89A9A; --cover-ink: #7F2A2A; }
+.cover--cherry  { --cover-bg: #F9CDD3; --cover-accent: #E05C6E; --cover-ink: #7A1F2B; }
+.cover--peach   { --cover-bg: #FAD6C2; --cover-accent: #E78B55; --cover-ink: #7A401F; }
+.cover--butter  { --cover-bg: #F9E8B4; --cover-accent: #E8B92C; --cover-ink: #7A631F; }
+.cover--lime    { --cover-bg: #E1F1BC; --cover-accent: #9ECC33; --cover-ink: #526A1B; }
+.cover--grass   { --cover-bg: #C4EECE; --cover-accent: #47C266; --cover-ink: #1D7232; }
+.cover--mint    { --cover-bg: #C4EEE3; --cover-accent: #40BF9F; --cover-ink: #1D725D; }
+.cover--sky     { --cover-bg: #C5E8F7; --cover-accent: #4EB0DA; --cover-ink: #1F5F7A; }
+.cover--cobalt  { --cover-bg: #CBD9FB; --cover-accent: #6389E3; --cover-ink: #1F3A7A; }
+.cover--violet  { --cover-bg: #DBD1FA; --cover-accent: #9378E2; --cover-ink: #361F7A; }
+.cover--orchid  { --cover-bg: #EED4F7; --cover-accent: #C274DC; --cover-ink: #631F7A; }
+.cover--rose    { --cover-bg: #F9D2EC; --cover-accent: #E170BB; --cover-ink: #7A1F5C; }
+.cover--clay    { --cover-bg: #EDD5CF; --cover-accent: #C77D6B; --cover-ink: #7A311F; }
 
 .board-cover {
   position: relative;

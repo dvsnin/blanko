@@ -41,7 +41,9 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
         <div className="tpl-head__text">
         <h1 className="tpl-title">Шаблоны занятий</h1>
         <p className="tpl-sub">
-          Готовые доски: выберите, нажмите «Создать доску», и она появится в {activeTeam ? `группе «${activeTeam.name}»` : "выбранной группе"}
+          {activeTeam
+            ? `Готовые занятия для детей. Новая доска из шаблона попадёт в группу «${activeTeam.name}».`
+            : "Готовые занятия для детей. Сначала создайте группу, чтобы добавлять доски."}
         </p>
         </div>
       <label className="input input--search tpl-search">

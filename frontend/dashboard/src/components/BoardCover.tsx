@@ -3,7 +3,7 @@ import { colorForId, initialsOf } from "../utils/cover";
 import { coverForBoard } from "../utils/templates";
 
 export interface BoardCoverProps {
-  board: { id: string; title: string; owner: string; ownerId?: string; templateId?: string };
+  board: { id: string; title: string; owner: string; ownerId?: string; templateId?: string; colorKey?: string };
   size: "card" | "small";
 }
 

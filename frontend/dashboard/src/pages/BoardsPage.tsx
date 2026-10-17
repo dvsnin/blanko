@@ -137,9 +137,17 @@ export default function BoardsPage() {
   const selectedTeamHasBoards = loading
     ? dashFlags?.hasBoards !== false
     : Boolean(activeTeam && activeBoards.length > 0);
+  const colouredByTeam = useMemo(
+    () => new Map(teams.map((t) => [t.id, assignColors(t.boards)])),
+    [teams],
+  );
   const otherMatches = useMemo(
-    () => searchOtherTeams(teams, activeTeamId, q),
-    [teams, activeTeamId, q],
+    () =>
+      searchOtherTeams(teams, activeTeamId, q).map(({ board, team }) => ({
+        board: colouredByTeam.get(team.id)?.find((b) => b.id === board.id) ?? board,
+        team,
+      })),
+    [teams, activeTeamId, q, colouredByTeam],
   );
 
   const handleStarClick = (board: { id: string; isStarred?: boolean }) => {

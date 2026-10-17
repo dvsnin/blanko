@@ -1,7 +1,6 @@
 export const COVER_KEYS = [
-  'butter', 'peach', 'lime', 'mint', 'sky', 'lavender', 'rose', 'apricot',
-  'olive', 'aqua', 'cobalt', 'violet', 'cherry', 'lemon', 'grass', 'ice',
-  'periwinkle', 'orchid', 'clay', 'sand', 'sage', 'steel', 'plum', 'coral',
+  'cherry', 'peach', 'butter', 'lime', 'grass', 'mint',
+  'sky', 'cobalt', 'violet', 'orchid', 'rose', 'clay',
 ] as const;
 
 export type CoverKey = (typeof COVER_KEYS)[number];
@@ -57,10 +56,14 @@ export function glyphFromTitle(title: string): string {
   return FALLBACK_GLYPH;
 }
 
-export function coverFor(board: { id: string; title: string }): Cover {
+function isCoverKey(k: string | undefined): k is CoverKey {
+  return !!k && (COVER_KEYS as readonly string[]).includes(k);
+}
+
+export function coverFor(board: { id: string; title: string; colorKey?: string }): Cover {
   const h = hashString(board.id);
   return {
-    colorKey: COVER_KEYS[h % COVER_KEYS.length],
+    colorKey: isCoverKey(board.colorKey) ? board.colorKey : COVER_KEYS[h % COVER_KEYS.length],
     shape: SHAPES[(h >>> 8) % 3],
     corner: ((h >>> 16) % 4) as CoverCorner,
     glyph: glyphFromTitle(board.title),

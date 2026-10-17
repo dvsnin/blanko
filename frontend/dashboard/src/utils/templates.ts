@@ -48,7 +48,7 @@ export function ageLabel(key?: AgeKey): string | undefined {
 }
 
 /** Обложка доски: базовая coverFor, а глиф и тема берутся из шаблона, если он известен. */
-export function coverForBoard(board: { id: string; title: string; templateId?: string }): Cover & { topic?: TopicStyle } {
+export function coverForBoard(board: { id: string; title: string; templateId?: string; colorKey?: string }): Cover & { topic?: TopicStyle } {
   const base = coverFor(board);
   const tpl = templateById(board.templateId);
   if (!tpl) return base;
