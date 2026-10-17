@@ -414,10 +414,13 @@ export default function BoardsPage() {
                   </button>
                 ))}
               </div>
-              <div className="filter-group">
-                <span className="filter-label">Сортировка</span>
+              <label className="sort-control" title="Сортировка">
+                <svg className="sort-control__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 4v16M7 20l-3-3M7 20l3-3" />
+                  <path d="M17 20V4M17 4l-3 3M17 4l3 3" />
+                </svg>
                 <select
-                  className="filter-select"
+                  className="sort-control__select"
                   aria-label="Сортировка"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortBy)}
@@ -426,7 +429,10 @@ export default function BoardsPage() {
                   <option value="name">По названию</option>
                   <option value="updated">По дате изменения</option>
                 </select>
-              </div>
+                <svg className="sort-control__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </label>
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
             </div>
 
