@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Team, Board } from "../types";
-import { pickAvailableColor } from "../utils/colors";
+import { colorForId } from "../utils/cover";
 import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
 
@@ -54,7 +54,7 @@ interface TeamsProviderProps {
   children: ReactNode;
 }
 
-function boardFromDTO(dto: BoardDTO, colorKey?: string): Board {
+export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id)): Board {
   return {
     id: dto.id,
     publicId: dto.publicId,
@@ -80,18 +80,9 @@ function teamFromDTO(dto: TeamDTO, boards: Board[] = []): Team {
   };
 }
 
-/**
- * Маппит список досок в модель фронта и назначает цвета (цвет не приходит
- * с бэкенда — это чисто визуальная метка, вычисляется инкрементально по мере
- * добавления, чтобы соседние доски не совпадали).
- */
-function mapBoards(dtos: BoardDTO[]): Board[] {
-  const out: Board[] = [];
-  for (const dto of dtos) {
-    const color = pickAvailableColor(out);
-    out.push(boardFromDTO(dto, color));
-  }
-  return out;
+/** Маппит список досок в модель фронта; цвет всегда выводится из id доски. */
+export function mapBoards(dtos: BoardDTO[]): Board[] {
+  return dtos.map((dto) => boardFromDTO(dto));
 }
 
 function pickInitialActiveTeamId(teams: Team[]): string | null {
@@ -232,8 +223,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       if (!activeTeamId) return null;
       try {
         const created = await api.boards.create(activeTeamId, title);
-        const color = pickAvailableColor(activeBoards);
-        const board = boardFromDTO(created, color);
+        const board = boardFromDTO(created);
         setTeams((prev) =>
           prev.map((t) =>
             t.id === activeTeamId
@@ -247,7 +237,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
         return null;
       }
     },
-    [activeTeamId, activeBoards],
+    [activeTeamId],
   );
 
   const renameBoard = useCallback(
