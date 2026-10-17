@@ -79,6 +79,8 @@ export default function BoardsPage() {
   };
   const [segment, setSegment] = useState<Segment>("all");
   const [sortBy, setSortBy] = useState<SortBy>("last-opened");
+  // true, если взаимодействие с селектом сортировки началось с мыши/тача
+  const sortByPointer = useRef(false);
   // Поисковый запрос не сохраняем между сессиями.
   const [q, setQ] = useState("");
   // Модалка настроек активной группы / создания новой.
@@ -433,7 +435,17 @@ export default function BoardsPage() {
                   className="sort-control__select"
                   aria-label="Сортировка"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortBy)}
+                  onPointerDown={() => { sortByPointer.current = true; }}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as SortBy);
+                    // После выбора мышью снимаем фокус, чтобы рамка не держалась на кнопке;
+                    // при выборе с клавиатуры фокус остаётся.
+                    if (sortByPointer.current) {
+                      sortByPointer.current = false;
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => { sortByPointer.current = false; }}
                 >
                   <option value="last-opened">{SORT_LABELS["last-opened"]}</option>
                   <option value="name">{SORT_LABELS.name}</option>
