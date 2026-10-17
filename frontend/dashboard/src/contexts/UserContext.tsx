@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import type { User } from "../types";
 import { api } from "../api/client";
 
-interface UserContextValue {
+export interface UserContextValue {
   user: User;
   setUser: (user: User) => void;
   /** Переименовать текущего пользователя на бэкенде + обновить локальное состояние. */
@@ -11,7 +11,7 @@ interface UserContextValue {
   workspaceName: string;
 }
 
-const UserContext = createContext<UserContextValue | null>(null);
+export const UserContext =createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   // Единственный источник user-данных — window.dashData (рендерится сервером в
