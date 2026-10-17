@@ -46,8 +46,9 @@
 }
 
 .sort-control:hover { background: var(--field); }
-/* Рамка фокуса только при навигации с клавиатуры */
-.sort-control:has(.sort-control__select:focus-visible) { outline: 2px solid var(--teal); outline-offset: 2px; }
+/* Без рамки фокуса; при навигации с клавиатуры граница становится темнее */
+.sort-control:has(.sort-control__select:focus-visible) { border-color: var(--ink); }
+.sort-control__select:focus { outline: none; }
 
 .sort-control__icon { flex: 0 0 auto; color: var(--muted); }
 
