@@ -29,7 +29,9 @@
 .group-card__name { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; min-width: 0; }
 .group-card__name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-card__sub { font-size: 13px; font-weight: 600; color: var(--muted); }
-.group-card__bottom { display: flex; align-items: stretch; gap: 16px; }
+/* Фиксированная высота: 3 строки досок (28px) + зазоры + строка «и ещё N», чтобы плитка
+   с количеством досок была одного размера у всех групп, от 0 до 11+ досок. */
+.group-card__bottom { display: flex; align-items: stretch; gap: 16px; min-height: 120px; }
 .group-card__count {
   flex: 0 0 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   border-radius: 14px; background: var(--field); padding: 10px 0;
