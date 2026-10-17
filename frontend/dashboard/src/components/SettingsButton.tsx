@@ -8,7 +8,7 @@ import "./MenuButton.css";
   - Forwards ref to the overlay button for portals/anchors.
 */
 const SettingsButton = React.forwardRef(function SettingsButton(
-    { onClick, ariaLabel = "Настройки команды", size = 36, variant = "grid" },
+    { onClick, ariaLabel = "Настройки группы", size = 36, variant = "grid" },
     ref
 ) {
     const wrapClass = `menu-wrap ${variant === "list" ? "menu-wrap--list" : "menu-wrap--grid"}`;

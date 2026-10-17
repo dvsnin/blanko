@@ -3,6 +3,7 @@ import "./Boards.modals.css";
 import ConfirmModal from "./ConfirmModal";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { VALID_ROLES } from "../constants/roles";
+import { AGES, type AgeKey } from "../constants/templates";
 import type { Team, TeamRole } from "../types";
 
 /*
@@ -14,13 +15,14 @@ import type { Team, TeamRole } from "../types";
 interface TeamSettingsModalProps {
   team: Partial<Team> & { create?: boolean };
   onClose: () => void;
-  onSave: (teamId: string, newName: string) => void;
+  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | "" }) => void;
   onDelete: (teamId: string) => void;
   onLeave: (teamId: string) => void;
 }
 
 export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onLeave }: TeamSettingsModalProps) {
   const [name, setName] = useState(team?.name || "");
+  const [ageGroup, setAgeGroup] = useState<AgeKey | "">(team?.ageGroup ?? "");
   const [activeTab, setActiveTab] = useState("main");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -28,6 +30,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
 
   useEffect(() => {
     setName(team?.name || "");
+    setAgeGroup(team?.ageGroup ?? "");
     setShowDeleteConfirm(false);
     setShowLeaveConfirm(false);
     setActiveTab("main");
@@ -57,7 +60,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   function handleSave() {
     const val = (name || "").trim();
     if (!val) return;
-    onSave?.(team?.id || "", val);
+    onSave?.(team?.id || "", { name: val, ageGroup });
     onClose?.();
   }
 
@@ -83,12 +86,27 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     onClose?.();
   }
 
+  const ageSelect = (
+    <select
+      className="boards-modal-input"
+      value={ageGroup}
+      onChange={(e) => setAgeGroup(e.target.value as AgeKey | "")}
+      aria-label="Возраст детей"
+      disabled={isMember}
+    >
+      <option value="">Не указан</option>
+      {AGES.map((a) => (
+        <option key={a.key} value={a.key}>{a.label}</option>
+      ))}
+    </select>
+  );
+
   if (isCreate) {
     return (
       <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
         <div className="boards-modal" ref={ref} onMouseDown={(e) => e.stopPropagation()}>
           <div className="boards-modal-header">
-            <h3 className="boards-modal-title">Новая команда</h3>
+            <h3 className="boards-modal-title">Новая группа</h3>
             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={onClose}>×</button>
           </div>
 
@@ -102,9 +120,13 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                 if (e.key === "Enter") handleSave();
                 if (e.key === "Escape") onClose?.();
               }}
-              placeholder="Название команды"
-              aria-label="Название команды"
+              placeholder="Название группы"
+              aria-label="Название группы"
             />
+            <div className="ts-section" style={{ marginTop: 12 }}>
+              <label className="ts-section-label">Возраст детей</label>
+              {ageSelect}
+            </div>
           </div>
 
           <div className="boards-modal-footer" style={{ padding: "16px 24px", borderTop: "1px solid #eef2f7" }}>
@@ -115,7 +137,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
               disabled={isEmpty}
               aria-disabled={isEmpty}
             >
-              Создать команду
+              Создать группу
             </button>
             <button type="button" className="secondary-btn" onClick={onClose}>Отмена</button>
           </div>
@@ -129,12 +151,12 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
       <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
         <div className="boards-modal team-settings-modal team-settings-modal--fixed" ref={ref} onMouseDown={(e) => e.stopPropagation()}>
           <div className="boards-modal-header">
-            <h3 className="boards-modal-title">Настройки команды</h3>
+            <h3 className="boards-modal-title">Настройки группы</h3>
             <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={onClose}>×</button>
           </div>
 
           <div className="team-settings-body">
-            <nav className="team-settings-sidebar" aria-label="Настройки команды">
+            <nav className="team-settings-sidebar" aria-label="Настройки группы">
               <ul>
                 {tabs.includes("main") && <li className={`ts-nav-item ${activeTab === "main" ? "active" : ""}`} onClick={() => setActiveTab("main")}>Основные</li>}
                 {!isMember && (
@@ -152,33 +174,38 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
               {activeTab === "main" && (
                 <>
                   <div className="ts-section">
-                    <label className="ts-section-label">Название команды</label>
+                    <label className="ts-section-label">Название группы</label>
                     <input
                       className={`boards-modal-input ${isEmpty ? "boards-modal-input--empty" : ""}`}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Название команды"
-                      aria-label="Название команды"
+                      placeholder="Название группы"
+                      aria-label="Название группы"
                       readOnly={isMember}
                       disabled={isMember}
                     />
+                  </div>
+
+                  <div className="ts-section">
+                    <label className="ts-section-label">Возраст детей</label>
+                    {ageSelect}
                   </div>
 
                   <hr className="ts-divider" />
 
                   {!hasValidRole && (
                     <div className="ts-section">
-                      <p className="ts-section-text">Неверные данные команды — отсутствует role. Обратитесь к бэкенду.</p>
+                      <p className="ts-section-text">Неверные данные группы — отсутствует role. Обратитесь к бэкенду.</p>
                     </div>
                   )}
 
                   {hasValidRole && !isOwner && (
                     <>
                       <div className="ts-section">
-                        <h4 className="ts-section-title">Покинуть команду</h4>
-                        <p className="ts-section-text">Покинув команду, вы потеряете доступ ко всем её доскам в своём аккаунте. При необходимости администратор сможет пригласить вас снова.</p>
+                        <h4 className="ts-section-title">Покинуть группу</h4>
+                        <p className="ts-section-text">Покинув группу, вы потеряете доступ ко всем её доскам в своём аккаунте. При необходимости администратор сможет пригласить вас снова.</p>
                         <div style={{ marginTop: 12 }}>
-                          <button className="btn-outlined-danger" onClick={() => setShowLeaveConfirm(true)}>Покинуть команду</button>
+                          <button className="btn-outlined-danger" onClick={() => setShowLeaveConfirm(true)}>Покинуть группу</button>
                         </div>
                       </div>
                       <hr className="ts-divider" />
@@ -187,10 +214,10 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
 
                   {hasValidRole && isOwner && (
                     <div className="ts-section">
-                      <h4 className="ts-section-title">Удалить команду</h4>
-                      <p className="ts-section-text">Удаление команды удалит все её доски и участники потеряют доступ. Это действие необратимо.</p>
+                      <h4 className="ts-section-title">Удалить группу</h4>
+                      <p className="ts-section-text">Удаление группы удалит все её доски и участники потеряют доступ. Это действие необратимо.</p>
                       <div style={{ marginTop: 12 }}>
-                        <button className="btn-outlined-danger" onClick={() => setShowDeleteConfirm(true)}>Удалить команду</button>
+                        <button className="btn-outlined-danger" onClick={() => setShowDeleteConfirm(true)}>Удалить группу</button>
                       </div>
                     </div>
                   )}
@@ -226,8 +253,8 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
       <ConfirmModal
         isOpen={showDeleteConfirm}
         compact
-        title="Удалить команду?"
-        message={<p style={{ margin: 0 }}>Удаление команды <strong>{team?.name || "команды"}</strong> приведёт к удалению всех её досок и потере доступа у участников. Это действие нельзя отменить.</p>}
+        title="Удалить группу?"
+        message={<p style={{ margin: 0 }}>Удаление группы <strong>{team?.name || "группы"}</strong> приведёт к удалению всех её досок и потере доступа у участников. Это действие нельзя отменить.</p>}
         confirmLabel="Удалить"
         cancelLabel="Отмена"
         danger
@@ -238,8 +265,8 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
       <ConfirmModal
         isOpen={showLeaveConfirm}
         compact
-        title="Покинуть команду?"
-        message={<p style={{ margin: 0 }}>Вы потеряете доступ ко всем доскам команды <strong>{team?.name}</strong>. Администратор сможет пригласить вас снова при необходимости.</p>}
+        title="Покинуть группу?"
+        message={<p style={{ margin: 0 }}>Вы потеряете доступ ко всем доскам группы <strong>{team?.name}</strong>. Администратор сможет пригласить вас снова при необходимости.</p>}
         confirmLabel="Покинуть"
         cancelLabel="Отмена"
         danger

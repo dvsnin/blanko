@@ -4,7 +4,7 @@ import NotificationButton from "./NotificationButton";
 import NotificationsPanel from "./NotificationsPanel";
 import ProfileButton from "./ProfileButton";
 import ProfileMenu from "./ProfileMenu";
-import { useTeams } from "../contexts/TeamsContext";
+import TeamSwitcher from "./TeamSwitcher";
 import { useUser } from "../contexts/UserContext";
 import { useHashRoute, navigate, type Route } from "../hooks/useHashRoute";
 import { LOGO_SVG } from "../constants/templates";
@@ -17,7 +17,6 @@ const NAV: ReadonlyArray<{ name: Route["name"]; href: string; label: string }> =
 
 export default function Topbar() {
   const route = useHashRoute();
-  const { activeTeam } = useTeams();
   const { user, userInitial } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -40,7 +39,7 @@ export default function Topbar() {
       </a>
 
       <div className="topbar__switcher">
-        <span>{activeTeam?.name ?? "Нет групп"}</span>
+        <TeamSwitcher />
       </div>
 
       <nav className="topbar__nav" aria-label="Разделы">

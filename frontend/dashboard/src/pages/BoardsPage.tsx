@@ -342,7 +342,7 @@ export default function BoardsPage() {
             onClick={() => { if (!canCreateBoard) return; handleCreateBoard(); }}
             disabled={!canCreateBoard}
             aria-disabled={!canCreateBoard}
-            title={!canCreateBoard ? "Нельзя создавать доски без выбранной команды" : "Создать доску"}
+            title={!canCreateBoard ? "Нельзя создавать доски без выбранной группы" : "Создать доску"}
           >
             + Создать доску
           </button>
@@ -351,11 +351,11 @@ export default function BoardsPage() {
         {/* If user has no teams, show minimal centered hint */}
         {!userHasTeams ? (
           <div className="boards-empty-hint" role="status" aria-live="polite">
-            <p className="boards-empty-hint__text">Чтобы создавать доски, создайте команду или присоединитесь к существующей.</p>
+            <p className="boards-empty-hint__text">Чтобы создавать доски, создайте группу или присоединитесь к существующей.</p>
           </div>
         ) : !selectedTeamHasBoards ? (
           <div className="boards-team-empty-hint" role="status" aria-live="polite">
-            <p className="boards-team-empty-hint__text">В этой команде пока нет досок. Создайте первую доску, чтобы начать работу вместе.</p>
+            <p className="boards-team-empty-hint__text">В этой группе пока нет досок. Создайте первую доску, чтобы начать работу вместе.</p>
           </div>
         ) : (
           <>

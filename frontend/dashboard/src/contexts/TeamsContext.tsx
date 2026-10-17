@@ -27,7 +27,7 @@ import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
  *  - Errors are surfaced via the `error` field and logged.
  */
 
-interface TeamsContextValue {
+export interface TeamsContextValue {
   teams: Team[];
   activeTeamId: string | null;
   activeTeam: Team | null;
@@ -49,7 +49,7 @@ interface TeamsContextValue {
   refresh: () => Promise<void>;
 }
 
-const TeamsContext = createContext<TeamsContextValue | null>(null);
+export const TeamsContext = createContext<TeamsContextValue | null>(null);
 
 interface TeamsProviderProps {
   children: ReactNode;

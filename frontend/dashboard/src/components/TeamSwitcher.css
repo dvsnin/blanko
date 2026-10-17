@@ -1,0 +1,65 @@
+/* TeamSwitcher — триггер в топбаре и поповер со списком групп. */
+
+.team-switcher { position: relative; display: inline-flex; min-width: 0; }
+
+.team-switcher__trigger { height: 44px; max-width: 320px; padding: 0 12px; gap: 10px; }
+
+.team-switcher__mark {
+    width: 24px; height: 24px; flex: 0 0 24px;
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
+    background: var(--cover-bg);
+    color: var(--cover-ink);
+}
+.team-switcher__mark--lg { width: 28px; height: 28px; flex-basis: 28px; font-size: 12px; }
+
+.team-switcher__name {
+    font-size: 15px; font-weight: 800;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+
+.team-switcher__pop {
+    position: absolute; top: calc(100% + 8px); left: 0;
+    width: 360px; max-width: calc(100vw - 32px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-pop);
+    z-index: 120;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+
+.team-switcher__search { padding: 10px 10px 8px; }
+.team-switcher__search .input { width: 100%; box-sizing: border-box; }
+
+.team-switcher__list {
+    max-height: 320px; overflow-y: auto;
+    padding: 0 6px 6px;
+    display: flex; flex-direction: column; gap: 2px;
+}
+
+.team-switcher__item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.team-switcher__item.is-hl { background: var(--chip); }
+
+.team-switcher__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.team-switcher__item-name {
+    font-size: 14px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.team-switcher__sub { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+.team-switcher__icons { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.team-switcher__check { color: var(--teal); }
+
+.team-switcher__empty { padding: 14px 10px; text-align: center; font-size: 13px; color: var(--muted); }
+
+.team-switcher__footer {
+    display: flex; gap: 8px; padding: 8px 10px;
+    border-top: 1px solid var(--border);
+}
+.team-switcher__footer .btn { flex: 1 1 0; }
