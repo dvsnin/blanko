@@ -25,4 +25,9 @@ export default defineConfig({
     },
 
     base: '/app/',
+
+    test: {
+        environment: 'jsdom',
+        include: ['**/*.test.{ts,tsx}']
+    },
 });
