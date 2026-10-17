@@ -30,6 +30,19 @@ describe('BoardCover', () => {
     const { getByTitle } = render(<BoardCover board={{ ...board, ownerId: undefined }} size="card" />);
     expect(getByTitle('Анна Петрова').className).toContain(`cover--${colorForId('Анна Петрова')}`);
   });
+  it('card + templateId: чип темы', () => {
+    const { container } = render(<BoardCover board={{ ...board, templateId: 'letter' }} size="card" />);
+    expect(container.querySelector('.board-cover__topic')?.textContent).toBe('Грамота');
+    expect(container.querySelector('.board-cover__glyph')?.textContent).toBe('А');
+  });
+  it('без templateId чипа нет', () => {
+    const { container } = render(<BoardCover board={board} size="card" />);
+    expect(container.querySelector('.board-cover__topic')).toBeNull();
+  });
+  it('small: чипа нет даже с templateId', () => {
+    const { container } = render(<BoardCover board={{ ...board, templateId: 'letter' }} size="small" />);
+    expect(container.querySelector('.board-cover__topic')).toBeNull();
+  });
   it('палитра в CSS совпадает с COVER_KEYS', () => {
     for (const key of COVER_KEYS) expect(css).toMatch(new RegExp(`\\.cover--${key}\\s*\\{[^}]*--cover-bg[^}]*--cover-accent[^}]*--cover-ink`));
   });

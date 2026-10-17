@@ -1,3 +1,5 @@
+import type { AgeKey } from "../constants/templates";
+
 export type TeamRole = "owner" | "admin" | "member";
 
 export interface Board {
@@ -12,6 +14,7 @@ export interface Board {
   lastOpened: string;
   colorKey?: string;
   isStarred?: boolean;
+  templateId?: string;
 }
 
 export interface Team {
@@ -23,6 +26,7 @@ export interface Team {
   ownerId?: string;
   create?: boolean;
   boardCount?: number;
+  ageGroup?: AgeKey;
 }
 
 export interface User {

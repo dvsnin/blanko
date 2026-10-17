@@ -81,6 +81,7 @@ export interface TeamDTO {
   role: "owner" | "admin" | "member";
   isStarred: boolean;
   boardCount: number;
+  ageGroup: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +95,7 @@ export interface BoardDTO {
   ownerName: string;
   teamAccess: "deny" | "view" | "edit";
   linkAccessEnabled: boolean;
+  templateId: string;
   isStarred: boolean;
   createdAt: string;
   updatedAt: string;
@@ -113,8 +115,9 @@ export const api = {
 
   teams: {
     list: () => post<List<TeamDTO>>("/team/list").then((r) => r.items ?? []),
-    create: (name: string) => post<TeamDTO>("/team/create", { name }),
-    update: (id: string, patch: { name?: string }) =>
+    create: (name: string, ageGroup?: string) =>
+      post<TeamDTO>("/team/create", { name, ...(ageGroup ? { ageGroup } : {}) }),
+    update: (id: string, patch: { name?: string; ageGroup?: string }) =>
       post<TeamDTO>("/team/update", { id, ...patch }),
     delete: (id: string) => post<void>("/team/delete", { id }),
     leave: (id: string) => post<void>("/team/leave", { id }),
@@ -125,8 +128,12 @@ export const api = {
   boards: {
     listByTeam: (teamId: string) =>
       post<List<BoardDTO>>("/board/list", { teamId }).then((r) => r.items ?? []),
-    create: (teamId: string, name?: string) =>
-      post<BoardDTO>("/board/create", { teamId, name: name ?? "" }),
+    create: (teamId: string, name?: string, templateId?: string) =>
+      post<BoardDTO>("/board/create", {
+        teamId,
+        name: name ?? "",
+        ...(templateId ? { templateId } : {}),
+      }),
     update: (
       id: string,
       patch: { name?: string; teamAccess?: string; linkAccessEnabled?: boolean },

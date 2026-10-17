@@ -19,7 +19,7 @@ export default function TeamsPanel() {
     activeTeamId,
     setActiveTeamId,
     createTeam,
-    renameTeam,
+    updateTeam,
     deleteTeam,
     toggleStarTeam,
     leaveTeam,
@@ -152,7 +152,7 @@ export default function TeamsPanel() {
             if ("create" in editingTeam && editingTeam.create) {
               createTeam({ name: newName });
             } else {
-              renameTeam(teamId, newName);
+              updateTeam(teamId, { name: newName });
             }
           }}
           onDelete={(teamId: string) => {

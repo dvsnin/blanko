@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Team, Board } from "../types";
+import type { AgeKey } from "../constants/templates";
 import { colorForId } from "../utils/cover";
 import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
@@ -36,12 +37,12 @@ interface TeamsContextValue {
   error: string | null;
 
   setActiveTeamId: (id: string | null) => void;
-  createTeam: (opts: { name: string }) => Promise<void>;
-  renameTeam: (teamId: string, newName: string) => Promise<void>;
+  createTeam: (opts: { name: string; ageGroup?: AgeKey }) => Promise<void>;
+  updateTeam: (teamId: string, patch: { name?: string; ageGroup?: AgeKey | "" }) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
   toggleStarTeam: (teamId: string) => Promise<void>;
-  createBoard: (title?: string) => Promise<Board | null>;
+  createBoard: (title?: string, templateId?: string) => Promise<Board | null>;
   renameBoard: (boardId: string, newTitle: string) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
@@ -66,10 +67,11 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     updatedAt: dto.updatedAt,
     colorKey,
     isStarred: dto.isStarred,
+    templateId: dto.templateId || undefined,
   };
 }
 
-function teamFromDTO(dto: TeamDTO, boards: Board[] = []): Team {
+export function teamFromDTO(dto: TeamDTO, boards: Board[] = []): Team {
   return {
     id: dto.id,
     name: dto.name,
@@ -77,6 +79,7 @@ function teamFromDTO(dto: TeamDTO, boards: Board[] = []): Team {
     boards,
     isStarred: dto.isStarred,
     boardCount: dto.boardCount,
+    ageGroup: (dto.ageGroup || undefined) as AgeKey | undefined,
   };
 }
 
@@ -139,9 +142,9 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   );
   const activeBoards = useMemo(() => activeTeam?.boards ?? [], [activeTeam]);
 
-  const createTeam = useCallback(async ({ name }: { name: string }) => {
+  const createTeam = useCallback(async ({ name, ageGroup }: { name: string; ageGroup?: AgeKey }) => {
     try {
-      const created = await api.teams.create(name);
+      const created = await api.teams.create(name, ageGroup);
       const team = teamFromDTO(created, []);
       setTeams((prev) => [team, ...prev]);
       setActiveTeamId(team.id);
@@ -151,17 +154,28 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, []);
 
-  const renameTeam = useCallback(async (teamId: string, newName: string) => {
+  const updateTeam = useCallback(
+    async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | "" }) => {
     try {
-      const updated = await api.teams.update(teamId, { name: newName });
+      const updated = await api.teams.update(teamId, patch);
       setTeams((prev) =>
-        prev.map((t) => (t.id === teamId ? { ...t, name: updated.name } : t)),
+        prev.map((t) =>
+          t.id === teamId
+            ? {
+                ...t,
+                name: updated.name,
+                ageGroup: (updated.ageGroup || undefined) as AgeKey | undefined,
+              }
+            : t,
+        ),
       );
     } catch (e) {
-      console.error("renameTeam failed:", e);
+      console.error("updateTeam failed:", e);
       throw e;
     }
-  }, []);
+    },
+    [],
+  );
 
   const deleteTeam = useCallback(async (teamId: string) => {
     try {
@@ -219,10 +233,10 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   );
 
   const createBoard = useCallback(
-    async (title = "Новая доска"): Promise<Board | null> => {
+    async (title = "Новая доска", templateId?: string): Promise<Board | null> => {
       if (!activeTeamId) return null;
       try {
-        const created = await api.boards.create(activeTeamId, title);
+        const created = await api.boards.create(activeTeamId, title, templateId);
         const board = boardFromDTO(created);
         setTeams((prev) =>
           prev.map((t) =>
@@ -331,7 +345,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       error,
       setActiveTeamId,
       createTeam,
-      renameTeam,
+      updateTeam,
       deleteTeam,
       leaveTeam,
       toggleStarTeam,
@@ -349,7 +363,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       loading,
       error,
       createTeam,
-      renameTeam,
+      updateTeam,
       deleteTeam,
       leaveTeam,
       toggleStarTeam,

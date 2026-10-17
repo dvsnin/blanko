@@ -1,14 +1,14 @@
 import "./BoardCover.css";
-import { coverFor, colorForId, initialsOf } from "../utils/cover";
+import { colorForId, initialsOf } from "../utils/cover";
+import { coverForBoard } from "../utils/templates";
 
 export interface BoardCoverProps {
-  board: { id: string; title: string; owner: string; ownerId?: string };
+  board: { id: string; title: string; owner: string; ownerId?: string; templateId?: string };
   size: "card" | "small";
-  topic?: string; // reserved for phase 2, not rendered yet
 }
 
 export default function BoardCover({ board, size }: BoardCoverProps) {
-  const cover = coverFor(board);
+  const cover = coverForBoard(board);
   return (
     <div
       className={`board-cover board-cover--${size} cover--${cover.colorKey}`}
@@ -18,6 +18,11 @@ export default function BoardCover({ board, size }: BoardCoverProps) {
         className={`board-cover__shape board-cover__shape--${cover.shape} board-cover__shape--corner-${cover.corner}`}
       />
       <span className="board-cover__glyph">{cover.glyph}</span>
+      {size === "card" && cover.topic && (
+        <span className="board-cover__topic" style={{ color: cover.topic.color }}>
+          {cover.topic.label}
+        </span>
+      )}
       {size === "card" && (
         <span
           className={`board-cover__author cover--${colorForId(board.ownerId ?? board.owner)}`}
