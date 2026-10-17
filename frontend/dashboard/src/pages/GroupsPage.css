@@ -1,0 +1,31 @@
+.groups__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.groups__title { margin: 0 0 6px; font-size: 28px; font-weight: 800; }
+.groups__sub { margin: 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+
+.groups__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+
+.groups-card { border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; }
+.groups-card__band { position: relative; height: 92px; background: var(--cover-accent); flex: 0 0 auto; }
+.groups-card__mark {
+  position: absolute; left: 16px; bottom: -14px; width: 44px; height: 44px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, .75); color: var(--cover-ink); font-size: 15px; font-weight: 800;
+}
+.groups-card__body { padding: 24px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.groups-card__titlerow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.groups-card__name { margin: 0; font-size: 18px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.groups-card__sub { margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
+.groups-card__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.groups-card__actions { display: flex; gap: 8px; margin-top: auto; padding-top: 6px; }
+.groups-card__open { flex: 1; background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.groups-new {
+  min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  border: 2px dashed var(--border); border-radius: 20px; background: transparent; color: var(--muted);
+  font: inherit; font-weight: 700; cursor: pointer;
+}
+.groups-new:hover { border-color: var(--ink); color: var(--ink); }
+.groups-new__plus {
+  width: 48px; height: 48px; border-radius: 14px; background: var(--chip); color: var(--ink);
+  display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700;
+}
