@@ -8,11 +8,18 @@ import StarButton from "../components/StarButton";
 import MenuButton from "../components/MenuButton";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
+import GroupHeader from "../components/GroupHeader";
+import TeamSettingsModal from "../components/TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
 import { assignColors } from "../utils/colors";
 import { formatRelative } from "../utils/relativeTime";
+import { colorForId } from "../utils/cover";
+import { coverForBoard } from "../utils/templates";
+import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
+import type { Team } from "../types";
+import type { AgeKey } from "../constants/templates";
 
 function openBoardWindow(board: { publicId: string }) {
   const url = `/app/board/${encodeURIComponent(board.publicId)}`;
@@ -32,6 +39,10 @@ export default function BoardsPage() {
     activeTeam,
     activeBoards,
     createBoard,
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    leaveTeam,
     renameBoard,
     deleteBoard,
     toggleStarBoard,
@@ -68,12 +79,13 @@ export default function BoardsPage() {
   const [menuBoardId, setMenuBoardId] = useState<string | null>(null);
 
   // Фильтры / сортировка панели "boards-toolbar".
-  type BoardFilter = "all" | "starred";
-  type OwnerFilter = "anyone" | "me";
   type SortBy = "last-opened" | "name" | "updated";
-  const [filter, setFilter] = useState<BoardFilter>("all");
-  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("anyone");
+  const [segment, setSegment] = useState<Segment>("all");
   const [sortBy, setSortBy] = useState<SortBy>("last-opened");
+  // Поисковый запрос не сохраняем между сессиями.
+  const [q, setQ] = useState("");
+  // Модалка настроек активной группы / создания новой.
+  const [teamModal, setTeamModal] = useState<"edit" | "create" | null>(null);
 
   const { toastMessage, toastVisible, showToast } = useToast();
 
@@ -91,14 +103,16 @@ export default function BoardsPage() {
   const boards = useMemo(() => {
     let list = activeBoards;
 
-    // фильтр "Все / Избранное"
-    if (filter === "starred") {
+    // сегмент "Все / Мои / Избранные"
+    if (segment === "starred") {
       list = list.filter((b) => b.isStarred);
+    } else if (segment === "mine") {
+      list = user.id ? list.filter((b) => b.ownerId === user.id) : [];
     }
 
-    // фильтр по владельцу
-    if (ownerFilter === "me" && user.id) {
-      list = list.filter((b) => b.ownerId === user.id);
+    // поиск по названию
+    if (q.trim()) {
+      list = list.filter((b) => matchesQuery(b.title, q));
     }
 
     // сортировка
@@ -118,7 +132,7 @@ export default function BoardsPage() {
     const starred = sorted.filter((b) => b.isStarred);
     const others = sorted.filter((b) => !b.isStarred);
     return assignColors([...starred, ...others]);
-  }, [activeBoards, filter, ownerFilter, sortBy, user.id]);
+  }, [activeBoards, segment, q, sortBy, user.id]);
 
   const canCreateBoard = Boolean(activeTeamId);
   // Во время первого фетча опираемся на флаги из window.dashData, чтобы
@@ -131,7 +145,10 @@ export default function BoardsPage() {
   const selectedTeamHasBoards = loading
     ? dashFlags?.hasBoards !== false
     : Boolean(activeTeam && activeBoards.length > 0);
-  const filtersActive = filter !== "all" || ownerFilter !== "anyone";
+  const otherMatches = useMemo(
+    () => searchOtherTeams(teams, activeTeamId, q),
+    [teams, activeTeamId, q],
+  );
 
   const handleStarClick = (board: { id: string; isStarred?: boolean }) => {
     const willStar = !board.isStarred;
@@ -335,74 +352,87 @@ export default function BoardsPage() {
   return (
     <main className="page boards-page">
       <div className="boards-wrapper">
-        <div className="boards-header-line">
-          <button
-            type="button"
-            className={`primary-btn create-btn ${!canCreateBoard ? "disabled" : ""}`}
-            onClick={() => { if (!canCreateBoard) return; handleCreateBoard(); }}
-            disabled={!canCreateBoard}
-            aria-disabled={!canCreateBoard}
-            title={!canCreateBoard ? "Нельзя создавать доски без выбранной группы" : "Создать доску"}
-          >
-            + Создать доску
-          </button>
-        </div>
+        {(!loading || activeTeam) && (
+          <GroupHeader
+            team={activeTeam ?? null}
+            boardsCount={activeTeam ? (loading ? (activeTeam.boardCount ?? 0) : activeTeam.boards.length) : 0}
+            role={activeTeam?.role ?? "member"}
+            onSettings={() => setTeamModal("edit")}
+            onCreateBoard={handleCreateBoard}
+            onCreateTeam={() => setTeamModal("create")}
+          />
+        )}
 
         {/* If user has no teams, show minimal centered hint */}
-        {!userHasTeams ? (
-          <div className="boards-empty-hint" role="status" aria-live="polite">
-            <p className="boards-empty-hint__text">Чтобы создавать доски, создайте группу или присоединитесь к существующей.</p>
-          </div>
-        ) : !selectedTeamHasBoards ? (
+        {!userHasTeams ? null : !selectedTeamHasBoards ? (
           <div className="boards-team-empty-hint" role="status" aria-live="polite">
             <p className="boards-team-empty-hint__text">В этой группе пока нет досок. Создайте первую доску, чтобы начать работу вместе.</p>
           </div>
         ) : (
           <>
             <div className="boards-toolbar">
-                <div className="boards-filters">
-                <div className="filter-group">
-                  <span className="filter-label">Фильтр</span>
-                  <select
-                    className="filter-select"
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value as BoardFilter)}
-                  >
-                    <option value="all">Все доски</option>
-                    <option value="starred">Избранное</option>
-                  </select>
-                </div>
-                <div className="filter-group">
-                  <span className="filter-label">Владелец</span>
-                  <select
-                    className="filter-select"
-                    value={ownerFilter}
-                    onChange={(e) => setOwnerFilter(e.target.value as OwnerFilter)}
-                  >
-                    <option value="anyone">Любой владелец</option>
-                    <option value="me">Мои доски</option>
-                  </select>
-                </div>
-                <div className="filter-group">
-                  <span className="filter-label">Сортировка</span>
-                  <select
-                    className="filter-select"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortBy)}
-                  >
-                    <option value="last-opened">Последние открытые</option>
-                    <option value="name">По названию</option>
-                    <option value="updated">По дате изменения</option>
-                  </select>
-                </div>
+              <div className="boards-toolbar__title">
+                <h2 className="boards-toolbar__heading">Доски группы</h2>
+                <span className="chip chip--muted">{boards.length}</span>
               </div>
-
+              <div className="boards-toolbar__spacer" />
+              <label className={`input input--search boards-search${q ? " boards-search--filled" : ""}`}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                  <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="text"
+                  value={q}
+                  placeholder="Найти доску…"
+                  aria-label="Найти доску"
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape" && q) { e.stopPropagation(); setQ(""); } }}
+                />
+                {q && (
+                  <button type="button" className="input__clear" aria-label="Очистить поиск" onClick={() => setQ("")}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
+              </label>
+              <div className="seg" role="group" aria-label="Показать доски">
+                {([["all", "Все"], ["mine", "Мои"], ["starred", "Избранные"]] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`seg__btn${segment === key ? " seg__btn--on" : ""}`}
+                    aria-pressed={segment === key}
+                    onClick={() => setSegment(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="filter-group">
+                <span className="filter-label">Сортировка</span>
+                <select
+                  className="filter-select"
+                  aria-label="Сортировка"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortBy)}
+                >
+                  <option value="last-opened">Последние открытые</option>
+                  <option value="name">По названию</option>
+                  <option value="updated">По дате изменения</option>
+                </select>
+              </div>
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
             </div>
 
-            {boards.length === 0 && filtersActive ? (
+            {boards.length === 0 ? (
               <div className="boards-team-empty-hint" role="status" aria-live="polite">
-                <p className="boards-team-empty-hint__text">По выбранным фильтрам нет досок.</p>
+                <p className="boards-team-empty-hint__text">
+                  {q.trim()
+                    ? `В группе «${activeTeam?.name ?? ""}» ничего не найдено по запросу «${q.trim()}».`
+                    : "По выбранному фильтру досок нет. Создайте новую или снимите фильтр."}
+                </p>
               </div>
             ) : view === "grid" ? (
               <div className="boards-grid">
@@ -422,8 +452,17 @@ export default function BoardsPage() {
 
                       <div className="board-info">
                         <div className="board-info-text">
-                          <div className="board-title" title={b.title}>{b.title}</div>
-                          <span className="visually-hidden">Владелец: {b.owner}</span>
+                          <button
+                            type="button"
+                            className="board-title"
+                            title={b.title}
+                            onClick={(e) => { e.stopPropagation(); openBoardWindow(b); }}
+                          >
+                            {b.title}
+                          </button>
+                          <span className="visually-hidden">
+                            Владелец: {b.owner}.{coverForBoard(b).topic ? ` Тема: ${coverForBoard(b).topic?.label}.` : ""}
+                          </span>
                           <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
                         </div>
                         <div className="board-card-actions" onClick={(e) => e.stopPropagation()}>
@@ -514,10 +553,57 @@ export default function BoardsPage() {
                 })}
               </div>
             )}
+
+            {otherMatches.length > 0 && (
+              <section className="boards-other" aria-label="Совпадения в других группах">
+                <h3 className="boards-other__title">Ещё {otherMatches.length} в других группах</h3>
+                <ul className="boards-other__list">
+                  {otherMatches.map(({ board, team }) => (
+                    <li key={board.id} className="boards-other__row card">
+                      <BoardCover board={board} size="small" />
+                      <div className="boards-other__text">
+                        <div className="boards-other__name">{board.title}</div>
+                        <div className="boards-other__sub">
+                          {board.owner} · {formatRelative(board.updatedAt, now)}
+                        </div>
+                      </div>
+                      <span className="chip chip--muted boards-other__team">
+                        <span className={`boards-other__swatch cover--${colorForId(team.id)}`} aria-hidden="true" />
+                        {team.name}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn--ghost"
+                        onClick={() => setActiveTeamId(team.id)}
+                        aria-label={`Перейти в группу «${team.name}»`}
+                      >
+                        Перейти в группу
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
         {toastVisible && <div className="boards-toast">{toastMessage}</div>}
       </div>
+
+      {teamModal && (teamModal === "create" || activeTeam) && (
+        <TeamSettingsModal
+          team={teamModal === "create" ? ({ create: true, id: "", name: "" } as unknown as Team) : (activeTeam as Team)}
+          onClose={() => setTeamModal(null)}
+          onSave={(teamId, { name, ageGroup }) => {
+            if (teamModal === "create") {
+              void createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+            } else {
+              void updateTeam(teamId, { name, ageGroup });
+            }
+          }}
+          onDelete={(teamId) => { void deleteTeam(teamId); }}
+          onLeave={(teamId) => { void leaveTeam(teamId); setTeamModal(null); }}
+        />
+      )}
 
       {dialog?.type === "rename" && (
         <div
