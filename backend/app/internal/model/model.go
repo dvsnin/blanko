@@ -40,6 +40,7 @@ type Team struct {
 	Name              string
 	MemberBoardAccess BoardAccess
 	AgeGroup          *string
+	Teachers          *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

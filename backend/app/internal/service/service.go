@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,7 @@ var (
 
 	// Специализированные ошибки валидации (оборачивают ErrValidation).
 	ErrInvalidAgeGroup   = fmt.Errorf("%w: invalid age group", ErrValidation)
+	ErrInvalidTeachers   = fmt.Errorf("%w: invalid teachers", ErrValidation)
 	ErrInvalidTemplateID = fmt.Errorf("%w: invalid template id", ErrValidation)
 )
 
@@ -124,12 +126,14 @@ type TeamService struct {
 type TeamCreateInput struct {
 	Name     string
 	AgeGroup string
+	Teachers string
 }
 
 // TeamUpdateInput — входные данные для частичного апдейта.
 type TeamUpdateInput struct {
 	Name     string
 	AgeGroup *string
+	Teachers *string
 }
 
 // List возвращает все команды, в которых состоит пользователь.
@@ -147,6 +151,10 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 	if err := validateAgeGroup(in.AgeGroup); err != nil {
 		return nil, err
 	}
+	teachers := strings.TrimSpace(in.Teachers)
+	if err := validateTeachers(teachers); err != nil {
+		return nil, err
+	}
 
 	var view model.TeamView
 	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -159,6 +167,9 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 		if in.AgeGroup != "" {
 			ag := in.AgeGroup
 			team.AgeGroup = &ag
+		}
+		if teachers != "" {
+			team.Teachers = &teachers
 		}
 		if err := repo.Create(ctx, team); err != nil {
 			return err
@@ -192,7 +203,15 @@ func (s *TeamService) Update(ctx context.Context, id Identity, teamID uuid.UUID,
 			return nil, err
 		}
 	}
-	fields := repository.TeamFields{Name: strings.TrimSpace(in.Name), AgeGroup: in.AgeGroup}
+	var teachers *string
+	if in.Teachers != nil {
+		t := strings.TrimSpace(*in.Teachers)
+		if err := validateTeachers(t); err != nil {
+			return nil, err
+		}
+		teachers = &t
+	}
+	fields := repository.TeamFields{Name: strings.TrimSpace(in.Name), AgeGroup: in.AgeGroup, Teachers: teachers}
 	if err := repo.Update(ctx, teamID, fields); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
@@ -456,6 +475,14 @@ func validateAgeGroup(s string) error {
 		return nil
 	}
 	return ErrInvalidAgeGroup
+}
+
+// validateTeachers допускает до 300 символов (уже обрезанная строка).
+func validateTeachers(s string) error {
+	if utf8.RuneCountInString(s) > 300 {
+		return ErrInvalidTeachers
+	}
+	return nil
 }
 
 // validateTemplateID допускает "" либо до 64 символов из [a-z0-9-].

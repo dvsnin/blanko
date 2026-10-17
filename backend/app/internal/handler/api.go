@@ -90,6 +90,8 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "forbidden", err.Error())
 	case errors.Is(err, service.ErrInvalidAgeGroup):
 		writeError(w, http.StatusBadRequest, "invalid_age_group", err.Error())
+	case errors.Is(err, service.ErrInvalidTeachers):
+		writeError(w, http.StatusBadRequest, "invalid_teachers", err.Error())
 	case errors.Is(err, service.ErrInvalidTemplateID):
 		writeError(w, http.StatusBadRequest, "invalid_template_id", err.Error())
 	case errors.Is(err, service.ErrValidation):

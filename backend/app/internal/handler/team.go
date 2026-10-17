@@ -18,6 +18,7 @@ type TeamDTO struct {
 	IsStarred  bool      `json:"isStarred"`
 	BoardCount int       `json:"boardCount"`
 	AgeGroup   string    `json:"ageGroup"`
+	Teachers   string    `json:"teachers"`
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
@@ -27,6 +28,10 @@ func teamViewToDTO(v model.TeamView) TeamDTO {
 	if v.Team.AgeGroup != nil {
 		ageGroup = *v.Team.AgeGroup
 	}
+	teachers := ""
+	if v.Team.Teachers != nil {
+		teachers = *v.Team.Teachers
+	}
 	return TeamDTO{
 		ID:         v.Team.ID.String(),
 		Name:       v.Team.Name,
@@ -34,6 +39,7 @@ func teamViewToDTO(v model.TeamView) TeamDTO {
 		IsStarred:  v.IsStarred,
 		BoardCount: v.BoardCount,
 		AgeGroup:   ageGroup,
+		Teachers:   teachers,
 		CreatedAt:  v.Team.CreatedAt,
 		UpdatedAt:  v.Team.UpdatedAt,
 	}
@@ -49,6 +55,7 @@ type createTeamRequest struct {
 	WithAccount
 	Name     string `json:"name"`
 	AgeGroup string `json:"ageGroup,omitempty"`
+	Teachers string `json:"teachers,omitempty"`
 }
 
 type updateTeamRequest struct {
@@ -56,6 +63,7 @@ type updateTeamRequest struct {
 	ID       string  `json:"id"`
 	Name     *string `json:"name,omitempty"`
 	AgeGroup *string `json:"ageGroup,omitempty"`
+	Teachers *string `json:"teachers,omitempty"`
 }
 
 type teamIDRequest struct {
@@ -91,7 +99,7 @@ func (a *API) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	view, err := a.services.Team.Create(r.Context(), id, service.TeamCreateInput{Name: req.Name, AgeGroup: req.AgeGroup})
+	view, err := a.services.Team.Create(r.Context(), id, service.TeamCreateInput{Name: req.Name, AgeGroup: req.AgeGroup, Teachers: req.Teachers})
 	if err != nil {
 		writeServiceError(w, err)
 		return
@@ -111,7 +119,7 @@ func (a *API) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
 		return
 	}
-	in := service.TeamUpdateInput{AgeGroup: req.AgeGroup}
+	in := service.TeamUpdateInput{AgeGroup: req.AgeGroup, Teachers: req.Teachers}
 	if req.Name != nil {
 		in.Name = *req.Name
 	}
