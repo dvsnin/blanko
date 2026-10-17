@@ -29,6 +29,8 @@ export interface Team {
   create?: boolean;
   boardCount?: number;
   ageGroup?: AgeKey;
+  /** Воспитатели группы, свободный текст. */
+  teachers?: string;
 }
 
 export interface User {

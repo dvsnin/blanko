@@ -30,6 +30,35 @@ describe('GroupHeader', () => {
     expect(screen.getByText('3-4 года')).toBeTruthy();
   });
 
+  it('воспитатель: один — «Воспитатель», несколько — «Воспитатели»', () => {
+    const { unmount } = render(<GroupHeader {...base} team={team({ teachers: 'Анна Петрова' })} role="owner" />);
+    expect(screen.getByText('Воспитатель: Анна Петрова')).toBeTruthy();
+    unmount();
+    render(<GroupHeader {...base} team={team({ teachers: 'Анна, Мария' })} role="owner" />);
+    expect(screen.getByText('Воспитатели: Анна, Мария')).toBeTruthy();
+  });
+
+  it('без воспитателей: владелец видит «Указать воспитателя», участник нет', () => {
+    const onSettings = vi.fn();
+    const { unmount } = render(<GroupHeader {...base} team={team()} role="owner" onSettings={onSettings} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Указать воспитателя' }));
+    expect(onSettings).toHaveBeenCalledTimes(1);
+    unmount();
+    render(<GroupHeader {...base} team={team({ role: 'member' })} role="member" />);
+    expect(screen.queryByRole('button', { name: 'Указать воспитателя' })).toBeNull();
+  });
+
+  it('роль: владелец без пометки, участник «вы участник», админ «вы администратор»', () => {
+    const { unmount } = render(<GroupHeader {...base} team={team()} role="owner" />);
+    expect(screen.queryByText(/^вы /)).toBeNull();
+    unmount();
+    const m = render(<GroupHeader {...base} team={team({ role: 'member' })} role="member" />);
+    expect(screen.getByText('вы участник')).toBeTruthy();
+    m.unmount();
+    render(<GroupHeader {...base} team={team({ role: 'admin' })} role="admin" />);
+    expect(screen.getByText('вы администратор')).toBeTruthy();
+  });
+
   it('team=null: «Создать группу» вызывает onCreateTeam', () => {
     const onCreateTeam = vi.fn();
     render(<GroupHeader {...base} team={null} role="member" onCreateTeam={onCreateTeam} />);

@@ -15,9 +15,13 @@ describe('новые поля', () => {
     expect(boardFromDTO({ ...dto, templateId: 'letter' }).templateId).toBe('letter');
   });
   const t = { id: 't', name: 'Группа', role: 'owner' as const, isStarred: false, boardCount: 0, createdAt: '', updatedAt: '' };
+  it('teachers: пусто → undefined', () => {
+    expect(teamFromDTO({ ...t, ageGroup: '', teachers: '' }).teachers).toBeUndefined();
+    expect(teamFromDTO({ ...t, ageGroup: '', teachers: 'Анна, Мария' }).teachers).toBe('Анна, Мария');
+  });
   it('ageGroup: пусто → undefined', () => {
-    expect(teamFromDTO({ ...t, ageGroup: '' }).ageGroup).toBeUndefined();
-    expect(teamFromDTO({ ...t, ageGroup: '4-5' }).ageGroup).toBe('4-5');
+    expect(teamFromDTO({ ...t, ageGroup: '', teachers: '' }).ageGroup).toBeUndefined();
+    expect(teamFromDTO({ ...t, ageGroup: '4-5', teachers: '' }).ageGroup).toBe('4-5');
   });
 });
 

@@ -3,12 +3,12 @@ import "./GroupHeader.css";
 import { colorForId, initialsOf } from "../utils/cover";
 import { plural } from "../utils/plural";
 import { ageLabel } from "../utils/templates";
+import { teachersLabel } from "../utils/teachers";
 import type { Team, TeamRole } from "../types";
 
-const ROLE_LABEL: Record<TeamRole, string> = {
-  owner: "Владелец",
-  admin: "Администратор",
-  member: "Участник",
+const YOU_ROLE: Partial<Record<TeamRole, string>> = {
+  admin: "вы администратор",
+  member: "вы участник",
 };
 
 export interface GroupHeaderProps {
@@ -55,8 +55,23 @@ export default function GroupHeader({
           )}
           <span aria-hidden="true"> · </span>
           <span>{plural(boardsCount, "доска", "доски", "досок")}</span>
-          <span aria-hidden="true"> · </span>
-          <span>{ROLE_LABEL[role]}</span>
+          {team.teachers ? (
+            <>
+              <span aria-hidden="true"> · </span>
+              <span>{teachersLabel(team.teachers)}: {team.teachers}</span>
+            </>
+          ) : canManage ? (
+            <>
+              <span aria-hidden="true"> · </span>
+              <button type="button" className="link-btn" onClick={onSettings}>Указать воспитателя</button>
+            </>
+          ) : null}
+          {YOU_ROLE[role] && (
+            <>
+              <span aria-hidden="true"> · </span>
+              <span>{YOU_ROLE[role]}</span>
+            </>
+          )}
         </p>
       </div>
       <div className="group-header__actions">

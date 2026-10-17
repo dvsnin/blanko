@@ -627,12 +627,12 @@ export default function BoardsPage() {
         <TeamSettingsModal
           team={teamModal === "create" ? NEW_TEAM : activeTeam!}
           onClose={() => setTeamModal(null)}
-          onSave={async (teamId, { name, ageGroup }) => {
+          onSave={async (teamId, { name, ageGroup, teachers }) => {
             try {
               if (teamModal === "create") {
-                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined, teachers: teachers || undefined });
               } else {
-                await updateTeam(teamId, { name, ageGroup });
+                await updateTeam(teamId, { name, ageGroup, teachers });
               }
             } catch (e) {
               showToast("Не удалось сохранить группу");

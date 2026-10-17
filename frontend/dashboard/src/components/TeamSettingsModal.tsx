@@ -18,7 +18,7 @@ interface TeamSettingsModalProps {
   team: Partial<Team> & { create?: boolean };
   onClose: () => void;
   /** May return a promise; if it rejects, the modal stays open. */
-  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | "" }) => void | Promise<unknown>;
+  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | ""; teachers: string }) => void | Promise<unknown>;
   onDelete: (teamId: string) => void | Promise<unknown>;
   onLeave: (teamId: string) => void | Promise<unknown>;
 }
@@ -26,6 +26,7 @@ interface TeamSettingsModalProps {
 export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onLeave }: TeamSettingsModalProps) {
   const [name, setName] = useState(team?.name || "");
   const [ageGroup, setAgeGroup] = useState<AgeKey | "">(team?.ageGroup ?? "");
+  const [teachers, setTeachers] = useState(team?.teachers ?? "");
   const [activeTab, setActiveTab] = useState("main");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -34,6 +35,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   useEffect(() => {
     setName(team?.name || "");
     setAgeGroup(team?.ageGroup ?? "");
+    setTeachers(team?.teachers ?? "");
     setShowDeleteConfirm(false);
     setShowLeaveConfirm(false);
     setActiveTab("main");
@@ -64,7 +66,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     const val = (name || "").trim();
     if (!val) return;
     try {
-      await onSave?.(team?.id || "", { name: val, ageGroup });
+      await onSave?.(team?.id || "", { name: val, ageGroup, teachers: teachers.trim() });
     } catch {
       return;
     }
@@ -120,6 +122,21 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     </select>
   );
 
+  const teachersField = (
+    <>
+      <input
+        className="boards-modal-input"
+        value={teachers}
+        onChange={(e) => setTeachers(e.target.value)}
+        placeholder="Анна Петрова, Мария Иванова"
+        aria-label="Воспитатели"
+        maxLength={300}
+        disabled={isMember}
+      />
+      <p className="ts-section-text" style={{ marginTop: 4 }}>Через запятую, если несколько</p>
+    </>
+  );
+
   if (isCreate) {
     return (
       <div className="boards-modal-backdrop" onMouseDown={handleBackdrop}>
@@ -145,6 +162,10 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
             <div className="ts-section" style={{ marginTop: 12 }}>
               <label className="ts-section-label">Возраст детей</label>
               {ageSelect}
+            </div>
+            <div className="ts-section" style={{ marginTop: 12 }}>
+              <label className="ts-section-label">Воспитатели</label>
+              {teachersField}
             </div>
           </div>
 
@@ -208,6 +229,11 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                   <div className="ts-section">
                     <label className="ts-section-label">Возраст детей</label>
                     {ageSelect}
+                  </div>
+
+                  <div className="ts-section">
+                    <label className="ts-section-label">Воспитатели</label>
+                    {teachersField}
                   </div>
 
                   <hr className="ts-divider" />

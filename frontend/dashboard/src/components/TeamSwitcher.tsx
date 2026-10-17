@@ -225,12 +225,12 @@ export default function TeamSwitcher() {
         <TeamSettingsModal
           team={editing}
           onClose={() => setEditing(null)}
-          onSave={async (teamId, { name, ageGroup }) => {
+          onSave={async (teamId, { name, ageGroup, teachers }) => {
             try {
               if ("create" in editing) {
-                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined, teachers: teachers || undefined });
               } else {
-                await updateTeam(teamId, { name, ageGroup });
+                await updateTeam(teamId, { name, ageGroup, teachers });
               }
             } catch (e) {
               showToast("Не удалось сохранить группу");

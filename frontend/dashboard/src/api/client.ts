@@ -82,6 +82,7 @@ export interface TeamDTO {
   isStarred: boolean;
   boardCount: number;
   ageGroup: string;
+  teachers: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,9 +117,13 @@ export const api = {
 
   teams: {
     list: () => post<List<TeamDTO>>("/team/list").then((r) => r.items ?? []),
-    create: (name: string, ageGroup?: string) =>
-      post<TeamDTO>("/team/create", { name, ...(ageGroup ? { ageGroup } : {}) }),
-    update: (id: string, patch: { name?: string; ageGroup?: string }) =>
+    create: (name: string, ageGroup?: string, teachers?: string) =>
+      post<TeamDTO>("/team/create", {
+        name,
+        ...(ageGroup ? { ageGroup } : {}),
+        ...(teachers ? { teachers } : {}),
+      }),
+    update: (id: string, patch: { name?: string; ageGroup?: string; teachers?: string }) =>
       post<TeamDTO>("/team/update", { id, ...patch }),
     delete: (id: string) => post<void>("/team/delete", { id }),
     leave: (id: string) => post<void>("/team/leave", { id }),

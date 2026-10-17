@@ -37,8 +37,8 @@ export interface TeamsContextValue {
   error: string | null;
 
   setActiveTeamId: (id: string | null) => void;
-  createTeam: (opts: { name: string; ageGroup?: AgeKey }) => Promise<void>;
-  updateTeam: (teamId: string, patch: { name?: string; ageGroup?: AgeKey | "" }) => Promise<void>;
+  createTeam: (opts: { name: string; ageGroup?: AgeKey; teachers?: string }) => Promise<void>;
+  updateTeam: (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string }) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
   toggleStarTeam: (teamId: string) => Promise<void>;
@@ -83,6 +83,7 @@ export function teamFromDTO(dto: TeamDTO, boards: Board[] = []): Team {
     isStarred: dto.isStarred,
     boardCount: dto.boardCount,
     ageGroup: (dto.ageGroup || undefined) as AgeKey | undefined,
+    teachers: dto.teachers || undefined,
   };
 }
 
@@ -145,9 +146,9 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   );
   const activeBoards = useMemo(() => activeTeam?.boards ?? [], [activeTeam]);
 
-  const createTeam = useCallback(async ({ name, ageGroup }: { name: string; ageGroup?: AgeKey }) => {
+  const createTeam = useCallback(async ({ name, ageGroup, teachers }: { name: string; ageGroup?: AgeKey; teachers?: string }) => {
     try {
-      const created = await api.teams.create(name, ageGroup);
+      const created = await api.teams.create(name, ageGroup, teachers);
       const team = teamFromDTO(created, []);
       setTeams((prev) => [team, ...prev]);
       setActiveTeamId(team.id);
@@ -158,7 +159,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   }, []);
 
   const updateTeam = useCallback(
-    async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | "" }) => {
+    async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string }) => {
     try {
       const updated = await api.teams.update(teamId, patch);
       setTeams((prev) =>
@@ -168,6 +169,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
                 ...t,
                 name: updated.name,
                 ageGroup: (updated.ageGroup || undefined) as AgeKey | undefined,
+                teachers: updated.teachers || undefined,
               }
             : t,
         ),

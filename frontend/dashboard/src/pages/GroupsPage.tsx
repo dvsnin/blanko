@@ -9,6 +9,7 @@ import { navigate } from "../hooks/useHashRoute";
 import { colorForId, initialsOf } from "../utils/cover";
 import { plural } from "../utils/plural";
 import { ageLabel } from "../utils/templates";
+import { teachersLabel } from "../utils/teachers";
 import type { AgeKey } from "../constants/templates";
 import type { Team, TeamRole } from "../types";
 
@@ -82,7 +83,9 @@ export default function GroupsPage() {
                     />
                   </div>
                   <p className="groups-card__sub">
-                    {ageLabel(team.ageGroup) ?? "Возраст не указан"} · {ROLE_LABEL[team.role]}
+                    {team.teachers
+                      ? `${ageLabel(team.ageGroup) ?? "Возраст не указан"} · ${teachersLabel(team.teachers)}: ${team.teachers}`
+                      : `${ageLabel(team.ageGroup) ?? "Возраст не указан"} · ${ROLE_LABEL[team.role]}`}
                   </p>
                   <div className="groups-card__chips">
                     <span className="chip chip--muted">{plural(count, "доска", "доски", "досок")}</span>
@@ -121,12 +124,12 @@ export default function GroupsPage() {
         <TeamSettingsModal
           team={editing}
           onClose={() => setEditing(null)}
-          onSave={async (teamId, { name, ageGroup }) => {
+          onSave={async (teamId, { name, ageGroup, teachers }) => {
             try {
               if ("create" in editing) {
-                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined });
+                await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined, teachers: teachers || undefined });
               } else {
-                await updateTeam(teamId, { name, ageGroup });
+                await updateTeam(teamId, { name, ageGroup, teachers });
               }
             } catch (e) {
               showToast("Не удалось сохранить группу");
