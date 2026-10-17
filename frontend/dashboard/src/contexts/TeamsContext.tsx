@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Team, Board } from "../types";
 import { pickAvailableColor } from "../utils/colors";
+import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
 
 /**
@@ -53,15 +54,6 @@ interface TeamsProviderProps {
   children: ReactNode;
 }
 
-function formatLastOpened(iso: string): string {
-  try {
-    const date = new Date(iso);
-    return date.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  } catch {
-    return "";
-  }
-}
-
 function boardFromDTO(dto: BoardDTO, colorKey?: string): Board {
   return {
     id: dto.id,
@@ -70,7 +62,7 @@ function boardFromDTO(dto: BoardDTO, colorKey?: string): Board {
     owner: dto.ownerName,
     ownerId: dto.ownerId,
     lastOpened: formatLastOpened(dto.updatedAt),
-    updated: formatLastOpened(dto.updatedAt),
+    updated: formatRelative(dto.updatedAt),
     updatedAt: dto.updatedAt,
     colorKey,
     isStarred: dto.isStarred,
