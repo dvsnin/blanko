@@ -5,14 +5,15 @@ import (
 )
 
 // Ресурс account: текущий пользователь. Действия выполняются для владельца
-// сессии — accountId в body должен совпадать с accountId, который decodeAndAuth
+// сессии - accountId в body должен совпадать с accountId, который decodeAndAuth
 // получает из oauth2-proxy headers (см. handler/api.go).
 
-// AccountDTO — минимальное публичное представление аккаунта.
+// AccountDTO - минимальное публичное представление аккаунта.
 type AccountDTO struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	OrgRole string `json:"orgRole"`
 }
 
 type accountGetRequest struct {
@@ -24,7 +25,7 @@ type accountUpdateRequest struct {
 	Name *string `json:"name,omitempty"`
 }
 
-// GetAccount POST /api/v1/account/get — актуальные данные текущего аккаунта из БД
+// GetAccount POST /api/v1/account/get - актуальные данные текущего аккаунта из БД
 // (ProfileModal вызывает при открытии, чтобы не полагаться на возможно устаревший
 // снимок из window.dashData).
 func (a *API) GetAccount(w http.ResponseWriter, r *http.Request) {
@@ -34,13 +35,14 @@ func (a *API) GetAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, AccountDTO{
-		ID:    id.Account.ID.String(),
-		Name:  id.Account.Name,
-		Email: id.Account.Email,
+		ID:      id.Account.ID.String(),
+		Name:    id.Account.Name,
+		Email:   id.Account.Email,
+		OrgRole: string(id.OrgRole),
 	})
 }
 
-// UpdateAccount POST /api/v1/account/update — частичный апдейт профиля.
+// UpdateAccount POST /api/v1/account/update - частичный апдейт профиля.
 func (a *API) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 	var req accountUpdateRequest
 	id, ok := a.decodeAndAuth(w, r, &req)
@@ -57,8 +59,9 @@ func (a *API) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, AccountDTO{
-		ID:    acc.ID.String(),
-		Name:  acc.Name,
-		Email: acc.Email,
+		ID:      acc.ID.String(),
+		Name:    acc.Name,
+		Email:   acc.Email,
+		OrgRole: string(id.OrgRole),
 	})
 }

@@ -8,15 +8,16 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import { useToast } from "../hooks/useToast";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { navigate, useHashRoute } from "../hooks/useHashRoute";
-import { colorForId, initialsOf } from "../utils/cover";
+import { initialsOf } from "../utils/cover";
+import { colorOf } from "../utils/colors";
 import { plural } from "../utils/plural";
 import { ageLabel } from "../utils/templates";
 import type { AgeKey } from "../constants/templates";
 import type { Team } from "../types";
 
 /*
-  TeamSwitcher — кнопка текущей группы в топбаре и поповер со списком групп:
-  поиск, клавиатура, переключение. Всё состояние — из TeamsContext.
+  TeamSwitcher - кнопка текущей группы в топбаре и поповер со списком групп:
+  поиск, клавиатура, переключение. Всё состояние - из TeamsContext.
 */
 
 type Editing = Team | typeof NEW_TEAM;
@@ -112,7 +113,7 @@ export default function TeamSwitcher() {
   const showPlaceholder = loading && !activeTeam;
   const showCreateTrigger = !loading && teams.length === 0;
 
-  // Устаревший activeTeamId (группы нет в списке) — переключаемся на первую.
+  // Устаревший activeTeamId (группы нет в списке) - переключаемся на первую.
   const fallbackId = !loading && !activeTeam && teams.length > 0 ? teams[0].id : null;
   useEffect(() => {
     if (fallbackId) setActiveTeamId(fallbackId);
@@ -131,7 +132,7 @@ export default function TeamSwitcher() {
             aria-label={`Текущая группа: ${shownTeam.name}. Открыть список групп`}
             title={shownTeam.name}
           >
-            <span className={`team-switcher__mark cover--${colorForId(shownTeam.id)}`} aria-hidden>
+            <span className={`team-switcher__mark cover--${colorOf(shownTeam)}`} aria-hidden>
               {initialsOf(shownTeam.name)}
             </span>
             <span className="team-switcher__name">{shownTeam.name}</span>
@@ -178,7 +179,7 @@ export default function TeamSwitcher() {
                     onMouseEnter={() => setHighlight(i)}
                     onClick={() => selectTeam(team.id)}
                   >
-                    <span className={`team-switcher__mark team-switcher__mark--lg cover--${colorForId(team.id)}`} aria-hidden>
+                    <span className={`team-switcher__mark team-switcher__mark--lg cover--${colorOf(team)}`} aria-hidden>
                       {initialsOf(team.name)}
                     </span>
                     <span className="team-switcher__main">

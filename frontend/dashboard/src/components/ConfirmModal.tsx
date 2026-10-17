@@ -4,7 +4,7 @@ import { useEscapeKey } from "../hooks/useEscapeKey";
 import "./Boards.modals.css";
 
 /*
-  ConfirmModal — portal-based confirm dialog.
+  ConfirmModal - portal-based confirm dialog.
   - Single #confirm-portal-root appended to body (pointer-events: none by default).
   - Portal child uses pointer-events:auto while mounted so it captures clicks.
   - compact: smaller dialog variant

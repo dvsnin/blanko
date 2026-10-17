@@ -7,7 +7,7 @@ import ProfilePage from "./pages/ProfilePage";
 import { useHashRoute } from "./hooks/useHashRoute";
 
 /*
-  App.tsx — shell: Topbar + the page for the current hash route.
+  App.tsx - shell: Topbar + the page for the current hash route.
   Teams/boards state lives in TeamsContext, user state in UserContext (main.tsx).
 */
 

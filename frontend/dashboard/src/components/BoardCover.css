@@ -73,22 +73,6 @@
   color: var(--cover-ink);
 }
 
-.board-cover__author {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cover-ink);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-}
-
 /* small: shapes scaled by 0.35 */
 .board-cover--small .board-cover__glyph { font-size: 16px; }
 

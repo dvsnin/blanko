@@ -1,6 +1,7 @@
 import "./BoardCover.css";
 import "./GroupHeader.css";
-import { colorForId, initialsOf } from "../utils/cover";
+import { initialsOf } from "../utils/cover";
+import { colorOf } from "../utils/colors";
 import { plural } from "../utils/plural";
 import { ageLabel } from "../utils/templates";
 import { teachersLabel } from "../utils/teachers";
@@ -40,7 +41,7 @@ export default function GroupHeader({
 
   return (
     <section className="group-header card" aria-label="Группа">
-      <div className={`group-header__badge cover--${colorForId(team.id)}`} aria-hidden="true">
+      <div className={`group-header__badge cover--${colorOf(team)}`} aria-hidden="true">
         {initialsOf(team.name)}
       </div>
       <div className="group-header__text">

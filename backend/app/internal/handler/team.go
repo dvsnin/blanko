@@ -10,7 +10,7 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// TeamDTO — представление команды во внешнем API.
+// TeamDTO - представление команды во внешнем API.
 type TeamDTO struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`

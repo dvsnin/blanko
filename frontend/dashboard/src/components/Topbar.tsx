@@ -18,7 +18,7 @@ const NAV: ReadonlyArray<{ name: Route["name"]; href: string; label: string }> =
 
 export default function Topbar() {
   const route = useHashRoute();
-  const { user } = useUser();
+  const { user, workspaceName } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
@@ -34,11 +34,10 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      <a className="topbar__logo" href="#/" aria-label="Blanko">
+      <a className="topbar__logo" href="#/" aria-label={workspaceName} title={workspaceName}>
         <span className="topbar__logo-mark" dangerouslySetInnerHTML={{ __html: LOGO_SVG }} />
-        <span className="topbar__logo-text">Blanko</span>
+        <span className="topbar__logo-text">{workspaceName}</span>
       </a>
-      <span className="chip chip--teal">Free</span>
 
       <div className="topbar__switcher">
         <TeamSwitcher />

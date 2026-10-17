@@ -11,16 +11,17 @@ import {
 import type { Team, Board } from "../types";
 import type { AgeKey } from "../constants/templates";
 import { colorForId } from "../utils/cover";
+import { assignColors } from "../utils/colors";
 import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
 
 /**
- * TeamsContext — single source of truth for teams/boards, synchronised with
+ * TeamsContext - single source of truth for teams/boards, synchronised with
  * the backend over the REST API at /app/api/v1.
  *
  * Strategy:
  *  - On mount: fetch /team/list, then /board/list per team in parallel. dashData
- *    намеренно не содержит предзагруженных teams/boards — чтобы не дублировать
+ *    намеренно не содержит предзагруженных teams/boards - чтобы не дублировать
  *    контракт и не рассинхронизироваться с API.
  *  - All mutations hit the API; on success we update local state optimistically
  *    (or with the server response when it's more authoritative, e.g. create).
@@ -68,6 +69,7 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     updated: formatRelative(dto.updatedAt),
     updatedAt: dto.updatedAt,
     lastOpenedAt: dto.lastOpenedAt || dto.updatedAt,
+    createdAt: dto.createdAt,
     colorKey,
     isStarred: dto.isStarred,
     templateId: dto.templateId || undefined,
@@ -140,9 +142,11 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     void refresh();
   }, [refresh]);
 
+  // Цвета групп без повторов, как у досок внутри группы
+  const coloredTeams = useMemo(() => assignColors(teams), [teams]);
   const activeTeam = useMemo(
-    () => (activeTeamId ? teams.find((t) => t.id === activeTeamId) ?? null : null),
-    [teams, activeTeamId],
+    () => (activeTeamId ? coloredTeams.find((t) => t.id === activeTeamId) ?? null : null),
+    [coloredTeams, activeTeamId],
   );
   const activeBoards = useMemo(() => activeTeam?.boards ?? [], [activeTeam]);
 
@@ -354,7 +358,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
 
   const value = useMemo<TeamsContextValue>(
     () => ({
-      teams,
+      teams: coloredTeams,
       activeTeamId,
       activeTeam,
       activeBoards,
@@ -374,7 +378,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       refresh,
     }),
     [
-      teams,
+      coloredTeams,
       activeTeamId,
       activeTeam,
       activeBoards,

@@ -1,4 +1,4 @@
-/* MenuButton — normalized overlay behavior to match StarButton.
+/* MenuButton - normalized overlay behavior to match StarButton.
    Overlay is fixed-size, same hover/focus visuals, no large focus outline.
 */
 
@@ -67,7 +67,7 @@
     pointer-events: auto;
 }
 
-/* hover/focus visual — keep identical for both states and both controls */
+/* hover/focus visual - keep identical for both states and both controls */
 .menu-action:hover,
 .menu-action:focus,
 .menu-wrap:hover .menu-action,

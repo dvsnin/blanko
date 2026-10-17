@@ -10,13 +10,14 @@ import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
+import TemplateSettingsModal, { NEW_TEMPLATE } from "../components/TemplateSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
+import { useTemplates } from "../contexts/TemplatesContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
 import { navigate } from "../hooks/useHashRoute";
-import { assignColors } from "../utils/colors";
+import { assignColors, colorOf } from "../utils/colors";
 import { formatRelative } from "../utils/relativeTime";
-import { colorForId } from "../utils/cover";
 import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
 import { openBoardWindow } from "../utils/openBoard";
@@ -41,6 +42,7 @@ export default function BoardsPage() {
     toggleStarBoard,
     loading,
   } = useTeams();
+  const { byId: byTemplateId, createTemplate } = useTemplates();
 
   const { user } = useUser();
 
@@ -98,6 +100,7 @@ export default function BoardsPage() {
 
 
   const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: string } | null>(null);
+  const [saveAsTemplate, setSaveAsTemplate] = useState<{ id: string; title: string; templateId?: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
   // Цвета назначаются по всей группе ДО фильтров, чтобы доска не меняла цвет при поиске/сегменте.
@@ -121,7 +124,7 @@ export default function BoardsPage() {
     if (sortBy === "name") {
       sorted.sort((a, b) => a.title.localeCompare(b.title, "ru"));
     } else {
-      // recent — по lastOpenedAt desc (фолбэк updatedAt); updated — по updatedAt desc
+      // recent - по lastOpenedAt desc (фолбэк updatedAt); updated - по updatedAt desc
       const ts = (iso?: string) => (iso ? Date.parse(iso) : 0);
       const key = (x: (typeof sorted)[number]) =>
         sortBy === "recent" ? ts(x.lastOpenedAt || x.updatedAt) : ts(x.updatedAt);
@@ -136,7 +139,7 @@ export default function BoardsPage() {
   const canCreateBoard = Boolean(activeTeamId);
   // Во время первого фетча опираемся на флаги из window.dashData, чтобы
   // не мигать empty-state у пользователей, у которых на самом деле данные есть.
-  // После загрузки — реальное состояние из TeamsContext.
+  // После загрузки - реальное состояние из TeamsContext.
   const dashFlags = window.dashData;
   const userHasTeams = loading
     ? dashFlags?.hasTeams !== false
@@ -157,7 +160,7 @@ export default function BoardsPage() {
     [teams, activeTeamId, q, colouredByTeam],
   );
 
-  // Звезда на карточке и в списке — общий StarToggle с нейтральными тостами
+  // Звезда на карточке и в списке - общий StarToggle с нейтральными тостами
 
   const handleCreateBoard = () => {
     void (async () => {
@@ -184,6 +187,11 @@ export default function BoardsPage() {
   };
 
   const closeDialog = () => { setDialog(null); setRenameDraft(""); };
+
+  const openSaveAsTemplate = (board: { id: string; title: string; templateId?: string }) => {
+    setSaveAsTemplate(board);
+    closeMenu();
+  };
 
   const handleRenameConfirm = () => {
     if (!dialog || dialog.type !== "rename") return;
@@ -260,7 +268,19 @@ export default function BoardsPage() {
       let top = Math.round(anchorRect.top + (anchorRect.height / 2) - (menuRect.height / 2));
       let placement = "left";
 
-      if (left < margin) {
+      // Кнопка в углу обложки: меню вниз, правым краем по кнопке; если не помещается, вверх.
+      const inCorner = !!anchor.closest(".board-card__corner");
+      if (inCorner) {
+        left = Math.round(anchorRect.right - menuRect.width);
+        const below = Math.round(anchorRect.bottom + 4);
+        if (below + menuRect.height <= vh - margin) {
+          top = below;
+          placement = "bottom";
+        } else {
+          top = Math.round(anchorRect.top - menuRect.height - 4);
+          placement = "top";
+        }
+      } else if (left < margin) {
         const rightLeft = Math.round(anchorRect.right + margin);
         if (rightLeft + menuRect.width <= vw - margin) {
           left = rightLeft;
@@ -336,7 +356,7 @@ export default function BoardsPage() {
     };
   }, [menuBoardId]);
 
-  const renderContextMenu = (b: { id: string; title: string }, variant: "grid" | "list") => (
+  const renderContextMenu = (b: { id: string; title: string; templateId?: string }, variant: "grid" | "list") => (
     <div
       ref={menuRef}
       className={`board-card-menu${variant === "list" ? " board-card-menu--list" : ""}`}
@@ -350,6 +370,7 @@ export default function BoardsPage() {
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
+      <button type="button" className="board-card-menu-item" onClick={() => openSaveAsTemplate(b)}><span className="board-card-menu-icon">▦</span><span className="board-card-menu-label">Сохранить как шаблон</span></button>
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
     </div>
@@ -464,7 +485,8 @@ export default function BoardsPage() {
                 {boards.map((b) => {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
-                  const cover = coverForBoard(b);
+                  const tpl = byTemplateId(b.templateId);
+                  const cover = coverForBoard(b, tpl);
                   return (
                     <div
                       key={b.id}
@@ -474,7 +496,28 @@ export default function BoardsPage() {
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                       onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
                     >
-                      <BoardCover board={b} size="card" />
+                      <BoardCover board={b} size="card" template={tpl} />
+
+                      <span className="board-card__corner" onClick={(e) => e.stopPropagation()}>
+                        <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
+                        <span className="board-menu-wrapper">
+                          <MenuButton
+                            variant="list"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
+                              menuAnchorRef.current = e.currentTarget;
+                              setMenuPlacement("left");
+                              handleMenuToggle(b.id);
+                            }}
+                          />
+                          {menuBoardId === b.id && (
+                            <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
+                              {renderContextMenu(b, "grid")}
+                            </MenuPortal>
+                          )}
+                        </span>
+                      </span>
 
                       <div className="board-info">
                         <div className="board-info-text">
@@ -486,30 +529,9 @@ export default function BoardsPage() {
                           >
                             {b.title}
                           </button>
-                          <span className="visually-hidden">
-                            Владелец: {b.owner}.{cover.topic ? ` Тема: ${cover.topic.label}.` : ""}
-                          </span>
+                          {cover.topic && <span className="visually-hidden">Тема: {cover.topic.label}.</span>}
                           <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
-                        </div>
-                        <div className="board-card-actions" onClick={(e) => e.stopPropagation()}>
-                          <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="grid" />
-                          <div className="board-menu-wrapper">
-                            <MenuButton
-                              variant="grid"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
-                                menuAnchorRef.current = e.currentTarget;
-                                setMenuPlacement("left");
-                                handleMenuToggle(b.id);
-                              }}
-                            />
-                            {menuBoardId === b.id && (
-                              <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
-                                {renderContextMenu(b, "grid")}
-                              </MenuPortal>
-                            )}
-                          </div>
+                          <div className="board-card__author" title={b.owner}>{b.owner}</div>
                         </div>
                       </div>
                     </div>
@@ -530,7 +552,8 @@ export default function BoardsPage() {
                   const isStarred = b.isStarred ?? false;
                   const isMenuOpen = menuBoardId === b.id;
                   const isLastRow = index === boards.length - 1;
-                  const cover = coverForBoard(b);
+                  const tpl = byTemplateId(b.templateId);
+                  const cover = coverForBoard(b, tpl);
                   return (
                     <div
                       key={b.id}
@@ -539,7 +562,7 @@ export default function BoardsPage() {
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                     >
                       <div className="boards-name-cell" onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}>
-                        <BoardCover board={b} size="small" />
+                        <BoardCover board={b} size="small" template={tpl} />
                         <div className="boards-name-text">
                           <div className="board-row-title">{b.title}</div>
                           {cover.topic && (
@@ -598,7 +621,7 @@ export default function BoardsPage() {
                         </div>
                       </div>
                       <span className="chip chip--muted boards-other__team">
-                        <span className={`boards-other__swatch cover--${colorForId(team.id)}`} aria-hidden="true" />
+                        <span className={`boards-other__swatch cover--${colorOf(team)}`} aria-hidden="true" />
                         {team.name}
                       </span>
                       <button
@@ -640,6 +663,29 @@ export default function BoardsPage() {
           }}
           onLeave={async (teamId) => {
             try { await leaveTeam(teamId); } catch (e) { showToast("Не удалось выйти из группы"); throw e; }
+          }}
+        />
+      )}
+
+      {saveAsTemplate && (
+        <TemplateSettingsModal
+          template={NEW_TEMPLATE}
+          initial={{
+            name: saveAsTemplate.title,
+            ages: activeTeam?.ageGroup ? [activeTeam.ageGroup] : [],
+            topic: byTemplateId(saveAsTemplate.templateId)?.topic ?? "math",
+            durationMin: 20,
+          }}
+          onClose={() => setSaveAsTemplate(null)}
+          onSave={async (input) => {
+            try {
+              await createTemplate(input, saveAsTemplate.id);
+            } catch (e) {
+              showToast("Не удалось сохранить шаблон");
+              throw e;
+            }
+            showToast("Шаблон сохранён");
+            navigate({ name: "templates" });
           }}
         />
       )}

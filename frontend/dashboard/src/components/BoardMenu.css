@@ -1,4 +1,4 @@
-/* BoardMenu.css — updated arrow rules to respect portal data-placement
+/* BoardMenu.css - updated arrow rules to respect portal data-placement
    Keep previous menu styles but add arrow placement for left/right/top/bottom.
 */
 
@@ -101,7 +101,7 @@
 }
 
 /* -----------------------------------------
-   ARROW (pointer) — positioned based on data-placement on the portal wrapper
+   ARROW (pointer) - positioned based on data-placement on the portal wrapper
    ----------------------------------------- */
 
 /* Default reset: no arrow */
@@ -142,7 +142,7 @@
     z-index: -1;
 }
 
-/* Top placement: menu above anchor — arrow at bottom edge centered */
+/* Top placement: menu above anchor - arrow at bottom edge centered */
 .portal-wrapper[data-placement="top"] .board-card-menu::before {
     content: "";
     position: absolute;
@@ -158,7 +158,7 @@
     z-index: -1;
 }
 
-/* Bottom placement: menu below anchor — arrow at top edge centered */
+/* Bottom placement: menu below anchor - arrow at top edge centered */
 .portal-wrapper[data-placement="bottom"] .board-card-menu::before {
     content: "";
     position: absolute;

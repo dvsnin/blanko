@@ -1,33 +1,34 @@
 import React from "react";
 import "./MenuButton.css";
 
-/*
-  MenuButton (three dots)
-  - Visible SVG glyph always present.
-  - Overlay rounded-square button appears only when the wrapper is hovered or has keyboard focus.
-  - Forwards ref to the overlay button so parent can use it as anchorRef for portals.
-  - onMouseDown only stops propagation (NOT preventDefault) so clicks inside portal/menu work.
-*/
-const MenuButton = React.forwardRef(function MenuButton(
-    { onClick, ariaLabel = "Действия с доской", size = 36, variant = "grid" },
+/* Три точки: глиф всегда виден, кнопка-подложка появляется при наведении. Ref - на кнопку. */
+export interface MenuButtonProps {
+    onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+    ariaLabel?: string;
+    size?: number;
+    variant?: "grid" | "list";
+    ariaExpanded?: boolean;
+    ariaHasPopup?: "menu" | "true";
+}
+
+const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(function MenuButton(
+    { onClick, ariaLabel = "Действия с доской", size = 36, variant = "grid", ariaExpanded, ariaHasPopup },
     ref
 ) {
     const wrapClass = `menu-wrap ${variant === "list" ? "menu-wrap--list" : "menu-wrap--grid"}`;
 
-    const handleMouseDown = (e) => {
-        // stop propagation so document click handler doesn't immediately close the menu
+    const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+        // Без preventDefault, иначе не работает фокус и клики в меню
         e.stopPropagation();
-        // DO NOT preventDefault here — allow normal focus/click behaviour so menu items work
     };
 
-    const handleClick = (e) => {
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         if (typeof onClick === "function") onClick(e);
     };
 
     return (
         <span className={wrapClass} style={{ width: size, height: size }}>
-      {/* visible minimal SVG icon (always present) */}
             <svg
                 className="menu-icon"
                 width="18"
@@ -43,12 +44,13 @@ const MenuButton = React.forwardRef(function MenuButton(
         <circle cx="15" cy="3" r="2" fill="currentColor" />
       </svg>
 
-            {/* overlay interactive button that appears on hover / focus-within */}
             <button
                 ref={ref}
                 type="button"
                 className="menu-action"
                 aria-label={ariaLabel}
+                aria-expanded={ariaExpanded}
+                aria-haspopup={ariaHasPopup}
                 onMouseDown={handleMouseDown}
                 onClick={handleClick}
             />

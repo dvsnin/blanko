@@ -1,4 +1,4 @@
-/* Boards.modals.css — final consolidated stylesheet for modals (complete)
+/* Boards.modals.css - final consolidated stylesheet for modals (complete)
    Notes:
    - Scopes confirm modal layout so it doesn't affect board/team modals.
    - Ensures footer alignment for board rename/delete modals.
@@ -206,7 +206,7 @@
     padding: 12px 0;
     box-sizing: border-box;
 }
-/* Boards modals (no sidebar) — align footer with body padding */
+/* Boards modals (no sidebar) - align footer with body padding */
 .boards-modal:not(.team-settings-modal) .boards-modal-footer {
     padding-left: 24px;
 }

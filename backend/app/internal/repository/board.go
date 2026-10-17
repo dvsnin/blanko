@@ -2,8 +2,6 @@ package repository
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"time"
 
@@ -13,7 +11,7 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 )
 
-// BoardRepo — репозиторий досок.
+// BoardRepo - репозиторий досок.
 type BoardRepo struct {
 	db DBTX
 }
@@ -22,7 +20,7 @@ func NewBoardRepo(db DBTX) *BoardRepo {
 	return &BoardRepo{db: db}
 }
 
-// BoardFields — набор полей для частичного апдейта доски.
+// BoardFields - набор полей для частичного апдейта доски.
 type BoardFields struct {
 	Name              string
 	TeamAccess        model.BoardAccess
@@ -35,7 +33,7 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 		b.ID = uuid.New()
 	}
 	if b.PublicID == "" {
-		pid, err := generatePublicID()
+		pid, err := newPublicID("")
 		if err != nil {
 			return err
 		}
@@ -136,7 +134,7 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID u
 	return result, rows.Err()
 }
 
-// Update — переиспользуемое частичное обновление доски.
+// Update - переиспользуемое частичное обновление доски.
 func (r *BoardRepo) Update(ctx context.Context, id uuid.UUID, f BoardFields) error {
 	b := psql.Update("board").Where("id = ? AND deleted_at IS NULL", id)
 	touched := false
@@ -205,13 +203,4 @@ func (r *BoardRepo) SetStarred(ctx context.Context, accountID, boardID uuid.UUID
 	q := psql.Delete("board_starred").Where("account_id = ? AND board_id = ?", accountID, boardID)
 	_, err := execBuilder(ctx, r.db, q)
 	return err
-}
-
-// generatePublicID — короткий уникальный id для URL.
-func generatePublicID() (string, error) {
-	buf := make([]byte, 8)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(buf), nil
 }

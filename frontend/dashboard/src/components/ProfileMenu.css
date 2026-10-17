@@ -1,4 +1,4 @@
-/* ProfileMenu.css — toned-down avatar hover + menu positioning tweaks
+/* ProfileMenu.css - toned-down avatar hover + menu positioning tweaks
    - removed large glow and scale
    - subtle shadow on hover
    - smaller focus ring
@@ -28,7 +28,7 @@
     will-change: box-shadow;
 }
 
-/* Hover: subtle elevation only — no translate/scale and no background swap */
+/* Hover: subtle elevation only - no translate/scale and no background swap */
 .profile-avatar-btn:hover,
 .topbar-avatar:hover {
     box-shadow: 0 10px 22px rgba(46,80,170,0.06);

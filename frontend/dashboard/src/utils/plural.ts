@@ -1,4 +1,4 @@
-/** Русское склонение: plural(5, 'доска', 'доски', 'досок') → '5 досок'. */
+/** Русское склонение: plural(5, 'доска', 'доски', 'досок') -> '5 досок'. */
 export function plural(n: number, one: string, few: string, many: string): string {
   const abs = Math.abs(n);
   const m100 = abs % 100;

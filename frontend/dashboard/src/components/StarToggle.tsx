@@ -1,7 +1,7 @@
 import StarButton from "./StarButton";
 
 /*
-  StarToggle — общая звезда «в избранное» для любых сущностей (доски, группы, …).
+  StarToggle - общая звезда «в избранное» для любых сущностей (доски, группы, …).
   Подписи и тосты нейтральные, без названия сущности, чтобы переиспользовать как есть.
 */
 
@@ -24,7 +24,7 @@ export interface StarToggleProps {
   isStarred: boolean;
   /** Переключает состояние у источника данных (контекст, API). */
   onToggle: () => void | Promise<unknown>;
-  /** Показ тоста; если не передан — тихо. */
+  /** Показ тоста; если не передан - тихо. */
   notify?: (message: string) => void;
   variant?: "grid" | "list";
   size?: number;

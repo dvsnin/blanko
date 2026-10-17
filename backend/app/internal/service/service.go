@@ -28,12 +28,13 @@ var (
 	ErrInvalidTemplateID = fmt.Errorf("%w: invalid template id", ErrValidation)
 )
 
-// Services — набор всех прикладных сервисов.
+// Services - набор всех прикладных сервисов.
 type Services struct {
-	Pool  *pgxpool.Pool
-	Auth  *AuthService
-	Team  *TeamService
-	Board *BoardService
+	Pool     *pgxpool.Pool
+	Auth     *AuthService
+	Team     *TeamService
+	Board    *BoardService
+	Template *TemplateService
 }
 
 // New создаёт все сервисы, используя общий pgxpool.
@@ -42,6 +43,7 @@ func New(pool *pgxpool.Pool) *Services {
 	s.Auth = &AuthService{pool: pool}
 	s.Team = &TeamService{pool: pool}
 	s.Board = &BoardService{pool: pool}
+	s.Template = &TemplateService{pool: pool}
 	return s
 }
 
@@ -58,9 +60,13 @@ type AuthService struct {
 	pool *pgxpool.Pool
 }
 
-// Identity — разрешённая идентичность текущего пользователя.
+// Identity - разрешённая идентичность текущего пользователя.
 type Identity struct {
-	Account model.Account
+	Account        model.Account
+	OrganizationID uuid.UUID
+	// OrgRole без организации всегда member.
+	OrgRole model.OrganizationRole
+	OrgName string
 }
 
 // Resolve обеспечивает наличие account для переданной пары (email, name).
@@ -88,6 +94,26 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 			return fmt.Errorf("get account: %w", err)
 		}
 		identity.Account = *acc
+		identity.OrgRole = model.OrgRoleMember
+
+		// Новый аккаунт - member; admin ставит только bootstrap.
+		orgRepo := repository.NewOrganizationRepo(tx)
+		org, err := orgRepo.GetFirst(ctx)
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("get organization: %w", err)
+		}
+		identity.OrganizationID = org.ID
+		identity.OrgName = org.Name
+		if err := orgRepo.EnsureMember(ctx, org.ID, acc.ID, model.OrgRoleMember); err != nil {
+			return fmt.Errorf("ensure membership: %w", err)
+		}
+		role, err := orgRepo.GetMemberRole(ctx, org.ID, acc.ID)
+		if err != nil {
+			return fmt.Errorf("get org role: %w", err)
+		}
+		identity.OrgRole = role
 		return nil
 	})
 	if err != nil {
@@ -96,7 +122,7 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 	return &identity, nil
 }
 
-// UpdateAccount — переименование текущей учётной записи.
+// UpdateAccount - переименование текущей учётной записи.
 func (s *AuthService) UpdateAccount(ctx context.Context, id Identity, name string) (*model.Account, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -122,14 +148,14 @@ type TeamService struct {
 	pool *pgxpool.Pool
 }
 
-// TeamCreateInput — входные данные для создания команды.
+// TeamCreateInput - входные данные для создания команды.
 type TeamCreateInput struct {
 	Name     string
 	AgeGroup string
 	Teachers string
 }
 
-// TeamUpdateInput — входные данные для частичного апдейта.
+// TeamUpdateInput - входные данные для частичного апдейта.
 type TeamUpdateInput struct {
 	Name     string
 	AgeGroup *string
@@ -191,7 +217,7 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 	return &view, nil
 }
 
-// Update — переименование/изменение команды. Доступно owner/admin.
+// Update - переименование/изменение команды. Доступно owner/admin.
 func (s *TeamService) Update(ctx context.Context, id Identity, teamID uuid.UUID, in TeamUpdateInput) (*model.TeamView, error) {
 	repo := repository.NewTeamRepo(s.pool)
 	role, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner, model.TeamRoleAdmin)
@@ -221,7 +247,7 @@ func (s *TeamService) Update(ctx context.Context, id Identity, teamID uuid.UUID,
 	return s.getView(ctx, teamID, id.Account.ID, role)
 }
 
-// Delete — soft delete команды. Только owner.
+// Delete - soft delete команды. Только owner.
 func (s *TeamService) Delete(ctx context.Context, id Identity, teamID uuid.UUID) error {
 	repo := repository.NewTeamRepo(s.pool)
 	if _, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner); err != nil {
@@ -236,7 +262,7 @@ func (s *TeamService) Delete(ctx context.Context, id Identity, teamID uuid.UUID)
 	return nil
 }
 
-// Leave — пользователь покидает команду. Owner покинуть не может.
+// Leave - пользователь покидает команду. Owner покинуть не может.
 func (s *TeamService) Leave(ctx context.Context, id Identity, teamID uuid.UUID) error {
 	repo := repository.NewTeamRepo(s.pool)
 	role, err := repo.GetRoleForAccount(ctx, teamID, id.Account.ID)
@@ -312,8 +338,8 @@ type BoardUpdateInput struct {
 	LinkAccessEnabled *bool
 }
 
-// GetByPublicID — лукап доски по короткому public_id (из URL).
-// ACL пока не проверяем: страница за oauth2-proxy, детальный доступ — отдельной задачей.
+// GetByPublicID - лукап доски по короткому public_id (из URL).
+// ACL пока не проверяем: страница за oauth2-proxy, детальный доступ - отдельной задачей.
 func (s *BoardService) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
 	board, err := repository.NewBoardRepo(s.pool).GetByPublicID(ctx, publicID)
 	if err != nil {
@@ -355,8 +381,21 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 	if name == "" {
 		name = "Новая доска"
 	}
-	if err := validateTemplateID(in.TemplateID); err != nil {
+	templateID, err := parseTemplateID(in.TemplateID)
+	if err != nil {
 		return nil, err
+	}
+	if templateID != nil {
+		tplRepo := repository.NewTemplateRepo(s.pool)
+		if err := validateTemplateExists(ctx, tplRepo, templateID); err != nil {
+			return nil, err
+		}
+		if name == "Новая доска" {
+			if t, err := tplRepo.GetByID(ctx, *templateID); err == nil {
+				name = t.Name
+			}
+		}
+		// TODO(collab): скопировать содержимое канваса шаблона -> board.PublicID.
 	}
 	board := &model.Board{
 		Name:              name,
@@ -364,10 +403,7 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 		AccountID:         id.Account.ID,
 		TeamAccess:        model.BoardAccessEdit,
 		LinkAccessEnabled: false,
-	}
-	if in.TemplateID != "" {
-		tid := in.TemplateID
-		board.TemplateID = &tid
+		TemplateID:        templateID,
 	}
 	if err := repository.NewBoardRepo(s.pool).Create(ctx, board); err != nil {
 		return nil, err
@@ -485,16 +521,14 @@ func validateTeachers(s string) error {
 	return nil
 }
 
-// validateTemplateID допускает "" либо до 64 символов из [a-z0-9-].
-func validateTemplateID(s string) error {
-	if len(s) > 64 {
-		return ErrInvalidTemplateID
+// parseTemplateID: "" -> nil, иначе UUID. Существование проверяет validateTemplateExists.
+func parseTemplateID(s string) (*uuid.UUID, error) {
+	if s == "" {
+		return nil, nil
 	}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
-			return ErrInvalidTemplateID
-		}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return nil, ErrInvalidTemplateID
 	}
-	return nil
+	return &id, nil
 }

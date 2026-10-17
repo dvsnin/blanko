@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// DBTX — минимальный интерфейс, который реализуют и *pgxpool.Pool, и pgx.Tx.
+// DBTX - минимальный интерфейс, который реализуют и *pgxpool.Pool, и pgx.Tx.
 // Позволяет репозиториям работать в транзакциях и вне их.
 type DBTX interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
@@ -21,13 +21,13 @@ type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// ErrNotFound — запись не найдена.
+// ErrNotFound - запись не найдена.
 var ErrNotFound = errors.New("not found")
 
-// psql — билдер squirrel, предварительно настроенный на $1-плейсхолдеры PostgreSQL.
+// psql - билдер squirrel, предварительно настроенный на $1-плейсхолдеры PostgreSQL.
 var psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
-// Pool — pgxpool, хранимый на уровне репозиториев.
+// Pool - pgxpool, хранимый на уровне репозиториев.
 type Pool = pgxpool.Pool
 
 // execBuilder выполняет builder-INSERT/UPDATE/DELETE через DBTX.

@@ -10,14 +10,14 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// ctxKey — приватный тип для ключей контекста.
+// ctxKey - приватный тип для ключей контекста.
 type ctxKey int
 
 const (
 	ctxKeyIdentity ctxKey = iota + 1
 )
 
-// API — корневая структура API, владеющая сервисами.
+// API - корневая структура API, владеющая сервисами.
 type API struct {
 	services *service.Services
 }
@@ -94,6 +94,12 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "invalid_teachers", err.Error())
 	case errors.Is(err, service.ErrInvalidTemplateID):
 		writeError(w, http.StatusBadRequest, "invalid_template_id", err.Error())
+	case errors.Is(err, service.ErrInvalidTopic):
+		writeError(w, http.StatusBadRequest, "invalid_topic", err.Error())
+	case errors.Is(err, service.ErrInvalidAges):
+		writeError(w, http.StatusBadRequest, "invalid_ages", err.Error())
+	case errors.Is(err, service.ErrInvalidDuration):
+		writeError(w, http.StatusBadRequest, "invalid_duration", err.Error())
 	case errors.Is(err, service.ErrValidation):
 		writeError(w, http.StatusBadRequest, "validation", err.Error())
 	case errors.Is(err, service.ErrUnauthorized):
@@ -114,7 +120,7 @@ func decodeJSON(r *http.Request, dst any) error {
 	return dec.Decode(dst)
 }
 
-// WithAccount — общая часть всех POST-DTO: клиент обязан присылать accountId
+// WithAccount - общая часть всех POST-DTO: клиент обязан присылать accountId
 // текущего пользователя; сервер сверяет его с сессией (oauth2-proxy headers)
 // и режет запросы с чужим id.
 type WithAccount struct {
@@ -128,10 +134,10 @@ type accountIDProvider interface {
 	GetAccountID() string
 }
 
-// decodeAndAuth — стандартный вход в любой POST-хендлер:
+// decodeAndAuth - стандартный вход в любой POST-хендлер:
 //  1. вытаскивает Identity из контекста (кладёт AuthMiddleware);
 //  2. парсит JSON-тело в req;
-//  3. сверяет req.AccountID с id.Account.ID — при несовпадении 403;
+//  3. сверяет req.AccountID с id.Account.ID - при несовпадении 403;
 //
 // В случае ошибки пишет HTTP-ответ и возвращает ok=false.
 func (a *API) decodeAndAuth(w http.ResponseWriter, r *http.Request, req accountIDProvider) (service.Identity, bool) {

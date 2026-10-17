@@ -6,7 +6,7 @@
     <title>Canvas Board</title>
 
     <!-- tldraw styles: инструменты, стили нод/стикеров/курсора и т.д. -->
-    <link rel="stylesheet" href="https://esm.sh/tldraw@5.4.2/tldraw.css"/>
+    <link rel="stylesheet" href="https://esm.sh/tldraw@3.15.3/tldraw.css"/>
 
     <style>
         html, body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -22,18 +22,18 @@
         .top-actions { display: flex; gap: 10px; align-items: center; }
         .btn { background: #fff; border: 1px solid #e6e9f2; padding: 9px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #0f1724; transition: background .15s, border-color .15s; }
         .btn:hover { background: #f8fafc; border-color: rgba(37,100,255,0.14); }
-        /* Share — primary-btn из dashboard: сине-фиолетовый градиент, pill 12px, тень. */
+        /* Share - primary-btn из dashboard: сине-фиолетовый градиент, pill 12px, тень. */
         .btn.primary { background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%); color: #fff; border: none; padding: 10px 16px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 26px rgba(79,139,255,0.12); transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease; }
         .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(79,139,255,0.18); filter: brightness(1.03); }
         .btn.primary:active { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(79,139,255,0.14); }
 
-        /* Профиль — такой же, как в dashboard (ProfileMenu.css): мягкий голубо-лиловый градиент, скруглённый квадрат 10px. */
+        /* Профиль - такой же, как в dashboard (ProfileMenu.css): мягкий голубо-лиловый градиент, скруглённый квадрат 10px. */
         .profile-initial { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #0f1724; font-size: 15px; background: linear-gradient(135deg, #eef4ff 0%, #f7f5ff 100%); border: 1px solid rgba(15,23,42,0.06); text-shadow: 0 1px 0 rgba(255,255,255,0.6); transition: box-shadow 160ms ease, border-color 160ms ease; }
         .profile-initial:hover { box-shadow: 0 10px 22px rgba(46,80,170,0.06); border-color: rgba(37,100,255,0.08); }
 
         #tldraw-root { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
 
-        /* tldraw sets its own font family via .tl-container — подхватываем Inter */
+        /* tldraw sets its own font family via .tl-container - подхватываем Inter */
         .tl-container { font-family: Inter, system-ui, -apple-system, sans-serif; }
     </style>
 </head>
@@ -57,29 +57,25 @@
 <div id="tldraw-root"></div>
 
 <!--
-  Canvas теперь построен на tldraw (через ESM CDN — без билд-шага, чтобы не
+  Canvas теперь построен на tldraw (через ESM CDN - без билд-шага, чтобы не
   заводить отдельное React-приложение ради мока доски).
   Содержит всё "как в Miro": select, sticky notes (с палитрой цветов),
   text, shapes (rect/ellipse/diamond/arrow/...), freehand pencil, pan/zoom.
   Состояние автоматически сохраняется в IndexedDB по persistenceKey=boardId
-  — каждая доска со своим content'ом, переживает перезагрузку.
+  - каждая доска со своим content'ом, переживает перезагрузку.
 -->
 <script type="module">
     import React from "https://esm.sh/react@18.3.1";
     import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-    import { Tldraw } from "https://esm.sh/tldraw@5.4.2?deps=react@18.3.1,react-dom@18.3.1";
+    import { Tldraw } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
 
-    // Лицензионный ключ tldraw инжектит бэкенд из TLDRAW_LICENSE_KEY.
-    // Пустая строка — валидное состояние: локально (HTTP на loopback) SDK
-    // считает окружение разработкой и ключ не проверяет.
-    //
-    // ВАЖНО: hobby-лицензия требует оставлять watermark "made with tldraw"
-    // видимым. Не скрывать его ни CSS-ом (.tl-watermark_SEE-LICENSE),
-    // ни переопределением components.
+    // tldraw 3.15.3 - последняя версия без лицензионного ключа; с 4.0 без ключа
+    // холст гаснет (в том числе на *.localhost). Апгрейд только с TLDRAW_LICENSE_KEY.
+    // Watermark "made with tldraw" скрывать нельзя.
     const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
     // boardId пробрасывается server-side (window.APP_UID),
-    // dashData — то же, что на /app/dashboard (accountId/name/email).
+    // dashData - то же, что на /app/dashboard (accountId/name/email).
     const boardId = (window.APP_UID || window.location.pathname.split("/").pop() || "scratch").toString();
     const profileName = (window.dashData && window.dashData.name) ? String(window.dashData.name) : "User";
     const profileInitial = (profileName.trim().charAt(0) || "U").toUpperCase();
@@ -106,6 +102,9 @@
                 try {
                     editor.user.updateUserPreferences({ name: profileName, locale: "ru" });
                 } catch {}
+                if (window.APP_READ_ONLY) {
+                    try { editor.updateInstanceState({ isReadonly: true }); } catch {}
+                }
             },
         }),
     );

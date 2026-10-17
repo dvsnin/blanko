@@ -14,7 +14,7 @@ export interface UserContextValue {
 export const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  // Единственный источник user-данных — window.dashData (рендерится сервером в
+  // Единственный источник user-данных - window.dashData (рендерится сервером в
   // dashboard.tmpl, accountId/email/name берутся из БД). Отдельного round-trip'а
   // на первом рендере нет; /account/get вызывается только там, где нужны свежие
   // данные (например, при открытии ProfilePage).
@@ -23,16 +23,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     id: initialDash?.accountId,
     name: initialDash?.name || "",
     email: initialDash?.email || "",
+    orgRole: initialDash?.orgRole,
   });
-  // Workspace name пока что = имя пользователя (личный workspace). Если в
-  // будущем появятся организации — добавим поле в dashData.
-  const workspaceName = user.name.trim() || "Рабочее пространство";
+  const workspaceName = (initialDash?.orgName ?? "").trim() || "Blanko";
 
   const updateName = useCallback(async (name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     const acc = await api.account.update({ name: trimmed });
-    setUser((prev) => ({ id: acc.id, name: acc.name, email: acc.email || prev.email }));
+    setUser((prev) => ({ id: acc.id, name: acc.name, email: acc.email || prev.email, orgRole: acc.orgRole || prev.orgRole }));
   }, []);
 
   const userInitial = user.name ? user.name[0].toUpperCase() : "?";

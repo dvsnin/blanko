@@ -54,7 +54,7 @@
 
 .group-card__actions { position: absolute; top: 18px; right: 14px; display: flex; align-items: center; gap: 0; }
 .group-card__menu { position: relative; }
-.group-card__icon-btn { width: 36px; height: 36px; }
+.group-card__menu { display: inline-flex; align-items: center; }
 .group-card__popover {
   position: absolute; top: 100%; right: 0; z-index: 20; min-width: 200px; padding: 6px; margin-top: 4px;
   display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border);

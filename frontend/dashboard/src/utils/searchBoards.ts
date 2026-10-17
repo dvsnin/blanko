@@ -8,7 +8,7 @@ export function matchesQuery(title: string, q: string): boolean {
   return !needle || title.toLowerCase().includes(needle);
 }
 
-/** Доски других групп, подходящие под запрос. Пустой запрос → []. */
+/** Доски других групп, подходящие под запрос. Пустой запрос -> []. */
 export function searchOtherTeams(
   teams: Team[],
   activeTeamId: string | null,

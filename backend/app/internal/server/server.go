@@ -19,12 +19,12 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// Server — HTTP-сервер приложения.
+// Server - HTTP-сервер приложения.
 type Server struct {
 	api      *handler.API
 	pool     *pgxpool.Pool
 	services *service.Services
-	// tldrawLicenseKey прокидывается в canvas-страницу. Пустая строка —
+	// tldrawLicenseKey прокидывается в canvas-страницу. Пустая строка -
 	// валидное состояние: локально tldraw работает без лицензии.
 	tldrawLicenseKey string
 }
@@ -60,8 +60,11 @@ func (s *Server) Router() http.Handler {
 	// Страница дашборда
 	r.HandleFunc("/app/dashboard", s.dashboardHandler)
 
-	// Страница доски — uid трактуется как public_id
+	// Страница доски - uid трактуется как public_id
 	r.HandleFunc("/app/board/{uid}", s.boardHandler)
+
+	// Страница шаблона на том же канвасе, права решает сервер
+	r.HandleFunc("/app/template/{uid}", s.templateHandler)
 
 	// logout
 	r.HandleFunc("/app/logout", s.handleLogout)
@@ -75,7 +78,7 @@ func (s *Server) Router() http.Handler {
 }
 
 // handleLogout завершает SSO-сессию пользователя:
-//  1. редиректим на /oauth2/sign_out — oauth2-proxy удаляет свою cookie
+//  1. редиректим на /oauth2/sign_out - oauth2-proxy удаляет свою cookie
 //  2. параметр rd = Keycloak end_session_endpoint, куда oauth2-proxy отправит
 //     пользователя дальше, чтобы прибить и SSO-сессию в Keycloak
 //  3. post_logout_redirect_uri внутри Keycloak возвращает юзера на /app/dashboard,
@@ -97,7 +100,7 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		url.QueryEscape(postLogoutRedir),
 	)
 
-	// id_token_hint → Keycloak доверяет источнику и пропускает confirm prompt
+	// id_token_hint -> Keycloak доверяет источнику и пропускает confirm prompt
 	if authz := r.Header.Get("Authorization"); strings.HasPrefix(authz, "Bearer ") {
 		idToken := strings.TrimPrefix(authz, "Bearer ")
 		if idToken != "" {
@@ -125,13 +128,13 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Минимальный срез состояния для первичного рендера: accountId (нужен
 	// API-клиенту для каждого POST-запроса), профиль (name/email) и булевы
-	// флаги hasTeams/hasBoards — чтобы скрыть empty-state пока TeamsContext
-	// фетчит /team/list. Полные списки сюда НЕ кладём, их тянет TeamsContext —
+	// флаги hasTeams/hasBoards - чтобы скрыть empty-state пока TeamsContext
+	// фетчит /team/list. Полные списки сюда НЕ кладём, их тянет TeamsContext -
 	// чтобы не дублировать контракт с API.
 	dashJSON := s.buildDashDataJSON(r)
 	scriptTag := "<script>window.dashData = " + dashJSON + ";</script>\n"
 
-	// Инжектим перед </body> — это единственная трансформация, поэтому
+	// Инжектим перед </body> - это единственная трансформация, поэтому
 	// никакого html/template на dashboard-странице не нужно (и незачем
 	// плодить артефакты от JS-контекстного экранирования).
 	out := strings.Replace(indexHTML, "</body>", scriptTag+"</body>", 1)
@@ -141,29 +144,31 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(out))
 }
 
-// dashPayload — минимальный набор для первого рендера: accountId (нужен API
+// dashPayload - минимальный набор для первого рендера: accountId (нужен API
 // клиенту для каждого POST-запроса) + имя/email для мгновенного отображения в UI.
-// Команды/доски сюда НЕ кладём — их тянет TeamsContext через /team/list +
+// Команды/доски сюда НЕ кладём - их тянет TeamsContext через /team/list +
 // /board/list сразу после монтирования, чтобы не дублировать данные в двух местах.
 //
-// name/email берутся из БД (id.Account), а не из Keycloak-заголовков —
+// name/email берутся из БД (id.Account), а не из Keycloak-заголовков -
 // заголовок X-Forwarded-Preferred-Username содержит login (например "test"),
 // а не реальное отображаемое имя аккаунта из таблицы accounts.
-// HasTeams/HasBoards — лёгкие булевы флаги для фронта: позволяют на первом
+// HasTeams/HasBoards - лёгкие булевы флаги для фронта: позволяют на первом
 // рендере сразу решить, показывать ли empty-state ("Команд не найдено...",
 // "В этой команде пока нет досок..."), не дожидаясь async-фетча TeamsContext.
 // Это убирает flash-of-empty-state у пользователей, у которых данные есть.
-// Полные списки сюда НЕ кладём — их тянет TeamsContext.
+// Полные списки сюда НЕ кладём - их тянет TeamsContext.
 type dashPayload struct {
 	AccountID string `json:"accountId"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`
+	OrgRole   string `json:"orgRole"`
+	OrgName   string `json:"orgName"`
 	HasTeams  bool   `json:"hasTeams"`
 	HasBoards bool   `json:"hasBoards"`
 }
 
 // buildDashDataJSON собирает срез состояния для первичного рендера фронта.
-// Любая ошибка деградирует изящно: отдаём то, что успели собрать — фронт либо
+// Любая ошибка деградирует изящно: отдаём то, что успели собрать - фронт либо
 // уйдёт на перелогин (нет accountId), либо ретраит через TeamsContext.refresh().
 func (s *Server) buildDashDataJSON(r *http.Request) string {
 	profile := extractUser(r)
@@ -181,9 +186,11 @@ func (s *Server) buildDashDataJSON(r *http.Request) string {
 	payload.AccountID = id.Account.ID.String()
 	payload.Name = id.Account.Name
 	payload.Email = id.Account.Email
+	payload.OrgRole = string(id.OrgRole)
+	payload.OrgName = id.OrgName
 
 	// Лёгкий запрос: TeamView уже содержит BoardCount, второй запрос за
-	// досками не нужен. Ошибка здесь не фатальна — оставим флаги false,
+	// досками не нужен. Ошибка здесь не фатальна - оставим флаги false,
 	// фронт всё равно ретраит через TeamsContext.refresh().
 	if teams, err := s.services.Team.List(r.Context(), *id); err == nil {
 		payload.HasTeams = len(teams) > 0
@@ -200,7 +207,7 @@ func (s *Server) buildDashDataJSON(r *http.Request) string {
 	return mustJSON(payload)
 }
 
-// mustJSON сериализует в pretty-printed JSON (каждое поле на новой строке) —
+// mustJSON сериализует в pretty-printed JSON (каждое поле на новой строке) -
 // так window.dashData остаётся читабельным при view-source страницы.
 func mustJSON(v any) string {
 	b, err := json.MarshalIndent(v, "", "  ")
@@ -224,25 +231,12 @@ func extractUser(r *http.Request) UserProfile {
 }
 
 func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	uid := vars["uid"]
+	uid := mux.Vars(r)["uid"]
 	if uid == "" {
 		http.NotFound(w, r)
 		return
 	}
-
-	_, currentFile, _, _ := runtime.Caller(0)
-	baseDir := filepath.Join(filepath.Dir(currentFile), "..", "..")
-	indexPath := filepath.Join(baseDir, "static", "canvas", "index.html")
-
-	indexBytes, err := os.ReadFile(indexPath)
-	if err != nil {
-		http.Error(w, "Cannot load canvas index.html: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	indexHTML := string(indexBytes)
-
-	// Тянем настоящее имя доски из БД по public_id. При ошибке fallback на uid —
+	// Тянем настоящее имя доски из БД по public_id. При ошибке fallback на uid -
 	// страница должна отрендериться даже если БД недоступна.
 	title := uid
 	if board, err := s.services.Board.GetByPublicID(r.Context(), uid); err == nil && board != nil {
@@ -253,20 +247,58 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("board mark opened %s: %v", uid, err)
 		}
 	}
+	// ACL досок пока нет: всегда запись.
+	s.renderCanvas(w, r, title, uid, false)
+}
+
+// templateHandler: автор и админы получают запись, остальные только чтение.
+func (s *Server) templateHandler(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
+	if uid == "" {
+		http.NotFound(w, r)
+		return
+	}
+	tpl, err := s.services.Template.GetByPublicID(r.Context(), uid)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	readOnly := true
+	profile := extractUser(r)
+	if profile.Email != "" {
+		if id, err := s.services.Auth.Resolve(r.Context(), profile.Email, profile.Name); err == nil {
+			readOnly = !s.services.Template.CanEdit(*tpl, *id)
+		} else {
+			log.Printf("template page: identity resolve failed: %v", err)
+		}
+	}
+	title := strings.TrimSpace(tpl.Name)
+	if title == "" {
+		title = uid
+	}
+	s.renderCanvas(w, r, title, uid, readOnly)
+}
+
+func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title, uid string, readOnly bool) {
+	_, currentFile, _, _ := runtime.Caller(0)
+	baseDir := filepath.Join(filepath.Dir(currentFile), "..", "..")
+	indexPath := filepath.Join(baseDir, "static", "canvas", "index.html")
+
+	indexBytes, err := os.ReadFile(indexPath)
+	if err != nil {
+		http.Error(w, "Cannot load canvas index.html: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	indexHTML := string(indexBytes)
 	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
 
-	// Инжектим перед </head> три вещи:
-	//   1. APP_UID — чтобы canvas знал, какая доска (используется в persistenceKey).
-	//   2. dashData — тот же payload, что на /app/dashboard. Нужен, чтобы
-	//      topbar доски показывал реальное имя/инициал пользователя, а не
-	//      заглушку "U".
-	//   3. TLDRAW_LICENSE_KEY — ключ лицензии из окружения. Пустая строка
-	//      означает "лицензии нет": локально это норма, tldraw считает
-	//      HTTP на loopback окружением разработки.
+	// APP_UID идёт в persistenceKey канваса; APP_READ_ONLY - режим только чтения.
 	uidJSON, _ := json.Marshal(uid)
+	readOnlyJSON, _ := json.Marshal(readOnly)
 	dashJSON := s.buildDashDataJSON(r)
 	licenseJSON, _ := json.Marshal(s.tldrawLicenseKey)
 	injectTag := "<script>window.APP_UID = " + string(uidJSON) +
+		"; window.APP_READ_ONLY = " + string(readOnlyJSON) +
 		"; window.dashData = " + dashJSON +
 		"; window.TLDRAW_LICENSE_KEY = " + string(licenseJSON) + ";</script>\n"
 	indexHTML = strings.Replace(indexHTML, "</head>", injectTag+"</head>", 1)

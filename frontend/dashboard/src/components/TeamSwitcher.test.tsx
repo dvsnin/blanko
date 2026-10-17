@@ -108,7 +108,7 @@ describe('TeamSwitcher', () => {
     const input = screen.getByRole('textbox');
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'Enter' });
-    // первая строка — активная Альфа, стрелка вниз ведёт на избранные Ягодки
+    // первая строка - активная Альфа, стрелка вниз ведёт на избранные Ягодки
     expect(v.setActiveTeamId).toHaveBeenCalledWith('t-cham');
   });
 

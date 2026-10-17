@@ -27,7 +27,7 @@
     width: 36px;
     height: 36px;
     border-radius: var(--radius-sm);
-    background: #F2B134;
+    background: var(--chip);
     display: inline-flex;
     align-items: center;
     justify-content: center;

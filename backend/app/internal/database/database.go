@@ -86,7 +86,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 		}
 		up := extractGooseUp(string(raw))
 		if strings.TrimSpace(up) == "" {
-			// Пустая миграция — просто отметим как применённую.
+			// Пустая миграция - просто отметим как применённую.
 			if _, err := pool.Exec(ctx,
 				`INSERT INTO schema_migrations(version) VALUES($1)`, name,
 			); err != nil {
@@ -147,7 +147,7 @@ func extractGooseUp(content string) string {
 }
 
 // importGooseHistory переносит применённые миграции из старой таблицы
-// goose_db_version в schema_migrations. Если goose_db_version отсутствует —
+// goose_db_version в schema_migrations. Если goose_db_version отсутствует -
 // ничего не делает. Сопоставление идёт по numeric-префиксу имени файла.
 func importGooseHistory(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 	var exists bool

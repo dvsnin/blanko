@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dvsnin/blanko/backend/app/internal/bootstrap"
 	"github.com/dvsnin/blanko/backend/app/internal/config"
 	"github.com/dvsnin/blanko/backend/app/internal/database"
 	"github.com/dvsnin/blanko/backend/app/internal/server"
@@ -36,6 +37,10 @@ func main() {
 		if err := database.Migrate(ctx, pool, cfg.MigrationsDir); err != nil {
 			log.Fatalf("migrate: %v", err)
 		}
+	}
+
+	if err := bootstrap.Run(ctx, pool, cfg.OrgName, cfg.AdminEmails); err != nil {
+		log.Fatalf("bootstrap: %v", err)
 	}
 
 	services := service.New(pool)

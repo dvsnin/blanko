@@ -30,7 +30,7 @@ describe('GroupHeader', () => {
     expect(screen.getByText('3-4 года')).toBeTruthy();
   });
 
-  it('воспитатель: один — «Воспитатель», несколько — «Воспитатели»', () => {
+  it('воспитатель: один - «Воспитатель», несколько - «Воспитатели»', () => {
     const { unmount } = render(<GroupHeader {...base} team={team({ teachers: 'Анна Петрова' })} role="owner" />);
     expect(screen.getByText('Воспитатель: Анна Петрова')).toBeTruthy();
     unmount();

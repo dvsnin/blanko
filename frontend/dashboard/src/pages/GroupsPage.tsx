@@ -2,15 +2,18 @@ import { useMemo, useRef, useState } from "react";
 import "../components/BoardCover.css";
 import "./GroupsPage.css";
 import ConfirmModal from "../components/ConfirmModal";
+import MenuButton from "../components/MenuButton";
 import StarToggle, { starMessage, STAR_LABEL } from "../components/StarToggle";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { VALID_ROLES } from "../constants/roles";
 import { useTeams } from "../contexts/TeamsContext";
+import { useTemplates } from "../contexts/TemplatesContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { useToast } from "../hooks/useToast";
 import { navigate } from "../hooks/useHashRoute";
-import { colorForId, initialsOf } from "../utils/cover";
+import { initialsOf } from "../utils/cover";
+import { colorOf } from "../utils/colors";
 import { plural } from "../utils/plural";
 import { formatRelative } from "../utils/relativeTime";
 import { ageLabel, coverForBoard } from "../utils/templates";
@@ -18,7 +21,7 @@ import { teachersLabel } from "../utils/teachers";
 import type { AgeKey } from "../constants/templates";
 import type { Board, Team, TeamRole } from "../types";
 
-/* GroupsPage — экран «Группы»: сетка кликабельных карточек (вариант Б). */
+/* GroupsPage - экран «Группы»: сетка кликабельных карточек (вариант Б). */
 
 type Editing = Team | typeof NEW_TEAM;
 
@@ -40,13 +43,16 @@ function recentBoards(boards: Board[]): Board[] {
 
 interface GroupMenuProps {
   team: Team;
+  /** Состояние держит карточка: закрывает меню при уходе курсора. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSettings: () => void;
   onToggleStar: () => void;
   onLeave: () => void;
 }
 
-function GroupMenu({ team, onSettings, onToggleStar, onLeave }: GroupMenuProps) {
-  const [open, setOpen] = useState(false);
+function GroupMenu({ team, open, onOpenChange, onSettings, onToggleStar, onLeave }: GroupMenuProps) {
+  const setOpen = onOpenChange;
   const wrapRef = useRef<HTMLDivElement>(null);
   const refs = useMemo(() => [wrapRef], []);
   const close = () => setOpen(false);
@@ -64,18 +70,14 @@ function GroupMenu({ team, onSettings, onToggleStar, onLeave }: GroupMenuProps) 
 
   return (
     <div className="group-card__menu" ref={wrapRef}>
-      <button
-        type="button"
-        className="btn btn--ghost btn--icon group-card__icon-btn"
-        aria-label="Действия с группой"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-          <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
-        </svg>
-      </button>
+      <MenuButton
+        ariaLabel="Действия с группой"
+        ariaHasPopup="menu"
+        ariaExpanded={open}
+        variant="list"
+        size={36}
+        onClick={() => setOpen(!open)}
+      />
       {open && (
         <div className="group-card__popover" role="menu">
           {canEdit && (
@@ -108,9 +110,11 @@ export default function GroupsPage() {
   } = useTeams();
   const [editing, setEditing] = useState<Editing | null>(null);
   const [leaving, setLeaving] = useState<Team | null>(null);
+  const [menuTeamId, setMenuTeamId] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [now] = useState(() => new Date());
   const { toastMessage, toastVisible, showToast } = useToast();
+  const { byId: byTemplateId } = useTemplates();
 
   // Пункт меню «В избранное»: тот же тост, что у звезды (StarToggle)
   const starTeam = (team: Team) => {
@@ -196,10 +200,14 @@ export default function GroupsPage() {
               : "Воспитатель не указан";
             const countWord = plural(count, "доска", "доски", "досок").split(" ")[1];
             return (
-              <div key={team.id} className={`group-card${isActive ? " group-card--active" : ""}`}>
+              <div
+                key={team.id}
+                className={`group-card${isActive ? " group-card--active" : ""}`}
+                onMouseLeave={() => { if (menuTeamId === team.id) setMenuTeamId(null); }}
+              >
                 <button type="button" className="group-card__main" onClick={() => openBoards(team.id)}>
                   <span className="group-card__top">
-                    <span className={`group-card__mark cover--${colorForId(team.id)}`} aria-hidden>
+                    <span className={`group-card__mark cover--${colorOf(team)}`} aria-hidden>
                       {initialsOf(team.name)}
                     </span>
                     <span className="group-card__who">
@@ -223,7 +231,7 @@ export default function GroupsPage() {
                     ) : (
                       <span className="group-card__boards">
                         {recent.map((b) => {
-                          const c = coverForBoard(b);
+                          const c = coverForBoard(b, byTemplateId(b.templateId));
                           return (
                             <span key={b.id} className="group-card__row">
                               <span className={`group-card__mini cover--${c.colorKey}`} aria-hidden>{c.glyph}</span>
@@ -252,6 +260,8 @@ export default function GroupsPage() {
                   />
                   <GroupMenu
                     team={team}
+                    open={menuTeamId === team.id}
+                    onOpenChange={(open) => setMenuTeamId(open ? team.id : null)}
                     onSettings={() => setEditing(team)}
                     onToggleStar={() => starTeam(team)}
                     onLeave={() => setLeaving(team)}

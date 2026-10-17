@@ -1,4 +1,4 @@
-/* Rebuilt Boards.css — star/menu styles cleaned so only one star glyph appears.
+/* Rebuilt Boards.css - star/menu styles cleaned so only one star glyph appears.
    - star is always a DOM glyph (★ or ☆) inside a button
    - filled star visually looks "static" but remains a button to allow unstar on click
    - menu button visuals normalized
@@ -144,6 +144,15 @@
     display: flex;
     align-items: center;
 }
+
+.board-card__corner {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.board-card__corner .star-wrap,
+.board-card__corner .menu-wrap { border-radius: 10px; background: rgba(255, 255, 255, .9); }
+
+.board-card__author { min-width: 0; font-size: 13px; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Lists */
 .boards-list {
@@ -323,7 +332,7 @@
     }
 }
 
-/* Create button disabled visual — apply to the header create button specifically */
+/* Create button disabled visual - apply to the header create button specifically */
 .primary-btn.create-btn.disabled,
 .primary-btn.create-btn[disabled] {
     opacity: 0.56;

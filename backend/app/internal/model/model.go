@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Account — учётная запись пользователя.
+// Account - учётная запись пользователя.
 type Account struct {
 	ID        uuid.UUID
 	Email     string
@@ -15,7 +15,7 @@ type Account struct {
 	UpdatedAt time.Time
 }
 
-// TeamRole — роль участника команды.
+// TeamRole - роль участника команды.
 type TeamRole string
 
 const (
@@ -24,7 +24,7 @@ const (
 	TeamRoleMember TeamRole = "member"
 )
 
-// BoardAccess — уровень доступа к доске.
+// BoardAccess - уровень доступа к доске.
 type BoardAccess string
 
 const (
@@ -33,7 +33,33 @@ const (
 	BoardAccessEdit BoardAccess = "edit"
 )
 
-// Team — команда. Если OrganizationID == nil — личная команда без организации.
+type OrganizationRole string
+
+const (
+	OrgRoleOwner  OrganizationRole = "owner"
+	OrgRoleAdmin  OrganizationRole = "admin"
+	OrgRoleMember OrganizationRole = "member"
+)
+
+func (r OrganizationRole) IsAdmin() bool {
+	return r == OrgRoleOwner || r == OrgRoleAdmin
+}
+
+type Organization struct {
+	ID             uuid.UUID
+	Name           string
+	OwnerAccountID uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type OrganizationMember struct {
+	AccountID uuid.UUID
+	Email     string
+	Role      OrganizationRole
+}
+
+// Team - команда. Если OrganizationID == nil - личная команда без организации.
 type Team struct {
 	ID                uuid.UUID
 	OrganizationID    *uuid.UUID
@@ -45,7 +71,7 @@ type Team struct {
 	UpdatedAt         time.Time
 }
 
-// TeamView — агрегированная модель команды для UI.
+// TeamView - агрегированная модель команды для UI.
 type TeamView struct {
 	Team       Team
 	Role       TeamRole
@@ -53,7 +79,7 @@ type TeamView struct {
 	BoardCount int
 }
 
-// Board — доска.
+// Board - доска.
 type Board struct {
 	ID                uuid.UUID
 	PublicID          string
@@ -62,15 +88,38 @@ type Board struct {
 	AccountID         uuid.UUID
 	TeamAccess        BoardAccess
 	LinkAccessEnabled bool
-	TemplateID        *string
+	TemplateID        *uuid.UUID
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	LastOpenedAt      *time.Time
 }
 
-// BoardView — доска с дополнительной информацией для UI.
+// BoardView - доска с дополнительной информацией для UI.
 type BoardView struct {
 	Board     Board
 	OwnerName string
 	IsStarred bool
+}
+
+// Template: AuthorAccountID == nil у предустановленных.
+type Template struct {
+	ID              uuid.UUID
+	PublicID        string
+	PresetKey       *string
+	Name            string
+	Description     string
+	Topic           string
+	Ages            []string
+	DurationMin     int
+	Glyph           *string
+	AuthorAccountID *uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type TemplateView struct {
+	Template   Template
+	AuthorName string
+	IsStarred  bool
+	CanEdit    bool
 }

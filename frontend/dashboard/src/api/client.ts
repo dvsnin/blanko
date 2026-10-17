@@ -1,8 +1,8 @@
 /**
  * HTTP client for the Blanko backend API.
  *
- * Routing convention: все API-action-эндпоинты — POST на /app/api/v1/<resource>/<action>,
- * исключения — страничные GET /app/dashboard и /app/board/:uid.
+ * Routing convention: все API-action-эндпоинты - POST на /app/api/v1/<resource>/<action>,
+ * исключения - страничные GET /app/dashboard и /app/board/:uid.
  *
  * accountId текущего пользователя прокидывается сервером в window.dashData.accountId
  * и автоматически добавляется в тело каждого запроса; бэкенд валидирует его против
@@ -73,6 +73,33 @@ export interface AccountDTO {
   id: string;
   email: string;
   name: string;
+  orgRole: "owner" | "admin" | "member";
+}
+
+export interface TemplateDTO {
+  id: string;
+  publicId: string;
+  name: string;
+  description: string;
+  topic: string;
+  ages: string[];
+  durationMin: number;
+  glyph: string;
+  source: "preset" | "own";
+  authorId: string;
+  authorName: string;
+  isStarred: boolean;
+  canEdit: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TemplateInputDTO {
+  name?: string;
+  description?: string;
+  topic?: string;
+  ages?: string[];
+  durationMin?: number;
 }
 
 export interface TeamDTO {
@@ -147,5 +174,16 @@ export const api = {
     delete: (id: string) => post<void>("/board/delete", { id }),
     star: (id: string) => post<void>("/board/star", { id }),
     unstar: (id: string) => post<void>("/board/unstar", { id }),
+  },
+
+  templates: {
+    list: () => post<List<TemplateDTO>>("/template/list").then((r) => r.items ?? []),
+    create: (input: Required<TemplateInputDTO>, fromBoardId?: string) =>
+      post<TemplateDTO>("/template/create", { ...input, ...(fromBoardId ? { fromBoardId } : {}) }),
+    update: (id: string, patch: TemplateInputDTO) => post<TemplateDTO>("/template/update", { id, ...patch }),
+    delete: (id: string) => post<void>("/template/delete", { id }),
+    duplicate: (id: string) => post<TemplateDTO>("/template/duplicate", { id }),
+    star: (id: string) => post<void>("/template/star", { id }),
+    unstar: (id: string) => post<void>("/template/unstar", { id }),
   },
 };

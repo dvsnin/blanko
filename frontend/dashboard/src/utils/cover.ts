@@ -20,11 +20,11 @@ const STOP_WORDS = new Set([
   'и', 'в', 'на', 'с', 'по', 'до', 'из', 'у', 'к', 'о', 'для', 'от', 'про', 'за', 'как', 'что', 'кто', 'а', 'но',
 ]);
 
-const SEPARATORS = /[\s«»"',.:;!?()\-–—]+/;
+const SEPARATORS = /[\s«»"',.:;!?()\-–-]+/;
 
 const FALLBACK_GLYPH = 'Д';
 
-/** FNV-1a 32-bit с финальным перемешиванием; результат — uint32. */
+/** FNV-1a 32-bit с финальным перемешиванием; результат - uint32. */
 export function hashString(s: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < s.length; i++) {

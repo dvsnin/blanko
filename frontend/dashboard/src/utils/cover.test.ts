@@ -12,13 +12,13 @@ describe('glyphFromTitle', () => {
     ['И', 'Д'],
     ['…', 'Д'],
     ['', 'Д'],
-  ])('%s → %s', (title, glyph) => expect(glyphFromTitle(title)).toBe(glyph));
+  ])('%s -> %s', (title, glyph) => expect(glyphFromTitle(title)).toBe(glyph));
 });
 
 describe('hashString / colorForId', () => {
   it('стабилен', () => expect(hashString('abc')).toBe(hashString('abc')));
   it('возвращает uint32', () => { const h = hashString('x'); expect(h).toBeGreaterThanOrEqual(0); expect(h).toBeLessThanOrEqual(0xffffffff); });
-  it('пустой id → первый ключ', () => expect(colorForId('')).toBe(COVER_KEYS[0]));
+  it('пустой id -> первый ключ', () => expect(colorForId('')).toBe(COVER_KEYS[0]));
   it('id 1…20 дают не меньше 7 разных цветов', () => {
     const keys = new Set(Array.from({ length: 20 }, (_, i) => colorForId(String(i + 1))));
     expect(keys.size).toBeGreaterThanOrEqual(7);
@@ -51,9 +51,9 @@ describe('coverFor', () => {
 
 describe('coverFor colorKey', () => {
   it('использует валидный colorKey', () => expect(coverFor({ id: 'x', title: 't', colorKey: 'rose' }).colorKey).toBe('rose'));
-  it('невалидный colorKey → хэш', () => expect(coverFor({ id: 'x', title: 't', colorKey: 'nope' }).colorKey).toBe(COVER_KEYS[hashString('x') % 12]));
+  it('невалидный colorKey -> хэш', () => expect(coverFor({ id: 'x', title: 't', colorKey: 'nope' }).colorKey).toBe(COVER_KEYS[hashString('x') % 12]));
 });
 
 describe('initialsOf', () => {
-  it.each([['Анна Петрова', 'АП'], ['анна', 'А'], ['Анна Мария Петрова', 'АМ'], ['', '']])('%s → %s', (n, r) => expect(initialsOf(n)).toBe(r));
+  it.each([['Анна Петрова', 'АП'], ['анна', 'А'], ['Анна Мария Петрова', 'АМ'], ['', '']])('%s -> %s', (n, r) => expect(initialsOf(n)).toBe(r));
 });

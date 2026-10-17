@@ -9,10 +9,10 @@ const mk = (id: string, name: string, role: Team['role']): Team => ({
   id, name, role, boards: [], isStarred: false,
 });
 
-function setup(teams: Team[] = [mk('a', 'Альфа', 'owner'), mk('b', 'Бета', 'admin'), mk('c', 'Гамма', 'member')]) {
+function setup(teams: Team[] = [mk('a', 'Альфа', 'owner'), mk('b', 'Бета', 'admin'), mk('c', 'Гамма', 'member')], orgRole: 'owner' | 'admin' | 'member' | undefined = 'member') {
   const updateName = vi.fn().mockResolvedValue(undefined);
   const user = {
-    user: { id: 'u1', name: 'Иван Петров', email: 'ivan@example.com' },
+    user: { id: 'u1', name: 'Иван Петров', email: 'ivan@example.com', orgRole },
     setUser: vi.fn(), updateName, userInitial: 'И', workspaceName: 'Иван Петров',
   } as UserContextValue;
   const tv = { teams, setActiveTeamId: vi.fn() } as unknown as TeamsContextValue;
@@ -26,6 +26,20 @@ function setup(teams: Team[] = [mk('a', 'Альфа', 'owner'), mk('b', 'Бет�
 
 describe('ProfilePage', () => {
   afterEach(cleanup);
+
+  const orgRole = () => document.querySelector('.profile__org-role')?.textContent;
+  it('роль в саду: админ', () => {
+    setup(undefined, 'admin');
+    expect(orgRole()).toBe('Администратор');
+  });
+  it('роль в саду: владелец тоже «Администратор»', () => {
+    setup(undefined, 'owner');
+    expect(orgRole()).toBe('Администратор');
+  });
+  it('роль в саду: пользователь', () => {
+    setup(undefined, 'member');
+    expect(orgRole()).toBe('Пользователь');
+  });
 
   it('поле имени заполнено', () => {
     setup();

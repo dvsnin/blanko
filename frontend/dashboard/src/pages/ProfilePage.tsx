@@ -6,9 +6,12 @@ import { useTeams } from "../contexts/TeamsContext";
 import { useToast } from "../hooks/useToast";
 import { navigate } from "../hooks/useHashRoute";
 import { colorForId, initialsOf } from "../utils/cover";
+import { colorOf } from "../utils/colors";
 import type { TeamRole } from "../types";
 
-/* ProfilePage — экран «Профиль»: личные данные и список групп. */
+/* ProfilePage - экран «Профиль»: личные данные и список групп. */
+
+const ORG_ROLE_LABEL = { owner: "Администратор", admin: "Администратор", member: "Пользователь" } as const;
 
 const ROLE_LABEL: Record<TeamRole, string> = {
   owner: "Владелец",
@@ -71,6 +74,7 @@ export default function ProfilePage() {
           <div className="profile__who">
             <div className="profile__name">{user.name}</div>
             <div className="profile__email">{user.email}</div>
+            {user.orgRole && <div className="profile__org-role">{ORG_ROLE_LABEL[user.orgRole]}</div>}
           </div>
         </div>
         <form
@@ -107,7 +111,7 @@ export default function ProfilePage() {
           <ul className="profile__groups">
             {teams.map((t) => (
               <li key={t.id} className="profile__row">
-                <span className={`profile__mark cover--${colorForId(t.id)}`} aria-hidden="true">
+                <span className={`profile__mark cover--${colorOf(t)}`} aria-hidden="true">
                   {initialsOf(t.name)}
                 </span>
                 <span className="profile__gname">{t.name}</span>

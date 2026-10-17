@@ -86,6 +86,15 @@ describe('GroupsPage', () => {
     expect(within(cardOf('Альфа')).getByRole('menuitem', { name: 'Покинуть группу' })).toBeTruthy();
   });
 
+  it('меню «⋯» закрывается, когда курсор уходит с карточки', () => {
+    setup(fake(teams));
+    const card = cardOf('Ягодки');
+    fireEvent.click(within(card).getByRole('button', { name: 'Действия с группой' }));
+    expect(within(card).getByRole('menuitem', { name: 'Настройки группы' })).toBeTruthy();
+    fireEvent.mouseLeave(card);
+    expect(within(card).queryByRole('menuitem', { name: 'Настройки группы' })).toBeNull();
+  });
+
   it('показывает три последние доски и «и ещё 2 доски»', () => {
     setup(fake(teams));
     const card = cardOf('Альфа');

@@ -11,7 +11,7 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// BoardDTO — представление доски в API.
+// BoardDTO - представление доски в API.
 type BoardDTO struct {
 	ID                string    `json:"id"`
 	PublicID          string    `json:"publicId"`
@@ -31,7 +31,7 @@ type BoardDTO struct {
 func boardViewToDTO(v model.BoardView) BoardDTO {
 	templateID := ""
 	if v.Board.TemplateID != nil {
-		templateID = *v.Board.TemplateID
+		templateID = v.Board.TemplateID.String()
 	}
 	lastOpened := ""
 	if v.Board.LastOpenedAt != nil {
@@ -233,4 +233,13 @@ func (a *API) Register(r *mux.Router) {
 	post("/board/delete", a.DeleteBoard)
 	post("/board/star", a.StarBoard)
 	post("/board/unstar", a.UnstarBoard)
+
+	// Templates
+	post("/template/list", a.ListTemplates)
+	post("/template/create", a.CreateTemplate)
+	post("/template/update", a.UpdateTemplate)
+	post("/template/delete", a.DeleteTemplate)
+	post("/template/duplicate", a.DuplicateTemplate)
+	post("/template/star", a.StarTemplate)
+	post("/template/unstar", a.UnstarTemplate)
 }

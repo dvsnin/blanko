@@ -11,7 +11,7 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 )
 
-// TeamRepo — репозиторий команд.
+// TeamRepo - репозиторий команд.
 type TeamRepo struct {
 	db DBTX
 }
@@ -20,14 +20,14 @@ func NewTeamRepo(db DBTX) *TeamRepo {
 	return &TeamRepo{db: db}
 }
 
-// TeamFields — набор полей для частичного апдейта команды.
+// TeamFields - набор полей для частичного апдейта команды.
 // Непустые/ненулевые значения будут применены.
 type TeamFields struct {
 	Name              string
 	MemberBoardAccess model.BoardAccess
-	// AgeGroup: nil — не менять, "" — сбросить в NULL.
+	// AgeGroup: nil - не менять, "" - сбросить в NULL.
 	AgeGroup *string
-	// Teachers: nil — не менять, "" — сбросить в NULL.
+	// Teachers: nil - не менять, "" - сбросить в NULL.
 	Teachers *string
 }
 
@@ -73,7 +73,7 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Team, erro
 	return &t, nil
 }
 
-// Update — переиспользуемое частичное обновление. Применяются только непустые поля.
+// Update - переиспользуемое частичное обновление. Применяются только непустые поля.
 func (r *TeamRepo) Update(ctx context.Context, id uuid.UUID, f TeamFields) error {
 	b := psql.Update("team").Where("id = ? AND deleted_at IS NULL", id)
 	touched := false

@@ -7,7 +7,7 @@ import { AGES, type AgeKey } from "../constants/templates";
 import type { Team, TeamRole } from "../types";
 
 /*
-  TeamSettingsModal — decision based only on team.role.
+  TeamSettingsModal - decision based only on team.role.
   role must be one of "owner" | "admin" | "member".
   If role is missing or invalid, we treat the team as broken and hide destructive actions.
 */
