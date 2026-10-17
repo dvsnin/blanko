@@ -19,18 +19,9 @@ import { formatRelative } from "../utils/relativeTime";
 import { colorForId } from "../utils/cover";
 import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
+import { openBoardWindow } from "../utils/openBoard";
 import type { Team } from "../types";
 import type { AgeKey, Template } from "../constants/templates";
-
-function openBoardWindow(board: { publicId: string }) {
-  const url = `/app/board/${encodeURIComponent(board.publicId)}`;
-  const w = window.open(url, "_blank");
-  if (!w) {
-    alert("Пожалуйста, разрешите всплывающие окна для этого сайта.");
-    return;
-  }
-  try { w.focus(); } catch {}
-}
 
 export default function BoardsPage() {
   const {
