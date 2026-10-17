@@ -17,7 +17,11 @@ export default function TemplatesStrip({ age, onBlank, onTemplate }: Props) {
         <h2 className="templates-strip__title">Начать занятие с шаблона</h2>
         {age && label && <span className="chip chip--muted">для {label}</span>}
         <span className="templates-strip__spacer" />
-        <a className="templates-strip__all" href={routeToHash({ name: "templates", age })}>Все шаблоны →</a>
+        <a className="templates-strip__all" href={routeToHash({ name: "templates", age })}>Все шаблоны
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </a>
       </div>
       <div className="templates-strip__grid">
         <button type="button" className="templates-strip__card templates-strip__card--blank" onClick={onBlank}>

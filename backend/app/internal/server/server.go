@@ -137,6 +137,7 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	out := strings.Replace(indexHTML, "</body>", scriptTag+"</body>", 1)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Write([]byte(out))
 }
 
@@ -268,5 +269,6 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	indexHTML = strings.Replace(indexHTML, "</head>", injectTag+"</head>", 1)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Write([]byte(indexHTML))
 }

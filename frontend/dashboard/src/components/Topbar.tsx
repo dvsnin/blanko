@@ -7,6 +7,7 @@ import ProfileMenu from "./ProfileMenu";
 import TeamSwitcher from "./TeamSwitcher";
 import { useUser } from "../contexts/UserContext";
 import { useHashRoute, navigate, type Route } from "../hooks/useHashRoute";
+import { initialsOf } from "../utils/cover";
 import { LOGO_SVG } from "../constants/templates";
 
 const NAV: ReadonlyArray<{ name: Route["name"]; href: string; label: string }> = [
@@ -17,7 +18,7 @@ const NAV: ReadonlyArray<{ name: Route["name"]; href: string; label: string }> =
 
 export default function Topbar() {
   const route = useHashRoute();
-  const { user, userInitial } = useUser();
+  const { user } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
@@ -58,7 +59,7 @@ export default function Topbar() {
 
       <div className="topbar__right">
         <NotificationButton unreadCount={0} onClick={() => setNotificationsOpen((v) => !v)} />
-        <ProfileButton userInitial={userInitial} onClick={() => setMenuOpen((v) => !v)} />
+        <ProfileButton initials={initialsOf(user.name || "") || "?"} onClick={() => setMenuOpen((v) => !v)} />
         {menuOpen && (
           <ProfileMenu
             name={user.name || "Пользователь"}

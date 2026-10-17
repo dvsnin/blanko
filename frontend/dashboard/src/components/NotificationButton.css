@@ -56,3 +56,15 @@
     box-shadow: 0 6px 18px rgba(255,104,104,0.18);
     line-height: 1;
 }
+
+/* unread dot */
+.notification-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 0 2px #fff;
+}

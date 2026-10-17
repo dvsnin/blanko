@@ -19,8 +19,8 @@
 }
 
 .group-header__badge {
-    background: var(--cover-bg);
-    color: var(--cover-ink);
+    background: var(--cover-accent);
+    color: var(--ink);
     flex: 0 0 auto;
     width: 64px;
     height: 64px;

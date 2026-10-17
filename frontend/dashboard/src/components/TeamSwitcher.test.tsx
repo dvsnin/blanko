@@ -35,6 +35,26 @@ function setup(value: TeamsContextValue) {
 describe('TeamSwitcher', () => {
   afterEach(cleanup);
 
+  it('пока грузится и нет активной группы — disabled-плейсхолдер', () => {
+    setup(fake([], { loading: true, activeTeam: null, activeTeamId: null }));
+    const b = screen.getByRole('button', { name: /Группы…/ }) as HTMLButtonElement;
+    expect(b.disabled).toBe(true);
+    expect(b.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('устаревший activeTeamId: триггер с первой группой и setActiveTeamId', () => {
+    const v = fake(teams, { activeTeam: null, activeTeamId: 'gone' });
+    setup(v);
+    expect(screen.getByText('Альфа')).toBeTruthy();
+    expect(v.setActiveTeamId).toHaveBeenCalledWith('t-alpha');
+  });
+
+  it('возраст группы показан в триггере', () => {
+    setup(fake([mk('t1', 'Ягодки', false, { ageGroup: '4-5' })]));
+    expect(screen.getByText('Ягодки')).toBeTruthy();
+    expect(screen.getByText('4–5 лет')).toBeTruthy();
+  });
+
   it('триггер показывает имя активной группы', () => {
     setup(fake(teams));
     const trigger = screen.getByRole('button', { name: /Альфа/ });

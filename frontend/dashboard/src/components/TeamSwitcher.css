@@ -9,8 +9,8 @@
     border-radius: 8px;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 800;
-    background: var(--cover-bg);
-    color: var(--cover-ink);
+    background: var(--cover-accent);
+    color: var(--ink);
 }
 .team-switcher__mark--lg { width: 28px; height: 28px; flex-basis: 28px; font-size: 12px; }
 
@@ -63,3 +63,6 @@
     border-top: 1px solid var(--border);
 }
 .team-switcher__footer .btn { flex: 1 1 0; }
+
+.team-switcher__age { font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.team-switcher__trigger--loading { color: var(--muted); font-weight: 600; cursor: default; }

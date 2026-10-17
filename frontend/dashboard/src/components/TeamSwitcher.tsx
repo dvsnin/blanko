@@ -103,28 +103,43 @@ export default function TeamSwitcher() {
   }
 
   // Пока идёт первый фетч, «Создать группу» не показываем, чтобы кнопка не мигала.
-  const showCreateTrigger = !activeTeam && (!loading || window.dashData?.hasTeams === false);
+  const shownTeam = activeTeam ?? (!loading ? teams[0] ?? null : null);
+  const showPlaceholder = loading && !activeTeam;
+  const showCreateTrigger = !loading && teams.length === 0;
+
+  // Устаревший activeTeamId (группы нет в списке) — переключаемся на первую.
+  const fallbackId = !loading && !activeTeam && teams.length > 0 ? teams[0].id : null;
+  useEffect(() => {
+    if (fallbackId) setActiveTeamId(fallbackId);
+  }, [fallbackId, setActiveTeamId]);
 
   return (
     <>
       <div className="team-switcher" ref={wrapRef}>
-        {activeTeam ? (
+        {shownTeam ? (
           <button
             type="button"
             className="btn btn--ghost team-switcher__trigger"
             onClick={() => setOpen((v) => !v)}
             aria-haspopup="listbox"
             aria-expanded={open}
-            aria-label={`Текущая группа: ${activeTeam.name}. Открыть список групп`}
-            title={activeTeam.name}
+            aria-label={`Текущая группа: ${shownTeam.name}. Открыть список групп`}
+            title={shownTeam.name}
           >
-            <span className={`team-switcher__mark cover--${colorForId(activeTeam.id)}`} aria-hidden>
-              {initialsOf(activeTeam.name)}
+            <span className={`team-switcher__mark cover--${colorForId(shownTeam.id)}`} aria-hidden>
+              {initialsOf(shownTeam.name)}
             </span>
-            <span className="team-switcher__name">{activeTeam.name}</span>
+            <span className="team-switcher__name">{shownTeam.name}</span>
+            {ageLabel(shownTeam.ageGroup) && (
+              <span className="team-switcher__age">{ageLabel(shownTeam.ageGroup)}</span>
+            )}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9l6 6 6-6" />
             </svg>
+          </button>
+        ) : showPlaceholder ? (
+          <button type="button" className="btn btn--ghost team-switcher__trigger team-switcher__trigger--loading" disabled aria-busy="true">
+            Группы…
           </button>
         ) : showCreateTrigger ? (
           <button type="button" className="btn btn--primary team-switcher__trigger" onClick={openCreate}>

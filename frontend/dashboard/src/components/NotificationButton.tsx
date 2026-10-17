@@ -14,9 +14,7 @@ export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel
             </svg>
 
             {unreadCount > 0 && (
-                <span className="notification-badge" aria-hidden>
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
+                <span className="notification-dot" aria-hidden />
             )}
         </button>
     );

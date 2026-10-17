@@ -2,6 +2,8 @@ import { useState } from "react";
 import "./TemplatesPage.css";
 import { AGES, TOPICS, type AgeKey, type TopicKey, type Template } from "../constants/templates";
 import { filterTemplates, topicCounts, topicStyle } from "../utils/templates";
+import { colorForId, initialsOf } from "../utils/cover";
+import "../components/BoardCover.css";
 import { openBoardWindow } from "../utils/openBoard";
 import { navigate } from "../hooks/useHashRoute";
 import { useToast } from "../hooks/useToast";
@@ -35,11 +37,13 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
 
   return (
     <main className="page tpl-page">
-      <h1 className="tpl-title">Шаблоны занятий</h1>
-      <p className="tpl-sub">
-        Готовые доски: выберите, нажмите «Создать доску», и она появится в {activeTeam ? `группе «${activeTeam.name}»` : "выбранной группе"}
-      </p>
-
+      <div className="tpl-head">
+        <div className="tpl-head__text">
+        <h1 className="tpl-title">Шаблоны занятий</h1>
+        <p className="tpl-sub">
+          Готовые доски: выберите, нажмите «Создать доску», и она появится в {activeTeam ? `группе «${activeTeam.name}»` : "выбранной группе"}
+        </p>
+        </div>
       <label className="input input--search tpl-search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
         <input
@@ -53,6 +57,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
           <button type="button" className="input__clear" aria-label="Очистить поиск" onClick={() => setQ("")}>×</button>
         )}
       </label>
+      </div>
 
       <div className="tpl-ages">
         <span className="tpl-ages__label">Возраст</span>
@@ -62,7 +67,10 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
         ))}
         <span className="tpl-spacer" />
         {groupAge && activeTeam && (
-          <button type="button" className="chip tpl-asgroup" onClick={() => setAge(groupAge)}>Как у группы «{activeTeam.name}»</button>
+          <button type="button" className="chip tpl-asgroup" onClick={() => setAge(groupAge)}>
+            <span className={`tpl-asgroup__mark cover--${colorForId(activeTeam.id)}`} aria-hidden>{initialsOf(activeTeam.name)}</span>
+            Как у группы «{activeTeam.name}»
+          </button>
         )}
       </div>
 

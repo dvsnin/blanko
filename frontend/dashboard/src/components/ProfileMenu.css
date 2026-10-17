@@ -90,3 +90,5 @@
 .profile-menu .menu-item.header { font-weight: 700; }
 .profile-menu .menu-item.small { font-size: 13px; color: var(--muted); }
 .profile-menu .menu-item:hover { background: #f6f9ff; }
+/* initials + chevron: auto width */
+.profile-avatar-btn.topbar-avatar { width: auto; min-width: 44px; padding: 0 10px; gap: 6px; }

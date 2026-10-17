@@ -428,7 +428,7 @@ export default function BoardsPage() {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortBy)}
                 >
-                  <option value="last-opened">Последние открытые</option>
+                  <option value="last-opened">Недавние</option>
                   <option value="name">По названию</option>
                   <option value="updated">По дате изменения</option>
                 </select>

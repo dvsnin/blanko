@@ -1,6 +1,15 @@
 .tpl-title { margin: 0 0 6px; font-size: 28px; font-weight: 800; }
 .tpl-sub { margin: 0 0 20px; color: var(--muted); font-size: 14px; font-weight: 600; }
-.tpl-search { width: 480px; max-width: 100%; margin-bottom: 16px; }
+.tpl-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin-bottom: 20px; }
+.tpl-head__text { flex: 1 1 320px; min-width: 0; }
+.tpl-head__text .tpl-sub { margin-bottom: 0; }
+.tpl-search { flex: 1 1 320px; max-width: 480px; }
+.tpl-asgroup { display: inline-flex; align-items: center; gap: 8px; }
+.tpl-asgroup__mark {
+  width: 20px; height: 20px; border-radius: 6px; flex: 0 0 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; background: var(--cover-accent); color: var(--ink);
+}
 
 .tpl-ages { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
 .tpl-ages__label { font-size: 13px; font-weight: 700; color: var(--muted); margin-right: 4px; }
