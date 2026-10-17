@@ -9,11 +9,11 @@ import MenuButton from "../components/MenuButton";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
-import TemplatesStrip from "../components/TemplatesStrip";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { useTeams } from "../contexts/TeamsContext";
 import { useUser } from "../contexts/UserContext";
 import { useToast } from "../hooks/useToast";
+import { navigate } from "../hooks/useHashRoute";
 import { assignColors } from "../utils/colors";
 import { formatRelative } from "../utils/relativeTime";
 import { colorForId } from "../utils/cover";
@@ -21,7 +21,7 @@ import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
 import { openBoardWindow } from "../utils/openBoard";
 import type { Team } from "../types";
-import type { AgeKey, Template } from "../constants/templates";
+import type { AgeKey } from "../constants/templates";
 
 export default function BoardsPage() {
   const {
@@ -154,18 +154,6 @@ export default function BoardsPage() {
       if (newBoard) {
         showToast("Доска создана");
         openBoardWindow(newBoard);
-      } else {
-        showToast("Не удалось создать доску");
-      }
-    })();
-  };
-
-  const handleTemplate = (t: Template) => {
-    void (async () => {
-      const b = await createBoard(t.title, t.id);
-      if (b) {
-        showToast(`Доска «${t.title}» создана`);
-        openBoardWindow(b);
       } else {
         showToast("Не удалось создать доску");
       }
@@ -364,13 +352,10 @@ export default function BoardsPage() {
             boardsCount={activeTeam ? (loading ? (activeTeam.boardCount ?? 0) : activeTeam.boards.length) : 0}
             role={activeTeam?.role ?? "member"}
             onSettings={() => setTeamModal("edit")}
+            onFromTemplate={() => navigate({ name: "templates", age: activeTeam?.ageGroup || undefined })}
             onCreateBoard={handleCreateBoard}
             onCreateTeam={() => setTeamModal("create")}
           />
-        )}
-
-        {activeTeam && (
-          <TemplatesStrip age={activeTeam.ageGroup || undefined} onBlank={handleCreateBoard} onTemplate={handleTemplate} />
         )}
 
         {/* If user has no teams, show minimal centered hint */}

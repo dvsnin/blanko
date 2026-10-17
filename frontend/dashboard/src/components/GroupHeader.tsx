@@ -16,12 +16,13 @@ export interface GroupHeaderProps {
   boardsCount: number;
   role: TeamRole;
   onSettings(): void;
+  onFromTemplate(): void;
   onCreateBoard(): void;
   onCreateTeam(): void;
 }
 
 export default function GroupHeader({
-  team, boardsCount, role, onSettings, onCreateBoard, onCreateTeam,
+  team, boardsCount, role, onSettings, onFromTemplate, onCreateBoard, onCreateTeam,
 }: GroupHeaderProps) {
   if (!team) {
     return (
@@ -64,6 +65,15 @@ export default function GroupHeader({
             Настройки группы
           </button>
         )}
+        <button type="button" className="btn btn--ghost" onClick={onFromTemplate}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+            <rect x="2" y="2" width="5" height="5" rx="1" />
+            <rect x="9" y="2" width="5" height="5" rx="1" />
+            <rect x="2" y="9" width="5" height="5" rx="1" />
+            <rect x="9" y="9" width="5" height="5" rx="1" />
+          </svg>
+          Из шаблона
+        </button>
         <button type="button" className="btn btn--primary" onClick={onCreateBoard}>
           Новая доска
         </button>

@@ -9,7 +9,7 @@ const team = (over: Partial<Team> = {}): Team =>
   ({ id: 't1', name: 'Ромашки', role: 'owner', boards: [], ...over }) as Team;
 
 const noop = () => {};
-const base = { boardsCount: 2, onSettings: noop, onCreateBoard: noop, onCreateTeam: noop };
+const base = { boardsCount: 2, onSettings: noop, onFromTemplate: noop, onCreateBoard: noop, onCreateTeam: noop };
 
 describe('GroupHeader', () => {
   it('владелец без возраста: «Указать возраст» и «Настройки группы»', () => {
@@ -35,5 +35,12 @@ describe('GroupHeader', () => {
     render(<GroupHeader {...base} team={null} role="member" onCreateTeam={onCreateTeam} />);
     fireEvent.click(screen.getByRole('button', { name: 'Создать группу' }));
     expect(onCreateTeam).toHaveBeenCalledTimes(1);
+  });
+
+  it('«Из шаблона» вызывает onFromTemplate', () => {
+    const onFromTemplate = vi.fn();
+    render(<GroupHeader {...base} team={team({ role: 'member' })} role="member" onFromTemplate={onFromTemplate} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Из шаблона' }));
+    expect(onFromTemplate).toHaveBeenCalledTimes(1);
   });
 });
