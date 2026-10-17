@@ -92,8 +92,9 @@ export default function BoardsPage() {
   const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
+  // Цвета назначаются по всей группе ДО фильтров, чтобы доска не меняла цвет при поиске/сегменте.
   const boards = useMemo(() => {
-    let list = activeBoards;
+    let list = assignColors(activeBoards);
 
     // сегмент "Все / Мои / Избранные"
     if (segment === "starred") {
@@ -123,7 +124,7 @@ export default function BoardsPage() {
     // избранные наверх (внутри каждой группы текущий sort сохраняется)
     const starred = sorted.filter((b) => b.isStarred);
     const others = sorted.filter((b) => !b.isStarred);
-    return assignColors([...starred, ...others]);
+    return [...starred, ...others];
   }, [activeBoards, segment, q, sortBy, user.id]);
 
   const canCreateBoard = Boolean(activeTeamId);
