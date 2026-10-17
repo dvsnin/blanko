@@ -47,12 +47,14 @@ describe('GroupsPage', () => {
     expect(screen.getByText('3 группы · 7 досок')).toBeTruthy();
   });
 
-  it('текущая группа первой и с чипом «ТЕКУЩАЯ»', () => {
+  it('текущая группа первой, выделена рамкой и помечена для скринридера', () => {
     const { container } = setup(fake(teams, 't-b'));
     const names = [...container.querySelectorAll('.group-card__name-text')].map((n) => n.textContent);
     expect(names).toEqual(['Бета', 'Ягодки', 'Альфа']);
-    expect(within(cardOf('Бета')).getByText('ТЕКУЩАЯ')).toBeTruthy();
-    expect(screen.getAllByText('ТЕКУЩАЯ')).toHaveLength(1);
+    expect(cardOf('Бета').className).toContain('group-card--active');
+    expect(within(cardOf('Бета')).getByText('текущая группа')).toBeTruthy();
+    expect(screen.getAllByText('текущая группа')).toHaveLength(1);
+    expect(screen.queryByText('ТЕКУЩАЯ')).toBeNull();
   });
 
   it('клик по карточке выбирает группу и ведёт на доски', () => {

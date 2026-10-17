@@ -198,7 +198,7 @@ export default function GroupsPage() {
                     <span className="group-card__who">
                       <span className="group-card__name">
                         <span className="group-card__name-text" title={team.name}>{team.name}</span>
-                        {isActive && <span className="chip chip--teal">ТЕКУЩАЯ</span>}
+                        {isActive && <span className="visually-hidden">текущая группа</span>}
                       </span>
                       <span className="group-card__sub">{age} · {teachers}</span>
                     </span>

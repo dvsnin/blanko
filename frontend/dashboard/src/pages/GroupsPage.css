@@ -12,6 +12,7 @@
 .group-card {
   position: relative; border-radius: var(--radius-xl); background: var(--surface);
   border: 1px solid var(--border);
+  display: flex; /* карточки в ряду одной высоты, роль прижата к низу */
 }
 .group-card--active { border: 2px solid var(--teal); }
 .group-card__main {
@@ -47,7 +48,7 @@
 .group-card__when { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--muted); }
 .group-card__empty { flex: 1; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
 .group-card__empty-title { font-size: 15px; font-weight: 800; }
-.group-card__role { align-self: flex-end; font-size: 13px; font-weight: 700; color: var(--muted); }
+.group-card__role { align-self: flex-end; margin-top: auto; font-size: 13px; font-weight: 700; color: var(--muted); }
 
 .group-card__actions { position: absolute; top: 18px; right: 14px; display: flex; align-items: center; gap: 0; }
 .group-card__menu { position: relative; }
