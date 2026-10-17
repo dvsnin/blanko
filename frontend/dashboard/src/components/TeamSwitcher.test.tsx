@@ -62,13 +62,25 @@ describe('TeamSwitcher', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('клик открывает listbox, избранная первой', () => {
+  it('клик открывает listbox: активная группа первой, затем избранная', () => {
     setup(fake(teams));
     fireEvent.click(screen.getByRole('button', { name: /Альфа/ }));
     const opts = screen.getAllByRole('option');
     expect(opts).toHaveLength(3);
-    expect(opts[0].textContent).toContain('Ягодки');
-    expect(opts[0].textContent).toContain('4-5 лет · 0 досок');
+    expect(opts[0].textContent).toContain('Альфа');
+    expect(opts[1].textContent).toContain('Ягодки');
+    expect(opts[1].textContent).toContain('4-5 лет · 0 досок');
+    expect(opts[2].textContent).toContain('Ромашки');
+  });
+
+  it('активная группа первой, даже если она не избранная и стоит в конце по алфавиту', () => {
+    const v = fake(teams, { activeTeamId: 't-rom', activeTeam: teams[1] });
+    setup(v);
+    fireEvent.click(screen.getByRole('button', { name: /Ромашки/ }));
+    const opts = screen.getAllByRole('option');
+    expect(opts[0].textContent).toContain('Ромашки');
+    expect(opts[1].textContent).toContain('Ягодки');
+    expect(opts[2].textContent).toContain('Альфа');
   });
 
   it('поиск «ром» оставляет одну группу', () => {
@@ -84,7 +96,7 @@ describe('TeamSwitcher', () => {
     const v = fake(teams);
     setup(v);
     fireEvent.click(screen.getByRole('button', { name: /Альфа/ }));
-    fireEvent.click(screen.getAllByRole('option')[0]);
+    fireEvent.click(screen.getAllByRole('option')[1]);
     expect(v.setActiveTeamId).toHaveBeenCalledWith('t-cham');
     expect(screen.queryByRole('listbox')).toBeNull();
   });
@@ -96,7 +108,8 @@ describe('TeamSwitcher', () => {
     const input = screen.getByRole('textbox');
     fireEvent.keyDown(input, { key: 'ArrowDown' });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(v.setActiveTeamId).toHaveBeenCalledWith('t-alpha');
+    // первая строка — активная Альфа, стрелка вниз ведёт на избранные Ягодки
+    expect(v.setActiveTeamId).toHaveBeenCalledWith('t-cham');
   });
 
   it('Escape закрывает', () => {

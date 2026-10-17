@@ -42,11 +42,16 @@ export default function TeamSwitcher() {
     const q = query.trim().toLowerCase();
     const list = q ? teams.filter((t) => (t.name || "").toLowerCase().includes(q)) : teams.slice();
     const byName = (a: Team, b: Team) => a.name.localeCompare(b.name, "ru");
+    // Активная группа всегда первой, затем избранные, затем остальные по алфавиту:
+    // при длинном списке выбранную группу не приходится искать прокруткой.
+    const rest = list.filter((t) => t.id !== activeTeamId);
+    const active = list.filter((t) => t.id === activeTeamId);
     return [
-      ...list.filter((t) => t.isStarred).sort(byName),
-      ...list.filter((t) => !t.isStarred).sort(byName),
+      ...active,
+      ...rest.filter((t) => t.isStarred).sort(byName),
+      ...rest.filter((t) => !t.isStarred).sort(byName),
     ];
-  }, [teams, query]);
+  }, [teams, query, activeTeamId]);
 
   const close = useMemo(() => () => setOpen(false), []);
   useClickOutside(refs, close, open);
