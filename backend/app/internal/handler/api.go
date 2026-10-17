@@ -88,6 +88,10 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "not_found", err.Error())
 	case errors.Is(err, service.ErrForbidden):
 		writeError(w, http.StatusForbidden, "forbidden", err.Error())
+	case errors.Is(err, service.ErrInvalidAgeGroup):
+		writeError(w, http.StatusBadRequest, "invalid_age_group", err.Error())
+	case errors.Is(err, service.ErrInvalidTemplateID):
+		writeError(w, http.StatusBadRequest, "invalid_template_id", err.Error())
 	case errors.Is(err, service.ErrValidation):
 		writeError(w, http.StatusBadRequest, "validation", err.Error())
 	case errors.Is(err, service.ErrUnauthorized):

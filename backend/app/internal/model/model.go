@@ -39,6 +39,7 @@ type Team struct {
 	OrganizationID    *uuid.UUID
 	Name              string
 	MemberBoardAccess BoardAccess
+	AgeGroup          *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -60,6 +61,7 @@ type Board struct {
 	AccountID         uuid.UUID
 	TeamAccess        BoardAccess
 	LinkAccessEnabled bool
+	TemplateID        *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

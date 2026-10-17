@@ -17,17 +17,23 @@ type TeamDTO struct {
 	Role       string    `json:"role"`
 	IsStarred  bool      `json:"isStarred"`
 	BoardCount int       `json:"boardCount"`
+	AgeGroup   string    `json:"ageGroup"`
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func teamViewToDTO(v model.TeamView) TeamDTO {
+	ageGroup := ""
+	if v.Team.AgeGroup != nil {
+		ageGroup = *v.Team.AgeGroup
+	}
 	return TeamDTO{
 		ID:         v.Team.ID.String(),
 		Name:       v.Team.Name,
 		Role:       string(v.Role),
 		IsStarred:  v.IsStarred,
 		BoardCount: v.BoardCount,
+		AgeGroup:   ageGroup,
 		CreatedAt:  v.Team.CreatedAt,
 		UpdatedAt:  v.Team.UpdatedAt,
 	}
@@ -41,13 +47,15 @@ type listTeamsRequest struct {
 
 type createTeamRequest struct {
 	WithAccount
-	Name string `json:"name"`
+	Name     string `json:"name"`
+	AgeGroup string `json:"ageGroup,omitempty"`
 }
 
 type updateTeamRequest struct {
 	WithAccount
-	ID   string  `json:"id"`
-	Name *string `json:"name,omitempty"`
+	ID       string  `json:"id"`
+	Name     *string `json:"name,omitempty"`
+	AgeGroup *string `json:"ageGroup,omitempty"`
 }
 
 type teamIDRequest struct {
@@ -83,7 +91,7 @@ func (a *API) CreateTeam(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	view, err := a.services.Team.Create(r.Context(), id, service.TeamCreateInput{Name: req.Name})
+	view, err := a.services.Team.Create(r.Context(), id, service.TeamCreateInput{Name: req.Name, AgeGroup: req.AgeGroup})
 	if err != nil {
 		writeServiceError(w, err)
 		return
@@ -103,7 +111,7 @@ func (a *API) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
 		return
 	}
-	in := service.TeamUpdateInput{}
+	in := service.TeamUpdateInput{AgeGroup: req.AgeGroup}
 	if req.Name != nil {
 		in.Name = *req.Name
 	}

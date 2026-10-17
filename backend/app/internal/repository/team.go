@@ -25,6 +25,8 @@ func NewTeamRepo(db DBTX) *TeamRepo {
 type TeamFields struct {
 	Name              string
 	MemberBoardAccess model.BoardAccess
+	// AgeGroup: nil — не менять, "" — сбросить в NULL.
+	AgeGroup *string
 }
 
 // Create вставляет команду.
@@ -40,8 +42,8 @@ func (r *TeamRepo) Create(ctx context.Context, t *model.Team) error {
 	t.UpdatedAt = now
 
 	b := psql.Insert("team").
-		Columns("id", "organization_id", "name", "member_board_access", "created_at", "updated_at").
-		Values(t.ID, t.OrganizationID, t.Name, t.MemberBoardAccess, t.CreatedAt, t.UpdatedAt)
+		Columns("id", "organization_id", "name", "member_board_access", "age_group", "created_at", "updated_at").
+		Values(t.ID, t.OrganizationID, t.Name, t.MemberBoardAccess, t.AgeGroup, t.CreatedAt, t.UpdatedAt)
 	if _, err := execBuilder(ctx, r.db, b); err != nil {
 		return err
 	}
@@ -50,7 +52,7 @@ func (r *TeamRepo) Create(ctx context.Context, t *model.Team) error {
 
 // GetByID возвращает команду по ID (с проверкой soft-delete).
 func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Team, error) {
-	b := psql.Select("id", "organization_id", "name", "member_board_access", "created_at", "updated_at").
+	b := psql.Select("id", "organization_id", "name", "member_board_access", "age_group", "created_at", "updated_at").
 		From("team").
 		Where("id = ? AND deleted_at IS NULL", id).
 		Limit(1)
@@ -60,7 +62,7 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Team, erro
 		return nil, err
 	}
 	var t model.Team
-	if err := row.Scan(&t.ID, &t.OrganizationID, &t.Name, &t.MemberBoardAccess, &t.CreatedAt, &t.UpdatedAt); err != nil {
+	if err := row.Scan(&t.ID, &t.OrganizationID, &t.Name, &t.MemberBoardAccess, &t.AgeGroup, &t.CreatedAt, &t.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -79,6 +81,14 @@ func (r *TeamRepo) Update(ctx context.Context, id uuid.UUID, f TeamFields) error
 	}
 	if f.MemberBoardAccess != "" {
 		b = b.Set("member_board_access", f.MemberBoardAccess)
+		touched = true
+	}
+	if f.AgeGroup != nil {
+		if *f.AgeGroup == "" {
+			b = b.Set("age_group", nil)
+		} else {
+			b = b.Set("age_group", *f.AgeGroup)
+		}
 		touched = true
 	}
 	if !touched {
@@ -116,7 +126,7 @@ func (r *TeamRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 // вместе с ролью пользователя, признаком избранного и количеством досок.
 func (r *TeamRepo) ListForAccount(ctx context.Context, accountID uuid.UUID) ([]model.TeamView, error) {
 	b := psql.Select(
-		"t.id", "t.organization_id", "t.name", "t.member_board_access", "t.created_at", "t.updated_at",
+		"t.id", "t.organization_id", "t.name", "t.member_board_access", "t.age_group", "t.created_at", "t.updated_at",
 		"tm.role",
 		"(ts.account_id IS NOT NULL) AS is_starred",
 		"COALESCE((SELECT COUNT(*) FROM board WHERE team_id = t.id AND deleted_at IS NULL), 0) AS board_count",
@@ -137,7 +147,7 @@ func (r *TeamRepo) ListForAccount(ctx context.Context, accountID uuid.UUID) ([]m
 	for rows.Next() {
 		var tv model.TeamView
 		if err := rows.Scan(
-			&tv.Team.ID, &tv.Team.OrganizationID, &tv.Team.Name, &tv.Team.MemberBoardAccess,
+			&tv.Team.ID, &tv.Team.OrganizationID, &tv.Team.Name, &tv.Team.MemberBoardAccess, &tv.Team.AgeGroup,
 			&tv.Team.CreatedAt, &tv.Team.UpdatedAt,
 			&tv.Role,
 			&tv.IsStarred,

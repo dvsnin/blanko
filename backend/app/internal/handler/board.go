@@ -22,11 +22,16 @@ type BoardDTO struct {
 	TeamAccess        string    `json:"teamAccess"`
 	LinkAccessEnabled bool      `json:"linkAccessEnabled"`
 	IsStarred         bool      `json:"isStarred"`
+	TemplateID        string    `json:"templateId"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 func boardViewToDTO(v model.BoardView) BoardDTO {
+	templateID := ""
+	if v.Board.TemplateID != nil {
+		templateID = *v.Board.TemplateID
+	}
 	return BoardDTO{
 		ID:                v.Board.ID.String(),
 		PublicID:          v.Board.PublicID,
@@ -37,6 +42,7 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 		TeamAccess:        string(v.Board.TeamAccess),
 		LinkAccessEnabled: v.Board.LinkAccessEnabled,
 		IsStarred:         v.IsStarred,
+		TemplateID:        templateID,
 		CreatedAt:         v.Board.CreatedAt,
 		UpdatedAt:         v.Board.UpdatedAt,
 	}
@@ -51,8 +57,9 @@ type listBoardsRequest struct {
 
 type createBoardRequest struct {
 	WithAccount
-	TeamID string `json:"teamId"`
-	Name   string `json:"name"`
+	TeamID     string `json:"teamId"`
+	Name       string `json:"name"`
+	TemplateID string `json:"templateId,omitempty"`
 }
 
 type updateBoardRequest struct {
@@ -106,7 +113,7 @@ func (a *API) CreateBoard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
 		return
 	}
-	view, err := a.services.Board.Create(r.Context(), id, teamID, service.BoardCreateInput{Name: req.Name})
+	view, err := a.services.Board.Create(r.Context(), id, teamID, service.BoardCreateInput{Name: req.Name, TemplateID: req.TemplateID})
 	if err != nil {
 		writeServiceError(w, err)
 		return

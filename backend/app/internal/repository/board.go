@@ -49,8 +49,8 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 	b.UpdatedAt = now
 
 	q := psql.Insert("board").
-		Columns("id", "public_id", "name", "team_id", "account_id", "team_access", "link_access_enabled", "created_at", "updated_at").
-		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, b.TeamAccess, b.LinkAccessEnabled, b.CreatedAt, b.UpdatedAt)
+		Columns("id", "public_id", "name", "team_id", "account_id", "team_access", "link_access_enabled", "template_id", "created_at", "updated_at").
+		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, b.TeamAccess, b.LinkAccessEnabled, b.TemplateID, b.CreatedAt, b.UpdatedAt)
 	_, err := execBuilder(ctx, r.db, q)
 	return err
 }
@@ -58,7 +58,7 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 // GetByID возвращает доску по UUID.
 func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, error) {
 	b := psql.Select("id", "public_id", "name", "team_id", "account_id", "team_access",
-		"link_access_enabled", "created_at", "updated_at").
+		"link_access_enabled", "template_id", "created_at", "updated_at").
 		From("board").
 		Where("id = ? AND deleted_at IS NULL", id).Limit(1)
 
@@ -68,7 +68,7 @@ func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, er
 	}
 	var m model.Board
 	if err := row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
-		&m.TeamAccess, &m.LinkAccessEnabled, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		&m.TeamAccess, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -80,7 +80,7 @@ func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, er
 // GetByPublicID возвращает доску по её короткому public_id (из URL доски).
 func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
 	b := psql.Select("id", "public_id", "name", "team_id", "account_id", "team_access",
-		"link_access_enabled", "created_at", "updated_at").
+		"link_access_enabled", "template_id", "created_at", "updated_at").
 		From("board").
 		Where("public_id = ? AND deleted_at IS NULL", publicID).Limit(1)
 
@@ -90,7 +90,7 @@ func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.
 	}
 	var m model.Board
 	if err := row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
-		&m.TeamAccess, &m.LinkAccessEnabled, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		&m.TeamAccess, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -103,7 +103,7 @@ func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.
 func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID uuid.UUID) ([]model.BoardView, error) {
 	b := psql.Select(
 		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
-		"b.link_access_enabled", "b.created_at", "b.updated_at",
+		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at",
 		"a.name",
 		"(bs.board_id IS NOT NULL) AS is_starred",
 	).
@@ -124,7 +124,7 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID u
 		var bv model.BoardView
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
-			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.CreatedAt, &bv.Board.UpdatedAt,
+			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
 		); err != nil {

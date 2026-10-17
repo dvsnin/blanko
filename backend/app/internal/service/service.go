@@ -20,6 +20,10 @@ var (
 	ErrForbidden    = errors.New("forbidden")
 	ErrValidation   = errors.New("validation error")
 	ErrUnauthorized = errors.New("unauthorized")
+
+	// Специализированные ошибки валидации (оборачивают ErrValidation).
+	ErrInvalidAgeGroup   = fmt.Errorf("%w: invalid age group", ErrValidation)
+	ErrInvalidTemplateID = fmt.Errorf("%w: invalid template id", ErrValidation)
 )
 
 // Services — набор всех прикладных сервисов.
@@ -118,12 +122,14 @@ type TeamService struct {
 
 // TeamCreateInput — входные данные для создания команды.
 type TeamCreateInput struct {
-	Name string
+	Name     string
+	AgeGroup string
 }
 
 // TeamUpdateInput — входные данные для частичного апдейта.
 type TeamUpdateInput struct {
-	Name string
+	Name     string
+	AgeGroup *string
 }
 
 // List возвращает все команды, в которых состоит пользователь.
@@ -138,6 +144,9 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 	if name == "" {
 		return nil, fmt.Errorf("%w: name is required", ErrValidation)
 	}
+	if err := validateAgeGroup(in.AgeGroup); err != nil {
+		return nil, err
+	}
 
 	var view model.TeamView
 	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -146,6 +155,10 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 			OrganizationID:    nil,
 			Name:              name,
 			MemberBoardAccess: model.BoardAccessEdit,
+		}
+		if in.AgeGroup != "" {
+			ag := in.AgeGroup
+			team.AgeGroup = &ag
 		}
 		if err := repo.Create(ctx, team); err != nil {
 			return err
@@ -174,7 +187,12 @@ func (s *TeamService) Update(ctx context.Context, id Identity, teamID uuid.UUID,
 	if err != nil {
 		return nil, err
 	}
-	fields := repository.TeamFields{Name: strings.TrimSpace(in.Name)}
+	if in.AgeGroup != nil {
+		if err := validateAgeGroup(*in.AgeGroup); err != nil {
+			return nil, err
+		}
+	}
+	fields := repository.TeamFields{Name: strings.TrimSpace(in.Name), AgeGroup: in.AgeGroup}
 	if err := repo.Update(ctx, teamID, fields); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
@@ -265,7 +283,8 @@ type BoardService struct {
 }
 
 type BoardCreateInput struct {
-	Name string
+	Name       string
+	TemplateID string
 }
 
 type BoardUpdateInput struct {
@@ -304,12 +323,19 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 	if name == "" {
 		name = "Новая доска"
 	}
+	if err := validateTemplateID(in.TemplateID); err != nil {
+		return nil, err
+	}
 	board := &model.Board{
 		Name:              name,
 		TeamID:            teamID,
 		AccountID:         id.Account.ID,
 		TeamAccess:        model.BoardAccessEdit,
 		LinkAccessEnabled: false,
+	}
+	if in.TemplateID != "" {
+		tid := in.TemplateID
+		board.TemplateID = &tid
 	}
 	if err := repository.NewBoardRepo(s.pool).Create(ctx, board); err != nil {
 		return nil, err
@@ -408,4 +434,27 @@ func (s *BoardService) requireBoardWrite(ctx context.Context, board *model.Board
 		return nil
 	}
 	return ErrForbidden
+}
+
+// validateAgeGroup допускает "" (не указан) и четыре возрастных диапазона.
+func validateAgeGroup(s string) error {
+	switch s {
+	case "", "3-4", "4-5", "5-6", "6-7":
+		return nil
+	}
+	return ErrInvalidAgeGroup
+}
+
+// validateTemplateID допускает "" либо до 64 символов из [a-z0-9-].
+func validateTemplateID(s string) error {
+	if len(s) > 64 {
+		return ErrInvalidTemplateID
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
+			return ErrInvalidTemplateID
+		}
+	}
+	return nil
 }
