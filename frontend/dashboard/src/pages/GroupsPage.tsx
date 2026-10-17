@@ -1,46 +1,139 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import "../components/BoardCover.css";
 import "./GroupsPage.css";
+import ConfirmModal from "../components/ConfirmModal";
 import StarButton from "../components/StarButton";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
+import { VALID_ROLES } from "../constants/roles";
 import { useTeams } from "../contexts/TeamsContext";
+import { useClickOutside } from "../hooks/useClickOutside";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 import { useToast } from "../hooks/useToast";
 import { navigate } from "../hooks/useHashRoute";
 import { colorForId, initialsOf } from "../utils/cover";
 import { plural } from "../utils/plural";
-import { ageLabel } from "../utils/templates";
+import { formatRelative } from "../utils/relativeTime";
+import { ageLabel, coverForBoard } from "../utils/templates";
 import { teachersLabel } from "../utils/teachers";
 import type { AgeKey } from "../constants/templates";
-import type { Team, TeamRole } from "../types";
+import type { Board, Team, TeamRole } from "../types";
 
-/* GroupsPage — экран «Группы»: сетка карточек групп пользователя. */
+/* GroupsPage — экран «Группы»: сетка кликабельных карточек (вариант Б). */
 
 type Editing = Team | typeof NEW_TEAM;
 
-const ROLE_LABEL: Record<TeamRole, string> = {
-  owner: "Владелец",
-  admin: "Администратор",
-  member: "Участник",
+const ROLE_TEXT: Record<TeamRole, string> = {
+  owner: "вы владелец",
+  admin: "вы администратор",
+  member: "вы участник",
 };
+
+const RECENT = 3;
+
+function recentBoards(boards: Board[]): Board[] {
+  const t = (b: Board) => {
+    const v = Date.parse(b.lastOpenedAt ?? b.updatedAt ?? "");
+    return Number.isNaN(v) ? 0 : v;
+  };
+  return [...boards].sort((a, b) => t(b) - t(a)).slice(0, RECENT);
+}
+
+interface GroupMenuProps {
+  team: Team;
+  onSettings: () => void;
+  onToggleStar: () => void;
+  onLeave: () => void;
+}
+
+function GroupMenu({ team, onSettings, onToggleStar, onLeave }: GroupMenuProps) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const refs = useMemo(() => [wrapRef], []);
+  const close = () => setOpen(false);
+  useClickOutside(refs, close, open);
+  useEscapeKey(close, open);
+
+  const validRole = VALID_ROLES.has(team.role);
+  const canEdit = validRole && (team.role === "owner" || team.role === "admin");
+  const canLeave = validRole && team.role !== "owner";
+
+  function run(fn: () => void) {
+    setOpen(false);
+    fn();
+  }
+
+  return (
+    <div className="group-card__menu" ref={wrapRef}>
+      <button
+        type="button"
+        className="btn btn--ghost btn--icon group-card__icon-btn"
+        aria-label="Действия с группой"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+        </svg>
+      </button>
+      {open && (
+        <div className="group-card__popover" role="menu">
+          {canEdit && (
+            <button type="button" role="menuitem" className="group-card__menu-item" onClick={() => run(onSettings)}>
+              Настройки группы
+            </button>
+          )}
+          <button type="button" role="menuitem" className="group-card__menu-item" onClick={() => run(onToggleStar)}>
+            {team.isStarred ? "Убрать из избранного" : "В избранное"}
+          </button>
+          {canLeave && (
+            <button
+              type="button"
+              role="menuitem"
+              className="group-card__menu-item group-card__menu-item--danger"
+              onClick={() => run(onLeave)}
+            >
+              Покинуть группу
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GroupsPage() {
   const {
-    teams, setActiveTeamId, createTeam, updateTeam, deleteTeam, leaveTeam, toggleStarTeam, loading,
+    teams, activeTeamId, setActiveTeamId, createTeam, updateTeam, deleteTeam, leaveTeam, toggleStarTeam, loading,
   } = useTeams();
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [leaving, setLeaving] = useState<Team | null>(null);
+  const [q, setQ] = useState("");
+  const [now] = useState(() => new Date());
   const { toastMessage, toastVisible, showToast } = useToast();
 
   const sorted = useMemo(() => {
     const byName = (a: Team, b: Team) => a.name.localeCompare(b.name, "ru");
-    return [
-      ...teams.filter((t) => t.isStarred).sort(byName),
-      ...teams.filter((t) => !t.isStarred).sort(byName),
-    ];
-  }, [teams]);
+    const rank = (t: Team) => (t.id === activeTeamId ? 0 : t.isStarred ? 1 : 2);
+    return [...teams].sort((a, b) => rank(a) - rank(b) || byName(a, b));
+  }, [teams, activeTeamId]);
+
+  const needle = q.trim().toLowerCase();
+  const visible = needle ? sorted.filter((t) => t.name.toLowerCase().includes(needle)) : sorted;
+
+  const countOf = (t: Team) => (loading ? t.boardCount ?? 0 : t.boards.length);
+  const totalBoards = teams.reduce((s, t) => s + countOf(t), 0);
 
   function openBoards(id: string) {
     setActiveTeamId(id);
     navigate({ name: "boards" });
+  }
+
+  async function confirmLeave() {
+    const team = leaving;
+    setLeaving(null);
+    if (!team) return;
+    try { await leaveTeam(team.id); } catch { showToast("Не удалось выйти из группы"); }
   }
 
   const showBody = !(loading && teams.length === 0);
@@ -48,70 +141,122 @@ export default function GroupsPage() {
   return (
     <main className="page groups">
       <div className="groups__head">
-        <div>
+        <div className="groups__heading">
           <h1 className="groups__title">Группы</h1>
           {showBody && (
-            <p className="groups__sub">{plural(teams.length, "группа", "группы", "групп")}</p>
+            <p className="groups__sub">
+              {plural(teams.length, "группа", "группы", "групп")} · {plural(totalBoards, "доска", "доски", "досок")}
+            </p>
           )}
         </div>
         {showBody && (
-          <button type="button" className="btn btn--primary" onClick={() => setEditing(NEW_TEAM)}>
-            Создать группу
-          </button>
+          <>
+            <label className="input input--search groups__search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span className="visually-hidden">Поиск групп</span>
+              <input
+                type="text"
+                value={q}
+                placeholder="Найти группу…"
+                onChange={(e) => setQ(e.target.value)}
+              />
+              {q && (
+                <button type="button" className="groups__clear" aria-label="Очистить поиск" onClick={() => setQ("")}>×</button>
+              )}
+            </label>
+            <button type="button" className="btn btn--soft" onClick={() => setEditing(NEW_TEAM)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Создать группу
+            </button>
+          </>
         )}
       </div>
 
       {showBody && (
         <div className="groups__grid">
-          {sorted.map((team) => {
-            const count = loading ? team.boardCount ?? 0 : team.boards.length;
-            const canEdit = team.role === "owner" || team.role === "admin";
+          {visible.map((team) => {
+            const count = countOf(team);
+            const recent = recentBoards(team.boards);
+            const isActive = team.id === activeTeamId;
+            const age = ageLabel(team.ageGroup) ?? "Возраст не указан";
+            const teachers = team.teachers
+              ? `${teachersLabel(team.teachers)}: ${team.teachers}`
+              : "Воспитатель не указан";
+            const countWord = plural(count, "доска", "доски", "досок").split(" ")[1];
             return (
-              <article key={team.id} className={`card groups-card cover--${colorForId(team.id)}`}>
-                <div className="groups-card__band">
-                  <span className="groups-card__mark" aria-hidden>{initialsOf(team.name)}</span>
-                </div>
-                <div className="groups-card__body">
-                  <div className="groups-card__titlerow">
-                    <h2 className="groups-card__name" title={team.name}>{team.name}</h2>
-                    <StarButton
-                      isStarred={!!team.isStarred}
-                      onToggle={() => toggleStarTeam(team.id)}
-                      ariaLabel={team.isStarred ? "Убрать группу из избранного" : "Добавить группу в избранное"}
-                      variant="list"
-                      size={28}
-                    />
-                  </div>
-                  <p className="groups-card__sub">
-                    {team.teachers
-                      ? `${ageLabel(team.ageGroup) ?? "Возраст не указан"} · ${teachersLabel(team.teachers)}: ${team.teachers}`
-                      : `${ageLabel(team.ageGroup) ?? "Возраст не указан"} · ${ROLE_LABEL[team.role]}`}
-                  </p>
-                  <div className="groups-card__chips">
-                    <span className="chip chip--muted">{plural(count, "доска", "доски", "досок")}</span>
-                  </div>
-                  <div className="groups-card__actions">
-                    <button type="button" className="btn groups-card__open" onClick={() => openBoards(team.id)}>
-                      Открыть доски
-                    </button>
-                    {canEdit && (
-                      <button
-                        type="button"
-                        className="btn btn--icon"
-                        aria-label="Настройки группы"
-                        title="Настройки группы"
-                        onClick={() => setEditing(team)}
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                          <circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" />
-                        </svg>
-                      </button>
+              <div key={team.id} className={`group-card${isActive ? " group-card--active" : ""}`}>
+                <button type="button" className="group-card__main" onClick={() => openBoards(team.id)}>
+                  <span className="group-card__top">
+                    <span className={`group-card__mark cover--${colorForId(team.id)}`} aria-hidden>
+                      {initialsOf(team.name)}
+                    </span>
+                    <span className="group-card__who">
+                      <span className="group-card__name">
+                        <span className="group-card__name-text" title={team.name}>{team.name}</span>
+                        {isActive && <span className="chip chip--teal">ТЕКУЩАЯ</span>}
+                      </span>
+                      <span className="group-card__sub">{age} · {teachers}</span>
+                    </span>
+                  </span>
+                  <span className="group-card__bottom">
+                    <span className={`group-card__count${count === 0 ? " group-card__count--empty" : ""}`}>
+                      <span className="group-card__num">{count}</span>
+                      <span className="group-card__unit">{countWord}</span>
+                    </span>
+                    {count === 0 ? (
+                      <span className="group-card__empty">
+                        <span className="group-card__empty-title">Досок пока нет</span>
+                        <span className="group-card__sub">откройте группу и создайте первую или возьмите шаблон</span>
+                      </span>
+                    ) : (
+                      <span className="group-card__boards">
+                        {recent.map((b) => {
+                          const c = coverForBoard(b);
+                          return (
+                            <span key={b.id} className="group-card__row">
+                              <span className={`group-card__mini cover--${c.colorKey}`} aria-hidden>{c.glyph}</span>
+                              <span className="group-card__row-title">{b.title}</span>
+                              <span className="group-card__when">{formatRelative(b.lastOpenedAt ?? b.updatedAt, now)}</span>
+                            </span>
+                          );
+                        })}
+                        {count > RECENT && (
+                          <span className="group-card__sub">
+                            и ещё {plural(count - RECENT, "доска", "доски", "досок")}
+                          </span>
+                        )}
+                      </span>
                     )}
-                  </div>
+                  </span>
+                  <span className="group-card__role">{ROLE_TEXT[team.role] ?? ""}</span>
+                </button>
+                <div className="group-card__actions">
+                  <StarButton
+                    isStarred={!!team.isStarred}
+                    onToggle={() => toggleStarTeam(team.id)}
+                    ariaLabel={team.isStarred ? "Убрать группу из избранного" : "Добавить группу в избранное"}
+                    variant="list"
+                    size={36}
+                  />
+                  <GroupMenu
+                    team={team}
+                    onSettings={() => setEditing(team)}
+                    onToggleStar={() => toggleStarTeam(team.id)}
+                    onLeave={() => setLeaving(team)}
+                  />
                 </div>
-              </article>
+              </div>
             );
           })}
+
+          {needle && visible.length === 0 && (
+            <p className="groups__none">Групп с таким названием нет</p>
+          )}
 
           <button type="button" className="groups-new" onClick={() => setEditing(NEW_TEAM)}>
             <span className="groups-new__plus" aria-hidden>+</span>
@@ -144,6 +289,17 @@ export default function GroupsPage() {
           }}
         />
       )}
+      <ConfirmModal
+        isOpen={!!leaving}
+        compact
+        title="Покинуть группу?"
+        message={<p style={{ margin: 0 }}>Вы потеряете доступ ко всем доскам группы <strong>{leaving?.name}</strong>. Администратор сможет пригласить вас снова при необходимости.</p>}
+        confirmLabel="Покинуть"
+        cancelLabel="Отмена"
+        danger
+        onConfirm={confirmLeave}
+        onCancel={() => setLeaving(null)}
+      />
       {toastVisible && <div className="boards-toast">{toastMessage}</div>}
     </main>
   );
