@@ -53,7 +53,7 @@
 .profile-avatar-initials {
     display: inline-block;
     font-weight: 700;
-    color: #0f1724;
+    color: var(--ink);
     font-size: 15px;
     line-height: 1;
     user-select: none;
@@ -65,8 +65,8 @@
     position: absolute;
     top: calc(100% + 10px); /* small nudge down for breathing room */
     right: 0;
-    background: #ffffff;
-    border-radius: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
     box-shadow: 0 12px 40px rgba(6,22,34,0.12); /* slightly softer shadow */
     padding: 8px 0;
     min-width: 220px;
@@ -88,5 +88,5 @@
     cursor: pointer;
 }
 .profile-menu .menu-item.header { font-weight: 700; }
-.profile-menu .menu-item.small { font-size: 13px; color: #6b7280; }
+.profile-menu .menu-item.small { font-size: 13px; color: var(--muted); }
 .profile-menu .menu-item:hover { background: #f6f9ff; }

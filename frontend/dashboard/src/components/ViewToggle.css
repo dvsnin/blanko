@@ -13,7 +13,7 @@
     height: 40px;
     border-radius: 10px;
     border: 1px solid rgba(15,23,42,0.08);
-    background: #ffffff;
+    background: var(--surface);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +46,7 @@
 
 /* active state: gradient fill and white icon */
 .vt-active {
-    background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%);
+    background: var(--accent);
     border: none;
     box-shadow: 0 12px 36px rgba(79,139,255,0.18);
 }
@@ -58,7 +58,7 @@
 
 /* slightly bigger active target for touch */
 @media (hover: none) and (pointer: coarse) {
-    .vt-btn { width: 46px; height: 46px; border-radius: 12px; }
+    .vt-btn { width: 46px; height: 46px; border-radius: var(--radius-md); }
 }
 
 /* small variant: if you want a smaller button size (optional) */

@@ -10,8 +10,8 @@
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(15,23,42,0.04);
-    background: linear-gradient(180deg,#ffffff,#f7fbff);
-    color: #0f1724;
+    background: linear-gradient(180deg,var(--surface),#f7fbff);
+    color: var(--ink);
     cursor: pointer;
     transition: transform 120ms ease, box-shadow 150ms ease, border-color 120ms ease, background 120ms ease;
     padding: 0;
@@ -23,7 +23,7 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 30px rgba(37, 66, 160, 0.06);
     border-color: rgba(37,100,255,0.12);
-    background: linear-gradient(180deg,#ffffff,#f2f8ff);
+    background: linear-gradient(180deg,var(--surface),#f2f8ff);
 }
 .notification-btn:active {
     transform: translateY(0);

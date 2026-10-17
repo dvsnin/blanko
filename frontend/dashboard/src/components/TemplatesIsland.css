@@ -28,12 +28,12 @@
 .ti-title {
     font-size: 16px;
     font-weight: 700;
-    color: #0f1724;
+    color: var(--ink);
 }
 .ti-actions { display:flex; align-items:center; gap:8px; }
 .ti-view-all {
     font-size: 13px;
-    color: #2564ff;
+    color: var(--accent);
     text-decoration: none;
     padding: 6px 8px;
     border-radius: 8px;
@@ -88,7 +88,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     display: block;
 }
 
@@ -97,14 +97,14 @@
 .template-thumb {
     width: 100%;
     height: 84px;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid rgba(12,18,26,0.04);
-    background: linear-gradient(180deg, #ffffff, #fbfcfe);
+    background: linear-gradient(180deg, var(--surface), #fbfcfe);
     transition: transform 160ms ease, box-shadow 160ms ease;
 }
 .ti-thumb-button:hover .ti-thumb,
@@ -119,7 +119,7 @@
     width: 70%;
     height: 56%;
     border-radius: 8px;
-    background: #ffffff;
+    background: var(--surface);
     display: flex;
     align-items: center;
     justify-content: center;
