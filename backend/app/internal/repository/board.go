@@ -51,7 +51,7 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 
 	q := psql.Insert("board").
 		Columns("id", "public_id", "name", "team_id", "account_id", "team_access", "link_access_enabled", "template_id", "created_at", "updated_at", "last_opened_at").
-		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, b.TeamAccess, b.LinkAccessEnabled, b.TemplateID, b.CreatedAt, b.UpdatedAt)
+		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, b.TeamAccess, b.LinkAccessEnabled, b.TemplateID, b.CreatedAt, b.UpdatedAt, b.LastOpenedAt)
 	_, err := execBuilder(ctx, r.db, q)
 	return err
 }
