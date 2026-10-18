@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS organization
     updated_at       timestamptz                    NOT NULL,
     deleted_at       timestamptz                    NULL
 );
-COMMENT ON TABLE organization IS 'Организации — корпоративный контейнер для команд. Привязанные домены хранятся в organization_domain, прочие политики (SSO, брендинг и т.п.) — в settings.';
+COMMENT ON TABLE organization IS 'Организации - корпоративный контейнер для команд. Привязанные домены хранятся в organization_domain, прочие политики (SSO, брендинг и т.п.) - в settings.';
 COMMENT ON COLUMN organization.id IS 'Уникальный идентификатор.';
 COMMENT ON COLUMN organization.name IS 'Название организации.';
 COMMENT ON COLUMN organization.owner_account_id IS 'Владелец организации (создатель).';
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS license
     UNIQUE (account_id),
     CONSTRAINT license_target_xor CHECK (num_nonnulls(organization_id, account_id) = 1)
 );
-COMMENT ON TABLE license IS 'Лицензии. Привязана либо к организации (корпоративная), либо к аккаунту напрямую (персональный план для фрилансеров/одиночек). CHECK гарантирует ровно одного владельца — один из ID обязательно NOT NULL, другой NULL.';
+COMMENT ON TABLE license IS 'Лицензии. Привязана либо к организации (корпоративная), либо к аккаунту напрямую (персональный план для фрилансеров/одиночек). CHECK гарантирует ровно одного владельца - один из ID обязательно NOT NULL, другой NULL.';
 COMMENT ON COLUMN license.id IS 'Уникальный идентификатор.';
 COMMENT ON COLUMN license.organization_id IS 'Организация-владелец. NULL для персональных лицензий.';
 COMMENT ON COLUMN license.account_id IS 'Аккаунт-владелец для персональных лицензий. NULL для корпоративных.';
@@ -135,9 +135,9 @@ CREATE TABLE IF NOT EXISTS team
     updated_at          timestamptz                         NOT NULL,
     deleted_at          timestamptz                         NULL
 );
-COMMENT ON TABLE team IS 'Команды. Если organization_id IS NULL — личная команда пользователя без организации. В settings лежат параметры открытия команды внешним участникам.';
+COMMENT ON TABLE team IS 'Команды. Если organization_id IS NULL - личная команда пользователя без организации. В settings лежат параметры открытия команды внешним участникам.';
 COMMENT ON COLUMN team.id IS 'Уникальный идентификатор.';
-COMMENT ON COLUMN team.organization_id IS 'Организация, к которой относится команда. NULL — личная команда.';
+COMMENT ON COLUMN team.organization_id IS 'Организация, к которой относится команда. NULL - личная команда.';
 COMMENT ON COLUMN team.name IS 'Название команды.';
 COMMENT ON COLUMN team.member_board_access IS 'Доступ участников команды к доскам команды.';
 COMMENT ON COLUMN team.settings IS 'Настройки команды в jsonb: открыта ли для внешних участников, дефолтный доступ гостей и т.д.';
@@ -251,7 +251,7 @@ COMMENT ON TABLE board_share_token IS 'Токены для доступа к д�
 COMMENT ON COLUMN board_share_token.board_id IS 'Идентификатор доски, к которой относится ссылка.';
 COMMENT ON COLUMN board_share_token.account_id IS 'Идентификатор аккаунта, кто сгенерировал токен доступа.';
 COMMENT ON COLUMN board_share_token.access IS 'Уровень доступа по данной ссылке.';
-COMMENT ON COLUMN board_share_token.token_hash IS 'SHA-256 hex (64 chars) от секретного токена. Сам токен клиенту возвращается один раз при генерации и в БД не хранится — при утечке дампа ссылки остаются непригодными.';
+COMMENT ON COLUMN board_share_token.token_hash IS 'SHA-256 hex (64 chars) от секретного токена. Сам токен клиенту возвращается один раз при генерации и в БД не хранится - при утечке дампа ссылки остаются непригодными.';
 COMMENT ON COLUMN board_share_token.expires_at IS 'Время действия ссылки, бесконечно - если не задано.';
 COMMENT ON COLUMN board_share_token.created_at IS 'Время создания.';
 COMMENT ON COLUMN board_share_token.updated_at IS 'Время обновления.';

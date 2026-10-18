@@ -1,6 +1,13 @@
 import "./ViewToggle.css";
 
-export default function ViewToggle({ view, setView }) {
+export type BoardsView = "grid" | "list";
+
+export interface ViewToggleProps {
+    view: BoardsView;
+    setView: (view: BoardsView) => void;
+}
+
+export default function ViewToggle({ view, setView }: ViewToggleProps) {
     return (
         <div className="view-toggle" role="toolbar" aria-label="Переключить вид">
             <button
@@ -10,7 +17,6 @@ export default function ViewToggle({ view, setView }) {
                 title="Плитка"
                 onClick={() => setView("grid")}
             >
-                {/* grid icon */}
                 <svg className="vt-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.6" />
                     <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.6" />
@@ -26,7 +32,6 @@ export default function ViewToggle({ view, setView }) {
                 title="Список"
                 onClick={() => setView("list")}
             >
-                {/* list icon */}
                 <svg className="vt-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                     <rect x="4" y="5" width="16" height="3" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
                     <rect x="4" y="10.5" width="16" height="3" rx="1.2" stroke="currentColor" strokeWidth="1.6" />

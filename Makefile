@@ -3,7 +3,7 @@ DOCKER_COMPOSE = docker compose -f deploy/docker-compose.yml
 # list of frontend apps to build (adjust package names or paths if needed)
 FRONTEND_FILTERS = @blanko/dashboard
 
-# Конфигурация стенда. deploy/.env не хранится в Git — создаётся из примера.
+# Конфигурация стенда. deploy/.env не хранится в Git - создаётся из примера.
 ENV_FILE = deploy/.env
 ENV_EXAMPLE = deploy/.env.example
 
@@ -14,7 +14,7 @@ up: prebuild_check env
 	@if [ -z "$(SKIP_FRONTEND)" ]; then \
 		$(MAKE) build-frontend || exit $$?; \
 	else \
-		echo "SKIP_FRONTEND set — пропускаем сборку фронтенда"; \
+		echo "SKIP_FRONTEND set - пропускаем сборку фронтенда"; \
 	fi
 	$(DOCKER_COMPOSE) up -d --build
 
@@ -23,11 +23,11 @@ down: env
 	$(DOCKER_COMPOSE) down
 
 # Создать deploy/.env из примера, если его ещё нет.
-# Значения в примере безопасны и рассчитаны на локальный запуск —
+# Значения в примере безопасны и рассчитаны на локальный запуск -
 # для публичного развёртывания их нужно заменить.
 env:
 	@if [ ! -f $(ENV_FILE) ]; then \
-		echo "==> $(ENV_FILE) не найден — создаю из $(ENV_EXAMPLE)"; \
+		echo "==> $(ENV_FILE) не найден - создаю из $(ENV_EXAMPLE)"; \
 		cp $(ENV_EXAMPLE) $(ENV_FILE); \
 	fi
 

@@ -1,36 +1,39 @@
+import type { KeyboardEvent, MouseEvent } from "react";
 import "./StarButton.css";
 
-export default function StarButton({ isStarred = false, onToggle, size = 36, variant = "grid", ariaLabel }) {
+/* Звезда: глиф всегда виден, кнопка-подложка появляется при наведении. */
+
+export interface StarButtonProps {
+    isStarred?: boolean;
+    onToggle?: (e: MouseEvent<HTMLButtonElement> | KeyboardEvent<HTMLButtonElement>) => void;
+    size?: number;
+    variant?: "grid" | "list";
+    ariaLabel?: string;
+}
+
+export default function StarButton({ isStarred = false, onToggle, size = 36, variant = "grid", ariaLabel }: StarButtonProps) {
     const wrapperClass = `star-wrap ${variant === "list" ? "star-wrap--list" : "star-wrap--grid"} ${isStarred ? "is-starred" : "is-not-starred"}`;
 
-    const handleKey = (e) => {
+    const handleKey = (e: KeyboardEvent<HTMLButtonElement>) => {
         if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            if (typeof onToggle === "function") onToggle(e);
+            onToggle?.(e);
         }
     };
 
     return (
-        <span
-            className={wrapperClass}
-            style={{ width: size, height: size }}
-        >
-      {/* plain glyph visible by default */}
-            <span className="star-glyph" aria-hidden>
-        {isStarred ? "★" : "☆"}
-      </span>
-
-            {/* overlay interactive element that appears on hover / focus-within */}
+        <span className={wrapperClass} style={{ width: size, height: size }}>
+            <span className="star-glyph" aria-hidden>{isStarred ? "★" : "☆"}</span>
             <button
                 type="button"
                 className="star-action"
                 aria-label={ariaLabel || (isStarred ? "Убрать звезду" : "Поставить звезду")}
-                onClick={(e) => { e.stopPropagation(); if (typeof onToggle === "function") onToggle(e); }}
+                onClick={(e) => { e.stopPropagation(); onToggle?.(e); }}
                 onKeyDown={handleKey}
-                onMouseDown={(e) => e.preventDefault()} /* prevent focus flick */
+                onMouseDown={(e) => e.preventDefault()}
             >
-        <span className="star-glyph" aria-hidden>{isStarred ? "★" : "☆"}</span>
-      </button>
-    </span>
+                <span className="star-glyph" aria-hidden>{isStarred ? "★" : "☆"}</span>
+            </button>
+        </span>
     );
 }

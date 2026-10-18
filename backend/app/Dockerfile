@@ -1,4 +1,4 @@
-# ---------- СТАДИЯ 1 — Сборка Go ----------
+# ---------- СТАДИЯ 1 - Сборка Go ----------
 FROM golang:1.25 AS builder
 
 WORKDIR /app
@@ -14,7 +14,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/main.go
 
 
-# ---------- СТАДИЯ 2 — Production образ ----------
+# ---------- СТАДИЯ 2 - Production образ ----------
 FROM alpine:3.19
 
 # Корректная поддержка времени

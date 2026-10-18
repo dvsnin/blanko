@@ -1,6 +1,12 @@
 import "./NotificationButton.css";
 
-export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel = "Уведомления" }) {
+export interface NotificationButtonProps {
+    unreadCount?: number;
+    onClick?: () => void;
+    ariaLabel?: string;
+}
+
+export default function NotificationButton({ unreadCount = 0, onClick, ariaLabel = "Уведомления" }: NotificationButtonProps) {
     return (
         <button
             type="button"
