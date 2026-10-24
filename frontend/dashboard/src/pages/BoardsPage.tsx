@@ -209,6 +209,14 @@ export default function BoardsPage() {
   const previewUrl = (b: { id: string; updatedAt?: string; hasPreview?: boolean }) =>
     b.hasPreview ? `/app/preview/boards/${b.id}?v=${encodeURIComponent(b.updatedAt || "")}` : undefined;
 
+  const handleCopyLink = (board: { publicId: string }) => {
+    closeMenu();
+    const url = `${window.location.origin}${boardUrl(board)}`;
+    navigator.clipboard?.writeText(url)
+      .then(() => showToast("Ссылка скопирована"))
+      .catch(() => showToast("Не удалось скопировать ссылку"));
+  };
+
   const handleDuplicate = (board: { id: string }) => {
     closeMenu();
     void duplicateBoard(board.id).then((copy) => showToast(copy ? "Копия создана" : "Не удалось дублировать"));
@@ -403,11 +411,9 @@ export default function BoardsPage() {
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
-      <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
+      <button type="button" className="board-card-menu-item" onClick={() => handleCopyLink(b)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => { closeMenu(); markBoardOpened(b.id); openInNewTab(boardUrl(b)); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
       <div className="board-card-menu-separator" />
-      <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
       <button type="button" className="board-card-menu-item" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => handleDuplicate(b)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Дублировать</span></button>
       <button type="button" className="board-card-menu-item" disabled={!b.canEdit || otherTeams.length === 0} aria-disabled={!b.canEdit || otherTeams.length === 0} onClick={() => openMoveDialog(b)}><span className="board-card-menu-icon">⊞</span><span className="board-card-menu-label">Перенести в группу</span></button>

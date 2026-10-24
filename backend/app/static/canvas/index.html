@@ -26,6 +26,8 @@
         .save-state { font-size: 13px; color: #64748b; }
 
         .top-actions { display: flex; gap: 10px; align-items: center; }
+        .share-hint { font-size: 13px; color: #64748b; opacity: 0; transition: opacity .2s; }
+        .share-hint.is-visible { opacity: 1; }
         .btn { background: #fff; border: 1px solid #e6e9f2; padding: 9px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #0f1724; transition: background .15s, border-color .15s; }
         .btn:hover { background: #f8fafc; border-color: rgba(37,100,255,0.14); }
         /* Share - primary-btn из dashboard: сине-фиолетовый градиент, pill 12px, тень. */
@@ -79,7 +81,8 @@
     </div>
 
     <div class="top-actions">
-        <button class="btn primary" id="shareBtn">Share</button>
+        <span class="share-hint" id="shareHint" role="status" aria-live="polite"></span>
+        <button class="btn primary" id="shareBtn">Поделиться</button>
         <div class="profile-initial" id="profileInitial">U</div>
     </div>
 </div>
@@ -119,12 +122,19 @@
     const profileInitial = (profileName.trim().charAt(0) || "U").toUpperCase();
     try { document.getElementById("profileInitial").textContent = profileInitial; } catch {}
 
-    document.getElementById("shareBtn").addEventListener("click", () => {
+    // Копирует ссылку на документ; подтверждение рядом с кнопкой, без модального окна.
+    document.getElementById("shareBtn").addEventListener("click", async () => {
+        const hint = document.getElementById("shareHint");
+        const show = (text) => {
+            hint.textContent = text;
+            hint.classList.add("is-visible");
+            setTimeout(() => hint.classList.remove("is-visible"), 2500);
+        };
         try {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Ссылка на доску скопирована");
+            await navigator.clipboard.writeText(window.location.href);
+            show("Ссылка скопирована");
         } catch {
-            alert(window.location.href);
+            show("Скопируйте адрес из строки браузера");
         }
     });
 

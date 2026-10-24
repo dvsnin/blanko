@@ -42,6 +42,21 @@ type wsIn struct {
 	Record json.RawMessage            `json:"record"`
 }
 
+// validRecords: сервер не знает схему tldraw, но ключ обязан совпадать с id записи,
+// а у записи должен быть typeName, иначе документ со временем превратится в мусор.
+func validRecords(put map[string]json.RawMessage) bool {
+	for key, raw := range put {
+		var rec struct {
+			ID       string `json:"id"`
+			TypeName string `json:"typeName"`
+		}
+		if err := json.Unmarshal(raw, &rec); err != nil || rec.ID != key || rec.TypeName == "" {
+			return false
+		}
+	}
+	return true
+}
+
 // presenceID достаёт id presence-записи; остальное содержимое сервер не разбирает.
 func presenceID(record json.RawMessage) (string, bool) {
 	var rec struct {
@@ -247,6 +262,10 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 		}
 		if !canEdit {
 			client.sendJSON(wsErr{Type: "error", Code: "read_only"})
+			continue
+		}
+		if !validRecords(in.Put) {
+			client.sendJSON(wsErr{Type: "error", Code: "bad_message"})
 			continue
 		}
 		ack, _ := json.Marshal(wsAck{Type: "ack", Seq: in.Seq})

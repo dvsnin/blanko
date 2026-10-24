@@ -123,6 +123,30 @@ func TestDocWS(t *testing.T) {
 		}
 	})
 
+	t.Run("malformed records rejected", func(t *testing.T) {
+		b := e.board(team, owner, "Битые записи")
+		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		cases := []map[string]any{
+			{"shape:a": map[string]any{"id": "shape:b", "typeName": "shape"}}, // ключ не равен id
+			{"shape:a": map[string]any{"id": "shape:a"}},                      // нет typeName
+			{"shape:a": "not an object"},                                      // не объект
+		}
+		for i, put := range cases {
+			writeMsg(t, c, pushMsg(i+1, put, nil))
+			if msg := readMsg(t, c, time.Second); msg["type"] != "error" || msg["code"] != "bad_message" {
+				t.Fatalf("case %d: msg = %v", i, msg)
+			}
+		}
+		time.Sleep(120 * time.Millisecond)
+		if e.store.Bytes(key(b.ID)) != nil {
+			t.Fatal("malformed records were persisted")
+		}
+		writeMsg(t, c, pushMsg(9, map[string]any{"shape:a": shape("shape:a")}, nil))
+		if ack := readMsg(t, c, time.Second); ack["type"] != "ack" {
+			t.Fatalf("connection dead after rejected records: %v", ack)
+		}
+	})
+
 	t.Run("bad message", func(t *testing.T) {
 		b := e.board(team, owner, "Мусор")
 		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
