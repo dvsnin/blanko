@@ -14,6 +14,7 @@ import { colorForId } from "../utils/cover";
 import { assignColors } from "../utils/colors";
 import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type TeamDTO } from "../api/client";
+import { readPref, savePrefs } from "../utils/prefs";
 
 /**
  * TeamsContext - single source of truth for teams/boards, synchronised with
@@ -103,7 +104,11 @@ export function mapBoards(dtos: BoardDTO[]): Board[] {
   return dtos.map((dto) => boardFromDTO(dto));
 }
 
+// Сначала группа из настроек аккаунта (переживает перезагрузку и смену устройства),
+// иначе первая с досками, иначе первая.
 function pickInitialActiveTeamId(teams: Team[]): string | null {
+  const saved = readPref("lastTeamId");
+  if (typeof saved === "string" && teams.some((t) => t.id === saved)) return saved;
   const withBoards = teams.find((t) => (t.boards || []).length > 0);
   return withBoards?.id ?? teams[0]?.id ?? null;
 }
@@ -113,6 +118,11 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   const teamsRef = useRef<Team[]>([]);
   useEffect(() => { teamsRef.current = teams; }, [teams]);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
+  // Явный выбор пользователя запоминаем на аккаунте; внутренние переключения (удаление группы) - нет.
+  const selectTeam = useCallback((id: string | null) => {
+    setActiveTeamId(id);
+    if (id) savePrefs({ lastTeamId: id });
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,12 +177,12 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       const created = await api.teams.create(name, ageGroup, teachers);
       const team = teamFromDTO(created, []);
       setTeams((prev) => [team, ...prev]);
-      setActiveTeamId(team.id);
+      selectTeam(team.id);
     } catch (e) {
       console.error("createTeam failed:", e);
       throw e;
     }
-  }, []);
+  }, [selectTeam]);
 
   const updateTeam = useCallback(
     async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string }) => {
@@ -435,7 +445,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       activeBoards,
       loading,
       error,
-      setActiveTeamId,
+      setActiveTeamId: selectTeam,
       createTeam,
       updateTeam,
       deleteTeam,

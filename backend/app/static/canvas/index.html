@@ -5,25 +5,29 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
     <title>Canvas Board</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+
     <!-- tldraw styles: инструменты, стили нод/стикеров/курсора и т.д. -->
     <link rel="stylesheet" href="https://esm.sh/tldraw@3.15.3/tldraw.css"/>
 
     <style>
-        html, body { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html, body { height: 100%; margin: 0; font-family: "Nunito", "Segoe UI", system-ui, sans-serif; }
         body { background: #f3f6f9; overflow: hidden; }
 
-        .thin-top { height: 8px; background: linear-gradient(90deg, #1f8a3f, #0d6b2c); box-shadow: 0 2px 0 rgba(0,0,0,0.06); }
-
-        .topbar { height: 56px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-shadow: 0 1px 0 rgba(15,23,42,0.04); z-index: 40; position: relative; }
+        /* Шапка повторяет геометрию и токены Topbar.css кабинета (69px с рамкой, отступ 32px, логотип 36px),
+           чтобы переход доска <-> кабинет в той же вкладке не дёргал страницу. */
+        .topbar { box-sizing: border-box; height: 69px; background: #FFFFFF; border-bottom: 1px solid #E6E2D9; display: flex; align-items: center; justify-content: space-between; padding: 12px 32px; z-index: 40; position: relative; }
         .brand-row { display: flex; align-items: center; gap: 12px; }
         /* Выход в кабинет хлебными крошками: логотип и раздел ведут назад в той же вкладке */
-        .back-link { display: inline-flex; align-items: center; gap: 8px; color: #64748b; font-size: 14px; font-weight: 600; text-decoration: none; padding: 4px 8px 4px 4px; border-radius: 10px; transition: background .15s, color .15s; }
-        .back-link:hover { background: #f1f5f9; color: #0f1724; }
-        .back-link .logo { width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
-        .crumb-sep { color: #cbd5e1; font-size: 16px; font-weight: 400; }
+        .back-link { display: inline-flex; align-items: center; gap: 10px; color: #5B6472; font-size: 14px; font-weight: 700; text-decoration: none; padding: 0 10px 0 0; border-radius: 10px; transition: background .15s, color .15s; }
+        .back-link:hover { background: #ECE9E0; color: #22262E; }
+        .back-link .logo { width: 36px; height: 36px; border-radius: 10px; background: #ECE9E0; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+        .crumb-sep { color: #C9C4B8; font-size: 16px; font-weight: 400; }
         .board-meta { display: flex; align-items: center; gap: 18px; }
-        .board-name { font-size: 20px; font-weight: 700; color: #0f1724; line-height: 1; }
-        .save-state { font-size: 13px; color: #64748b; }
+        .board-name { font-size: 20px; font-weight: 800; color: #22262E; line-height: 1; }
+        .save-state { font-size: 13px; font-weight: 600; color: #5B6472; }
 
         .top-actions { display: flex; gap: 10px; align-items: center; }
         .share-hint { font-size: 13px; color: #64748b; opacity: 0; transition: opacity .2s; }
@@ -39,10 +43,11 @@
         .profile-initial { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #0f1724; font-size: 15px; background: linear-gradient(135deg, #eef4ff 0%, #f7f5ff 100%); border: 1px solid rgba(15,23,42,0.06); text-shadow: 0 1px 0 rgba(255,255,255,0.6); transition: box-shadow 160ms ease, border-color 160ms ease; }
         .profile-initial:hover { box-shadow: 0 10px 22px rgba(46,80,170,0.06); border-color: rgba(37,100,255,0.08); }
 
-        #tldraw-root { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
+        #tldraw-root { position: absolute; left: 0; right: 0; top: 69px; bottom: 0; }
+        @media (max-width: 720px) { .topbar { padding: 12px 16px; } }
 
         /* Оверлей поверх холста: загрузка, потеря связи, удалённый документ. Пока виден, холст только для чтения. */
-        .overlay { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(243,246,249,0.78); backdrop-filter: blur(3px); }
+        .overlay { position: absolute; left: 0; right: 0; top: 69px; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(243,246,249,0.78); backdrop-filter: blur(3px); }
         .overlay[hidden] { display: none; }
         .overlay-card { background: #fff; border-radius: 16px; padding: 28px 32px; min-width: 280px; text-align: center; box-shadow: 0 18px 50px rgba(15,23,42,0.12); }
         .overlay-title { font-size: 18px; font-weight: 700; color: #0f1724; margin: 14px 0 6px; }
@@ -65,12 +70,11 @@
 </head>
 <body>
 
-<div class="thin-top" aria-hidden></div>
 
 <div class="topbar">
     <div class="brand-row">
         <a class="back-link" id="backLink" href="/app/dashboard#/boards" aria-label="Вернуться в кабинет">
-            <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="4" fill="#F2B134"/><path d="M12.5 3.5h8v8h-8z" fill="#1F8A85"/><path d="M4 20.5l5.5-9 5.5 9z" fill="#D5512E"/></svg></span>
+            <span class="logo"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="4" fill="#F2B134"/><path d="M12.5 3.5h8v8h-8z" fill="#1F8A85"/><path d="M4 20.5l5.5-9 5.5 9z" fill="#D5512E"/></svg></span>
             <span id="backLabel">Доски</span>
         </a>
         <span class="crumb-sep" aria-hidden="true">/</span>
@@ -267,6 +271,14 @@
         }, 1000);
     }
 
+    // Первую страницу tldraw заводит с именем "Page 1" без перевода (это не UI-строка, а запись в схеме);
+    // страницы из меню уже «Страница N». Переименовываем только точное дефолтное имя и только с правом записи.
+    function localizeDefaultPage() {
+        for (const page of editor.getPages()) {
+            if (page.name === "Page 1") editor.updatePage({ id: page.id, name: "Страница 1" });
+        }
+    }
+
     function emptyDocument() {
         return { schema: editor.store.schema.serialize(), store: {} };
     }
@@ -456,6 +468,7 @@
     // Переподключение: сервер главный, свои несохранённые правки докладываем поверх.
     function onInit(msg) {
         canEdit = !!msg.canEdit;
+        const firstInit = !gotInit;
         if (!gotInit) {
             if (msg.document) loadSnapshot(editor.store, { document: msg.document, session: readSession() });
             gotInit = true;
@@ -493,6 +506,8 @@
         attempt = 0;
         clearOfflineOverlay();
         applyReadonly();
+        // Только после снятия readonly: в режиме чтения tldraw молча игнорирует updatePage.
+        if (firstInit && canEdit) localizeDefaultPage();
         scheduleSend();
         // Сервер после реконнекта нас не помнит - представляемся заново.
         lastPresenceJson = "";

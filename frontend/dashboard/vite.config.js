@@ -18,12 +18,6 @@ export default defineConfig({
         emptyOutDir: true
     },
 
-    resolve: {
-        alias: {
-            "@blanko/ui": path.resolve(__dirname, "../../packages/ui/src")
-        }
-    },
-
     base: '/app/',
 
     test: {

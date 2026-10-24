@@ -5,6 +5,7 @@ import { useEscapeKey } from "../hooks/useEscapeKey";
 import { VALID_ROLES } from "../constants/roles";
 import { AGES, type AgeKey } from "../constants/templates";
 import type { Team, TeamRole } from "../types";
+import TeamMembersTab from "./TeamMembersTab";
 
 /*
   TeamSettingsModal - decision based only on team.role.
@@ -57,7 +58,8 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   const isCreate = !!team?.create || !team?.id;
   const isEmpty = (name || "").trim() === "";
 
-  const tabs = ["main"];
+  // «Участники» видят владелец и админ группы; у обычного участника только «Основные».
+  const tabs = isAdminOrOwner && !isCreate ? ["main", "members"] : ["main"];
   useEffect(() => {
     if (!tabs.includes(activeTab)) setActiveTab("main");
   }, [role]);
@@ -196,9 +198,20 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
           </div>
 
           <div className="team-settings-body">
-            {/* Боковая навигация появится вместе со вторым разделом настроек */}
+            {tabs.length > 1 && (
+              <nav className="team-settings-sidebar" aria-label="Настройки группы">
+                <ul>
+                  <li className={`ts-nav-item ${activeTab === "main" ? "active" : ""}`} onClick={() => setActiveTab("main")}>Основные</li>
+                  <li className={`ts-nav-item ${activeTab === "members" ? "active" : ""}`} onClick={() => setActiveTab("members")}>Участники</li>
+                </ul>
+              </nav>
+            )}
 
             <section className="team-settings-content" aria-live="polite">
+              {activeTab === "members" && team?.id && (
+                <TeamMembersTab teamId={team.id} canManage={isAdminOrOwner} />
+              )}
+
               {activeTab === "main" && (
                 <>
                   <div className="ts-section">

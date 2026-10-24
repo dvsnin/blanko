@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -28,6 +31,8 @@ var (
 	ErrInvalidAgeGroup   = fmt.Errorf("%w: invalid age group", ErrValidation)
 	ErrInvalidTeachers   = fmt.Errorf("%w: invalid teachers", ErrValidation)
 	ErrInvalidTemplateID = fmt.Errorf("%w: invalid template id", ErrValidation)
+	ErrInvalidEmail      = fmt.Errorf("%w: invalid email", ErrValidation)
+	ErrInvalidRole       = fmt.Errorf("%w: invalid role", ErrValidation)
 )
 
 // Services - набор всех прикладных сервисов.
@@ -145,6 +150,75 @@ func (s *AuthService) UpdateAccount(ctx context.Context, id Identity, name strin
 		return nil, fmt.Errorf("reload account: %w", err)
 	}
 	return acc, nil
+}
+
+const prefsMaxBytes = 4096
+
+// UpdatePrefs сливает переданные ключи в настройки аккаунта: null удаляет ключ, значения только
+// скаляры, итог не больше prefsMaxBytes. Возвращает полный объект после слияния.
+func (s *AuthService) UpdatePrefs(ctx context.Context, id Identity, set map[string]any) (model.Prefs, error) {
+	if len(set) == 0 {
+		return nil, fmt.Errorf("%w: set is empty", ErrValidation)
+	}
+	for k, v := range set {
+		if strings.TrimSpace(k) == "" || len(k) > 64 {
+			return nil, fmt.Errorf("%w: bad key %q", ErrValidation, k)
+		}
+		switch v.(type) {
+		case nil, string, bool, float64:
+		default:
+			return nil, fmt.Errorf("%w: value of %q must be a scalar", ErrValidation, k)
+		}
+	}
+	var out model.Prefs
+	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		repo := repository.NewAccountRepo(tx)
+		acc, err := repo.GetByID(ctx, id.Account.ID)
+		if err != nil {
+			return err
+		}
+		merged := model.Prefs{}
+		for k, v := range acc.Prefs {
+			merged[k] = v
+		}
+		for k, v := range set {
+			if v == nil {
+				delete(merged, k)
+			} else {
+				merged[k] = v
+			}
+		}
+		if raw, _ := json.Marshal(merged); len(raw) > prefsMaxBytes {
+			return fmt.Errorf("%w: prefs exceed %d bytes", ErrValidation, prefsMaxBytes)
+		}
+		if err := repo.UpdatePrefs(ctx, acc.ID, merged); err != nil {
+			return err
+		}
+		out = merged
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return out, nil
+}
+
+// SearchAccounts - справочник педагогов сада для подбора участников группы: любой вошедший
+// видит имена и почты коллег (коробка на один сад). Пустой запрос отдаёт всех, не больше 50.
+func (s *AuthService) SearchAccounts(ctx context.Context, q string) ([]model.Account, error) {
+	q = strings.TrimSpace(q)
+	list, err := repository.NewAccountRepo(s.pool).Search(ctx, q, 50)
+	if err != nil {
+		return nil, fmt.Errorf("search accounts: %w", err)
+	}
+	sort.SliceStable(list, func(i, j int) bool {
+		ki, kj := ruSortKey(list[i].Name), ruSortKey(list[j].Name)
+		return ki < kj || (ki == kj && list[i].Email < list[j].Email)
+	})
+	return list, nil
 }
 
 // ---------- TeamService ----------
@@ -297,6 +371,138 @@ func (s *TeamService) SetStarred(ctx context.Context, id Identity, teamID uuid.U
 }
 
 // requireRole проверяет, что у пользователя одна из допустимых ролей.
+// Members - участники команды; видит любой участник.
+func (s *TeamService) Members(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.TeamMemberView, error) {
+	repo := repository.NewTeamRepo(s.pool)
+	if _, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner, model.TeamRoleAdmin, model.TeamRoleMember); err != nil {
+		return nil, err
+	}
+	members, err := repo.ListMembers(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	if members == nil {
+		members = []model.TeamMemberView{}
+	}
+	return members, nil
+}
+
+// AddMember добавляет участника по почте; аккаунт создаётся заранее, если человек ещё не входил.
+// Повторное добавление ничего не меняет (created = false). Право: owner или admin команды.
+func (s *TeamService) AddMember(ctx context.Context, id Identity, teamID uuid.UUID, email string, role model.TeamRole) (*model.TeamMemberView, bool, error) {
+	repo := repository.NewTeamRepo(s.pool)
+	if _, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner, model.TeamRoleAdmin); err != nil {
+		return nil, false, err
+	}
+	email = strings.TrimSpace(strings.ToLower(email))
+	if err := validateEmail(email); err != nil {
+		return nil, false, err
+	}
+	if err := validateAssignableRole(role); err != nil {
+		return nil, false, err
+	}
+	var member *model.TeamMemberView
+	created := false
+	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		accRepo := repository.NewAccountRepo(tx)
+		acc, err := accRepo.GetByEmail(ctx, email)
+		if errors.Is(err, repository.ErrNotFound) {
+			acc = &model.Account{Email: email, Name: strings.SplitN(email, "@", 2)[0]}
+			if err := accRepo.Create(ctx, acc); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+		teamRepo := repository.NewTeamRepo(tx)
+		existing, err := teamRepo.GetRoleForAccount(ctx, teamID, acc.ID)
+		if err == nil {
+			member = &model.TeamMemberView{AccountID: acc.ID, Email: acc.Email, Name: acc.Name, Role: existing}
+			return nil
+		}
+		if !errors.Is(err, repository.ErrNotFound) {
+			return err
+		}
+		if err := teamRepo.AddMember(ctx, teamID, acc.ID, role); err != nil {
+			return err
+		}
+		created = true
+		member = &model.TeamMemberView{AccountID: acc.ID, Email: acc.Email, Name: acc.Name, Role: role, JoinedAt: time.Now().UTC()}
+		return nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	return member, created, nil
+}
+
+// SetMemberRole: owner или admin команды меняют роль участника между member и admin; владельца не трогают.
+func (s *TeamService) SetMemberRole(ctx context.Context, id Identity, teamID, accountID uuid.UUID, role model.TeamRole) (*model.TeamMemberView, error) {
+	repo := repository.NewTeamRepo(s.pool)
+	if _, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner, model.TeamRoleAdmin); err != nil {
+		return nil, err
+	}
+	if err := validateAssignableRole(role); err != nil {
+		return nil, err
+	}
+	current, err := repo.GetRoleForAccount(ctx, teamID, accountID)
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	if current == model.TeamRoleOwner {
+		return nil, ErrForbidden
+	}
+	if err := repo.SetMemberRole(ctx, teamID, accountID, role); err != nil {
+		return nil, mapNotFound(err)
+	}
+	return s.member(ctx, repo, teamID, accountID)
+}
+
+// RemoveMember исключает участника; владельца исключить нельзя.
+func (s *TeamService) RemoveMember(ctx context.Context, id Identity, teamID, accountID uuid.UUID) error {
+	repo := repository.NewTeamRepo(s.pool)
+	if _, err := s.requireRole(ctx, repo, teamID, id.Account.ID, model.TeamRoleOwner, model.TeamRoleAdmin); err != nil {
+		return err
+	}
+	current, err := repo.GetRoleForAccount(ctx, teamID, accountID)
+	if err != nil {
+		return mapNotFound(err)
+	}
+	if current == model.TeamRoleOwner {
+		return ErrForbidden
+	}
+	return repo.RemoveMember(ctx, teamID, accountID)
+}
+
+func (s *TeamService) member(ctx context.Context, repo *repository.TeamRepo, teamID, accountID uuid.UUID) (*model.TeamMemberView, error) {
+	members, err := repo.ListMembers(ctx, teamID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range members {
+		if members[i].AccountID == accountID {
+			return &members[i], nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func validateEmail(email string) error {
+	at := strings.Index(email, "@")
+	if at < 1 || at == len(email)-1 || strings.ContainsAny(email, " \t") || utf8.RuneCountInString(email) > 255 {
+		return ErrInvalidEmail
+	}
+	return nil
+}
+
+// validateAssignableRole: назначать можно только member и admin, владелец один и задаётся при создании.
+func validateAssignableRole(role model.TeamRole) error {
+	if role == model.TeamRoleMember || role == model.TeamRoleAdmin {
+		return nil
+	}
+	return ErrInvalidRole
+}
+
 func (s *TeamService) requireRole(ctx context.Context, repo *repository.TeamRepo, teamID, accountID uuid.UUID, roles ...model.TeamRole) (model.TeamRole, error) {
 	role, err := repo.GetRoleForAccount(ctx, teamID, accountID)
 	if err != nil {

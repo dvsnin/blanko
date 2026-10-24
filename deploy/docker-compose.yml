@@ -59,6 +59,7 @@ services:
       KC_PROXY: edge
     volumes:
       - ./keycloak:/opt/keycloak/data/import
+      - ./keycloak/themes/blanko:/opt/keycloak/themes/blanko
     depends_on:
       - postgres
     labels:

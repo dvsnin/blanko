@@ -2,7 +2,15 @@
   "realm": "blanko",
   "enabled": true,
 
+  "internationalizationEnabled": true,
+  "supportedLocales": ["ru"],
+  "defaultLocale": "ru",
+  "displayName": "Blanko",
+  "loginTheme": "blanko",
+
   "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "duplicateEmailsAllowed": false,
   "verifyEmail": false,
   "loginWithEmailAllowed": true,
   "resetPasswordAllowed": true,
@@ -67,7 +75,7 @@
 
   "users": [
     {
-      "username": "test",
+      "username": "test@example.com",
       "enabled": true,
       "email": "test@example.com",
       "emailVerified": true,

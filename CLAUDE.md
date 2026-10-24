@@ -32,6 +32,6 @@
 - `make up` собирает фронтенд, пересобирает бэкенд и перезапускает контейнеры; `make up SKIP_FRONTEND=1` только бэкенд. Статика фронтенда запекается в образ, после правок фронта нужен полный `make up`.
 - Секреты в `deploy/.env`, не печатать. psql: `docker exec deploy-postgres_backend-1 psql -U $APP_POSTGRES_USER -d $APP_POSTGRES_DB`.
 - tldraw закреплён на 3.15.3 (бесключевой режим с watermark). Апгрейд только с действующим `TLDRAW_LICENSE_KEY`, watermark скрывать нельзя.
-- Визуальная проверка дашборда без входа в Keycloak: мок API плюс vite на отдельном порту (см. scratchpad `visual-check`), Chrome для скриншотов.
+- Визуальная проверка на живом стенде: `node docs/tools/dashboard-shots.mjs <папка>` логинится тестовым пользователем в headless Chrome и снимает сетку, список, шаблоны и группы (флаги `ACCESS=1`, `MEMBERS=1`, `MENU=1` открывают диалоги и меню); E2E канваса `docs/tools/canvas-e2e.mjs <publicId>` с `MEDIA=1`, `RESTART=1`, `SHOT=путь`.
 - Перед пушем ветка схлопывается в один коммит с коротким сообщением на английском, например `Dashboard redesign: templates, admin role, card polish`. Пуш и слияние делает пользователь.
 - `docs/` в `.gitignore`: спецификации и планы локальные, в коммиты не попадают.

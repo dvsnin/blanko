@@ -221,3 +221,40 @@ func (r *TeamRepo) SetStarred(ctx context.Context, teamID, accountID uuid.UUID, 
 	_, err := execBuilder(ctx, r.db, b)
 	return err
 }
+
+// ListMembers - участники команды с аккаунтами: владелец первым, дальше по имени.
+func (r *TeamRepo) ListMembers(ctx context.Context, teamID uuid.UUID) ([]model.TeamMemberView, error) {
+	b := psql.Select("a.id", "a.email", "a.name", "tm.role", "tm.created_at").
+		From("team_member tm").
+		Join("account a ON a.id = tm.account_id AND a.deleted_at IS NULL").
+		Where("tm.team_id = ?", teamID).
+		OrderBy("CASE tm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END", "a.name", "a.email")
+	rows, err := queryBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.TeamMemberView
+	for rows.Next() {
+		var m model.TeamMemberView
+		if err := rows.Scan(&m.AccountID, &m.Email, &m.Name, &m.Role, &m.JoinedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// SetMemberRole меняет роль участника; ErrNotFound, если он не в команде.
+func (r *TeamRepo) SetMemberRole(ctx context.Context, teamID, accountID uuid.UUID, role model.TeamRole) error {
+	b := psql.Update("team_member").Set("role", role).Set("updated_at", time.Now().UTC()).
+		Where("team_id = ? AND account_id = ?", teamID, accountID)
+	tag, err := execBuilder(ctx, r.db, b)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

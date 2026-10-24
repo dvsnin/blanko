@@ -196,3 +196,138 @@ func (a *API) setTeamStar(w http.ResponseWriter, r *http.Request, starred bool) 
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// --- участники ---
+
+type TeamMemberDTO struct {
+	AccountID string `json:"accountId"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Role      string `json:"role"`
+	JoinedAt  string `json:"joinedAt"`
+}
+
+func teamMemberToDTO(m model.TeamMemberView) TeamMemberDTO {
+	joined := ""
+	if !m.JoinedAt.IsZero() {
+		joined = m.JoinedAt.Format(time.RFC3339)
+	}
+	return TeamMemberDTO{AccountID: m.AccountID.String(), Email: m.Email, Name: m.Name, Role: string(m.Role), JoinedAt: joined}
+}
+
+type teamMembersRequest struct {
+	WithAccount
+	TeamID string `json:"teamId"`
+}
+
+type addTeamMemberRequest struct {
+	WithAccount
+	TeamID string `json:"teamId"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+}
+
+// memberId, а не accountId: accountId в теле занят вызывающим (WithAccount).
+type teamMemberRoleRequest struct {
+	WithAccount
+	TeamID   string `json:"teamId"`
+	MemberID string `json:"memberId"`
+	Role     string `json:"role"`
+}
+
+type teamMemberRequest struct {
+	WithAccount
+	TeamID   string `json:"teamId"`
+	MemberID string `json:"memberId"`
+}
+
+// TeamMembers POST /api/v1/team/members
+func (a *API) TeamMembers(w http.ResponseWriter, r *http.Request) {
+	var req teamMembersRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	teamID, ok := parseID(w, req.TeamID, "team")
+	if !ok {
+		return
+	}
+	members, err := a.services.Team.Members(r.Context(), id, teamID)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	out := make([]TeamMemberDTO, 0, len(members))
+	for _, m := range members {
+		out = append(out, teamMemberToDTO(m))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out})
+}
+
+// AddTeamMember POST /api/v1/team/member/add: 201 при добавлении, 200 если уже в команде.
+func (a *API) AddTeamMember(w http.ResponseWriter, r *http.Request) {
+	var req addTeamMemberRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	teamID, ok := parseID(w, req.TeamID, "team")
+	if !ok {
+		return
+	}
+	member, created, err := a.services.Team.AddMember(r.Context(), id, teamID, req.Email, model.TeamRole(req.Role))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	writeJSON(w, status, teamMemberToDTO(*member))
+}
+
+// SetTeamMemberRole POST /api/v1/team/member/role
+func (a *API) SetTeamMemberRole(w http.ResponseWriter, r *http.Request) {
+	var req teamMemberRoleRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	teamID, ok := parseID(w, req.TeamID, "team")
+	if !ok {
+		return
+	}
+	accountID, ok := parseID(w, req.MemberID, "member")
+	if !ok {
+		return
+	}
+	member, err := a.services.Team.SetMemberRole(r.Context(), id, teamID, accountID, model.TeamRole(req.Role))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, teamMemberToDTO(*member))
+}
+
+// RemoveTeamMember POST /api/v1/team/member/remove
+func (a *API) RemoveTeamMember(w http.ResponseWriter, r *http.Request) {
+	var req teamMemberRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	teamID, ok := parseID(w, req.TeamID, "team")
+	if !ok {
+		return
+	}
+	accountID, ok := parseID(w, req.MemberID, "member")
+	if !ok {
+		return
+	}
+	if err := a.services.Team.RemoveMember(r.Context(), id, teamID, accountID); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

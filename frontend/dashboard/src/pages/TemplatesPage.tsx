@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { readPrefIn, savePrefs } from "../utils/prefs";
 import "./TemplatesPage.css";
 import "../components/BoardCover.css";
 import ConfirmModal from "../components/ConfirmModal";
@@ -15,13 +16,19 @@ import type { Template } from "../types";
 
 /* Экран «Шаблоны»: возраст, тематика слева, карточки, избранные первыми. */
 
+const AGE_FILTERS = ["all", ...AGES.map((a) => a.key)] as const;
+const TOPIC_FILTERS = ["all", ...TOPICS.map((t) => t.key)] as const;
+
 export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
   const { activeTeam, createBoard, markBoardOpened } = useTeams();
   const { templates, loading, error, refresh, createTemplate, toggleStarTemplate, duplicateTemplate, updateTemplate, deleteTemplate } = useTemplates();
   const { toastMessage, toastVisible, showToast } = useToast();
   const [q, setQ] = useState("");
-  const [age, setAge] = useState<AgeKey | "all">(initialAge ?? "all");
-  const [topic, setTopic] = useState<TopicKey | "all">("all");
+  // Возраст и тема живут в настройках аккаунта; возраст из адреса (#/templates?age=) важнее.
+  const [age, setAgeState] = useState<AgeKey | "all">(() => initialAge ?? readPrefIn("templates.age", AGE_FILTERS, "all"));
+  const [topic, setTopicState] = useState<TopicKey | "all">(() => readPrefIn("templates.topic", TOPIC_FILTERS, "all"));
+  const setAge = (v: AgeKey | "all") => { setAgeState(v); savePrefs({ "templates.age": v }); };
+  const setTopic = (v: TopicKey | "all") => { setTopicState(v); savePrefs({ "templates.topic": v }); };
   const [onlyOwn, setOnlyOwn] = useState(false);
   const [editing, setEditing] = useState<Template | typeof NEW_TEMPLATE | null>(null);
   const [deleting, setDeleting] = useState<Template | null>(null);

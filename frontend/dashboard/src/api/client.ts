@@ -74,6 +74,7 @@ export interface AccountDTO {
   email: string;
   name: string;
   orgRole: "owner" | "admin" | "member";
+  prefs: Record<string, string | number | boolean>;
 }
 
 export interface TemplateDTO {
@@ -100,6 +101,20 @@ export interface TemplateInputDTO {
   topic?: string;
   ages?: string[];
   durationMin?: number;
+}
+
+export interface AccountSearchDTO {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface TeamMemberDTO {
+  accountId: string;
+  email: string;
+  name: string;
+  role: "owner" | "admin" | "member";
+  joinedAt: string;
 }
 
 export interface TeamDTO {
@@ -142,6 +157,9 @@ export const api = {
   account: {
     get: () => post<AccountDTO>("/account/get"),
     update: (patch: { name?: string }) => post<AccountDTO>("/account/update", patch),
+    /** Слияние настроек кабинета: null удаляет ключ. Ответ - полный объект после слияния. */
+    updatePrefs: (set: Record<string, string | number | boolean | null>) =>
+      post<{ prefs: Record<string, string | number | boolean> }>("/account/prefs", { set }).then((r) => r.prefs),
   },
 
   teams: {
@@ -158,6 +176,17 @@ export const api = {
     leave: (id: string) => post<void>("/team/leave", { id }),
     star: (id: string) => post<void>("/team/star", { id }),
     unstar: (id: string) => post<void>("/team/unstar", { id }),
+    members: (teamId: string) => post<List<TeamMemberDTO>>("/team/members", { teamId }).then((r) => r.items ?? []),
+    addMember: (teamId: string, email: string, role: "member" | "admin") =>
+      post<TeamMemberDTO>("/team/member/add", { teamId, email, role }),
+    setMemberRole: (teamId: string, memberId: string, role: "member" | "admin") =>
+      post<TeamMemberDTO>("/team/member/role", { teamId, memberId, role }),
+    removeMember: (teamId: string, memberId: string) => post<void>("/team/member/remove", { teamId, memberId }),
+  },
+
+  accounts: {
+    /** Все учётные записи сада по части имени или почты; пустой запрос - все. */
+    search: (q: string) => post<List<AccountSearchDTO>>("/account/search", { q }).then((r) => r.items ?? []),
   },
 
   boards: {

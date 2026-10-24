@@ -92,6 +92,8 @@ export interface DashData {
    *  пока TeamsContext ещё фетчит /team/list. */
   hasTeams?: boolean;
   hasBoards?: boolean;
+  /** Настройки кабинета с аккаунта: последняя группа, режим и сортировка досок, фильтры. */
+  prefs?: Record<string, string | number | boolean>;
 }
 
 declare global {

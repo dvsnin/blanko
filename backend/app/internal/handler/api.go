@@ -28,18 +28,15 @@ func NewAPI(s *service.Services, mediaMaxBytes int64) *API {
 	return &API{services: s, mediaMaxBytes: mediaMaxBytes}
 }
 
-// AuthMiddleware достаёт email/name из заголовков oauth2-proxy, резолвит identity
-// и кладёт её в контекст запроса. Без валидной identity API вернёт 401.
+// AuthMiddleware достаёт email из заголовков oauth2-proxy и имя из ID-токена (DisplayNameFrom),
+// резолвит identity и кладёт её в контекст запроса. Без валидной identity API вернёт 401.
 func (a *API) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		email := r.Header.Get("X-Forwarded-Email")
 		if email == "" {
 			email = r.Header.Get("X-Auth-Request-Email")
 		}
-		name := r.Header.Get("X-Forwarded-Preferred-Username")
-		if name == "" {
-			name = r.Header.Get("X-Auth-Request-Preferred-Username")
-		}
+		name := DisplayNameFrom(r)
 		if email == "" {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "no identity headers")
 			return
@@ -95,6 +92,10 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "invalid_teachers", err.Error())
 	case errors.Is(err, service.ErrInvalidTemplateID):
 		writeError(w, http.StatusBadRequest, "invalid_template_id", err.Error())
+	case errors.Is(err, service.ErrInvalidEmail):
+		writeError(w, http.StatusBadRequest, "invalid_email", err.Error())
+	case errors.Is(err, service.ErrInvalidRole):
+		writeError(w, http.StatusBadRequest, "invalid_role", err.Error())
 	case errors.Is(err, service.ErrInvalidTopic):
 		writeError(w, http.StatusBadRequest, "invalid_topic", err.Error())
 	case errors.Is(err, service.ErrInvalidAges):

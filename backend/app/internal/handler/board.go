@@ -266,6 +266,8 @@ func (a *API) Register(r *mux.Router) {
 	// Account (текущий пользователь)
 	post("/account/get", a.GetAccount)
 	post("/account/update", a.UpdateAccount)
+	post("/account/search", a.SearchAccounts)
+	post("/account/prefs", a.UpdateAccountPrefs)
 
 	// Teams
 	post("/team/list", a.ListTeams)
@@ -275,6 +277,10 @@ func (a *API) Register(r *mux.Router) {
 	post("/team/leave", a.LeaveTeam)
 	post("/team/star", a.StarTeam)
 	post("/team/unstar", a.UnstarTeam)
+	post("/team/members", a.TeamMembers)
+	post("/team/member/add", a.AddTeamMember)
+	post("/team/member/role", a.SetTeamMemberRole)
+	post("/team/member/remove", a.RemoveTeamMember)
 
 	// Boards
 	post("/board/list", a.ListBoards)

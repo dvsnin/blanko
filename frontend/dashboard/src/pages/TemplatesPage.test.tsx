@@ -6,6 +6,10 @@ import { TeamsContext, type TeamsContextValue } from '../contexts/TeamsContext';
 import { TemplatesContext, EMPTY_TEMPLATES, type TemplatesContextValue } from '../contexts/TemplatesContext';
 import { FIXTURE } from '../utils/templates.fixture';
 import type { Board, Team } from '../types';
+import { api } from '../api/client';
+import { flushPrefs } from '../utils/prefs';
+
+vi.mock('../api/client', () => ({ api: { account: { updatePrefs: vi.fn().mockResolvedValue({}) } } }));
 
 const boardFromT1: Board = {
   id: 'b1', publicId: 'pb1', title: 'Счёт до 5 с яблоками', owner: 'x', lastOpened: '',
@@ -13,7 +17,7 @@ const boardFromT1: Board = {
 };
 const team = { id: 'g1', name: 'Ромашки', role: 'owner', boards: [boardFromT1], isStarred: false, ageGroup: '3-4' } as Team;
 
-function setup(opts: { team?: Team | null; templates?: typeof FIXTURE; loading?: boolean; error?: string | null } = {}) {
+function setup(opts: { team?: Team | null; templates?: typeof FIXTURE; loading?: boolean; error?: string | null; initialAge?: '3-4' | '4-5' | '5-6' | '6-7' } = {}) {
   const t = opts.team === undefined ? team : opts.team;
   const teams = {
     teams: t ? [t] : [], activeTeamId: t?.id ?? null, activeTeam: t, activeBoards: t?.boards ?? [],
@@ -35,7 +39,7 @@ function setup(opts: { team?: Team | null; templates?: typeof FIXTURE; loading?:
   render(
     <TeamsContext.Provider value={teams}>
       <TemplatesContext.Provider value={tpls}>
-        <TemplatesPage />
+        <TemplatesPage initialAge={opts.initialAge} />
       </TemplatesContext.Provider>
     </TeamsContext.Provider>,
   );
@@ -144,6 +148,33 @@ describe('TemplatesPage', () => {
     expect(found()).toBe('Найдено: 4');
   });
 
+
+  it('возраст и тема берутся из настроек аккаунта, смена пишет их обратно', () => {
+    window.dashData = { accountId: 'u1', prefs: { 'templates.age': '5-6', 'templates.topic': 'math' } };
+    try {
+      setup();
+      expect(screen.getByRole('button', { name: /^5-6/ }).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByRole('button', { name: 'Сбросить фильтры' })).toBeTruthy();
+      fireEvent.click(screen.getByRole('button', { name: 'Все' }));
+      flushPrefs();
+      expect(api.account.updatePrefs).toHaveBeenCalledWith({ 'templates.age': 'all' });
+      fireEvent.click(screen.getByRole('button', { name: 'Сбросить фильтры' }));
+      flushPrefs();
+      expect(api.account.updatePrefs).toHaveBeenLastCalledWith({ 'templates.age': 'all', 'templates.topic': 'all' });
+    } finally {
+      delete window.dashData;
+    }
+  });
+
+  it('возраст из адреса важнее сохранённого', () => {
+    window.dashData = { accountId: 'u1', prefs: { 'templates.age': '5-6' } };
+    try {
+      setup({ initialAge: '3-4' });
+      expect(screen.getByRole('button', { name: /^3-4/ }).getAttribute('aria-pressed')).toBe('true');
+    } finally {
+      delete window.dashData;
+    }
+  });
 
   it('поиск «буква» оставляет одну карточку', () => {
     setup();

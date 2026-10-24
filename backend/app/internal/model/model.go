@@ -11,9 +11,13 @@ type Account struct {
 	ID        uuid.UUID
 	Email     string
 	Name      string
+	Prefs     Prefs
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+// Prefs - настройки кабинета: плоский объект со скалярами, ключи задаёт фронтенд.
+type Prefs map[string]any
 
 // TeamRole - роль участника команды.
 type TeamRole string
@@ -77,6 +81,15 @@ type TeamView struct {
 	Role       TeamRole
 	IsStarred  bool
 	BoardCount int
+}
+
+// TeamMemberView - участник команды со сведениями об аккаунте.
+type TeamMemberView struct {
+	AccountID uuid.UUID
+	Email     string
+	Name      string
+	Role      TeamRole
+	JoinedAt  time.Time
 }
 
 // Board - доска.

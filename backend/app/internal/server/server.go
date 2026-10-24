@@ -158,9 +158,8 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 // Команды/доски сюда НЕ кладём - их тянет TeamsContext через /team/list +
 // /board/list сразу после монтирования, чтобы не дублировать данные в двух местах.
 //
-// name/email берутся из БД (id.Account), а не из Keycloak-заголовков -
-// заголовок X-Forwarded-Preferred-Username содержит login (например "test"),
-// а не реальное отображаемое имя аккаунта из таблицы accounts.
+// name/email берутся из БД (id.Account), а не из заголовков: имя из Keycloak нужно
+// только при первом входе, дальше его правят в профиле кабинета.
 // HasTeams/HasBoards - лёгкие булевы флаги для фронта: позволяют на первом
 // рендере сразу решить, показывать ли empty-state ("Команд не найдено...",
 // "В этой команде пока нет досок..."), не дожидаясь async-фетча TeamsContext.
@@ -174,6 +173,8 @@ type dashPayload struct {
 	OrgName   string `json:"orgName"`
 	HasTeams  bool   `json:"hasTeams"`
 	HasBoards bool   `json:"hasBoards"`
+	// Настройки кабинета сразу в HTML, чтобы активная группа и фильтры не «прыгали» после загрузки.
+	Prefs map[string]any `json:"prefs"`
 }
 
 // buildDashDataJSON собирает срез состояния для первичного рендера фронта.
@@ -197,6 +198,10 @@ func (s *Server) buildDashDataJSON(r *http.Request) string {
 	payload.Email = id.Account.Email
 	payload.OrgRole = string(id.OrgRole)
 	payload.OrgName = id.OrgName
+	payload.Prefs = id.Account.Prefs
+	if payload.Prefs == nil {
+		payload.Prefs = map[string]any{}
+	}
 
 	// Лёгкий запрос: TeamView уже содержит BoardCount, второй запрос за
 	// досками не нужен. Ошибка здесь не фатальна - оставим флаги false,
@@ -235,7 +240,7 @@ type UserProfile struct {
 func extractUser(r *http.Request) UserProfile {
 	return UserProfile{
 		Email: r.Header.Get("X-Forwarded-Email"),
-		Name:  r.Header.Get("X-Forwarded-Preferred-Username"),
+		Name:  handler.DisplayNameFrom(r),
 	}
 }
 

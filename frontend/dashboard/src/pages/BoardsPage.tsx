@@ -1,4 +1,5 @@
 import { useState, useRef, useLayoutEffect, useEffect, useMemo } from "react";
+import { readPrefIn, savePrefs } from "../utils/prefs";
 import "../components/Boards.css";
 import "../components/BoardMenu.css";
 import "../components/Boards.modals.css";
@@ -61,19 +62,9 @@ export default function BoardsPage() {
     };
   }, []);
 
-  // Режим отображения досок (grid/list) сохраняем в localStorage,
-  // чтобы не сбрасывался на grid после перезагрузки.
-  const [view, setView] = useState<"grid" | "list">(() => {
-    try {
-      const saved = localStorage.getItem("boards.view");
-      return saved === "list" ? "list" : "grid";
-    } catch {
-      return "grid";
-    }
-  });
-  useEffect(() => {
-    try { localStorage.setItem("boards.view", view); } catch { /* ignore */ }
-  }, [view]);
+  // Режим (сетка/список) и сортировка живут в настройках аккаунта и приходят в dashData.
+  const [view, setViewState] = useState<"grid" | "list">(() => readPrefIn("boards.view", ["grid", "list"], "grid"));
+  const setView = (v: "grid" | "list") => { setViewState(v); savePrefs({ "boards.view": v }); };
   const [menuBoardId, setMenuBoardId] = useState<string | null>(null);
 
   // Фильтры / сортировка панели "boards-toolbar".
@@ -84,7 +75,8 @@ export default function BoardsPage() {
     name: "По названию",
   };
   const [segment, setSegment] = useState<Segment>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("recent");
+  const [sortBy, setSortByState] = useState<SortBy>(() => readPrefIn("boards.sort", ["recent", "updated", "name"], "recent"));
+  const setSortBy = (v: SortBy) => { setSortByState(v); savePrefs({ "boards.sort": v }); };
   // true, если взаимодействие с селектом сортировки началось с мыши/тача
   const sortByPointer = useRef(false);
   // Поисковый запрос не сохраняем между сессиями.

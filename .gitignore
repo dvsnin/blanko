@@ -1,5 +1,5 @@
-# Root .gitignore for Blanko monorepo (Go backend + JS frontend apps + packages)
-# Tailored for: backend/ (Go), frontend/* (dashboard), packages/* (shared UI/SDK)
+# Root .gitignore for Blanko monorepo (Go backend + JS frontend app)
+# Tailored for: backend/ (Go), frontend/* (dashboard)
 # Keep or adjust any lines that conflict with files you intentionally commit.
 
 ########################
@@ -36,7 +36,7 @@ lerna-debug.log*
 *.rar
 
 ########################
-# Node / JS (frontend & packages)
+# Node / JS (frontend)
 ########################
 # node_modules (top-level & nested)
 node_modules/
@@ -149,19 +149,6 @@ vendor/
 # Go module cache (usually not inside repo)
 GOMODCACHE/
 
-########################
-# Generated files (codegen / proto / SDK)
-########################
-# If you generate code into packages/sdk or packages/proto, ignore their generated outputs
-packages/*/dist/
-packages/*/lib/
-packages/*/build/
-packages/*/generated/
-packages/*/out/
-
-# Protobuf generated artifacts (if generated into repo paths)
-**/*_pb.*
-**/*_grpc.pb.*
 
 ########################
 # IDEs / Editors

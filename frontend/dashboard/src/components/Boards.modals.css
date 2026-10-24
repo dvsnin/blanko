@@ -105,6 +105,19 @@
     margin: 4px 0 0 0;
     box-shadow: inset 0 1px 0 rgba(2,6,23,0.02);
 }
+/* Выпадающие списки: свой шеврон с одинаковым отступом во всех модалках, нативный у края рамки прыгает */
+select.boards-modal-input {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 38px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235B6472' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
+    cursor: pointer;
+}
+select.boards-modal-input:focus { border-color: var(--teal); }
+
 .boards-modal-input::placeholder,
 .teams-modal-input::placeholder {
     color: var(--muted);
@@ -298,3 +311,24 @@
 }
 .boards-modal-option:hover { border-color: rgba(37,100,255,0.3); background: #f6f9ff; }
 .board-card-menu-item[disabled] { opacity: 0.45; cursor: default; }
+
+/* Вкладка «Участники» */
+.ts-members__add { display: flex; gap: 8px; align-items: center; }
+.ts-members__add .boards-modal-input { flex: 1 1 auto; margin-top: 0; }
+.ts-members__add .btn { height: 44px; }
+.ts-members__role { flex: 0 0 160px; width: 160px; }
+.ts-members__error { color: var(--danger); }
+.ts-members__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ts-members__row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.ts-members__avatar { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--chip); font-weight: 800; flex: 0 0 auto; }
+.ts-members__who { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.ts-members__name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-members__email { font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-members__row .ts-members__role { flex: 0 0 150px; width: 150px; height: 36px; margin-top: 0; background-position: right 12px center; }
+.ts-members__row .btn { height: 36px; padding: 0 12px; font-size: 13px; }
+.ts-members__candidates { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 220px; overflow: auto; }
+.ts-members__candidate { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer; }
+.ts-members__candidate:hover { background: var(--field); }
+.ts-members__candidate input { width: 18px; height: 18px; accent-color: var(--teal); flex: 0 0 auto; }
+.ts-members__avatar--small { width: 30px; height: 30px; border-radius: 8px; font-size: 13px; }
+.ts-members__invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }

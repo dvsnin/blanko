@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "packageManager": "pnpm@10.24.0",
   "workspaces": [
-    "frontend/*",
-    "packages/*"
+    "frontend/*"
   ],
   "scripts": {
     "bootstrap": "pnpm -w install",
