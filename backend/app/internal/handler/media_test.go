@@ -71,6 +71,14 @@ func TestMediaUpload(t *testing.T) {
 		}
 	})
 
+	t.Run("content does not match type", func(t *testing.T) {
+		b := e.board(team, owner, "Подделка")
+		status, body := e.upload("owner@example.com", doc.KindBoard, b.ID, "a.png", "image/png", []byte("hello, definitely not a png"))
+		if status != 400 || body["error"] != "unsupported_media" {
+			t.Fatalf("status %d body %v", status, body)
+		}
+	})
+
 	t.Run("foreign template", func(t *testing.T) {
 		tpl := e.template(&owner, "Чужой")
 		status, _ := e.upload("other@example.com", doc.KindTemplate, tpl.ID, "a.png", "image/png", pngBody)

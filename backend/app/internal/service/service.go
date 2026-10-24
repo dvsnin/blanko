@@ -383,8 +383,13 @@ func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.
 	if err != nil {
 		return nil, err
 	}
+	ids := make([]uuid.UUID, len(views))
 	for i := range views {
 		views[i].CanEdit = canEditBoard(views[i].Board, id.Account.ID, role)
+		ids[i] = views[i].Board.ID
+	}
+	for i, has := range s.docs.HasPreviews(ctx, doc.KindBoard, ids) {
+		views[i].HasPreview = has
 	}
 	return views, nil
 }
@@ -546,7 +551,13 @@ func (s *BoardService) Move(ctx context.Context, id Identity, boardID, teamID uu
 		}
 		board.TeamID = teamID
 	}
-	return &model.BoardView{Board: *board, OwnerName: id.Account.Name, CanEdit: true}, nil
+	ownerName := id.Account.Name
+	if board.AccountID != id.Account.ID {
+		if owner, err := repository.NewAccountRepo(s.pool).GetByID(ctx, board.AccountID); err == nil {
+			ownerName = owner.Name
+		}
+	}
+	return &model.BoardView{Board: *board, OwnerName: ownerName, CanEdit: true}, nil
 }
 
 // SetStarred переключает избранное для доски у текущего пользователя.

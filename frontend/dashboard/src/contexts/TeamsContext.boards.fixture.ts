@@ -8,7 +8,7 @@ export const teamDTOs: TeamDTO[] = [
 export function boardDTO(id: string, teamId: string, name: string): BoardDTO {
   return {
     id, publicId: "p-" + id, name, teamId, ownerId: "u1", ownerName: "Анна",
-    teamAccess: "edit", linkAccessEnabled: false, isStarred: false, canEdit: true, templateId: "",
+    teamAccess: "edit", linkAccessEnabled: false, isStarred: false, canEdit: true, hasPreview: false, templateId: "",
     createdAt: "2026-10-02T00:00:00Z", updatedAt: "2026-10-02T00:00:00Z", lastOpenedAt: "2026-10-02T00:00:00Z",
   };
 }

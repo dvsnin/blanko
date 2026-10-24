@@ -23,6 +23,7 @@ type BoardDTO struct {
 	LinkAccessEnabled bool      `json:"linkAccessEnabled"`
 	IsStarred         bool      `json:"isStarred"`
 	CanEdit           bool      `json:"canEdit"`
+	HasPreview        bool      `json:"hasPreview"`
 	TemplateID        string    `json:"templateId"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
@@ -49,6 +50,7 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 		LinkAccessEnabled: v.Board.LinkAccessEnabled,
 		IsStarred:         v.IsStarred,
 		CanEdit:           v.CanEdit,
+		HasPreview:        v.HasPreview,
 		TemplateID:        templateID,
 		CreatedAt:         v.Board.CreatedAt,
 		UpdatedAt:         v.Board.UpdatedAt,

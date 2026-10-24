@@ -290,3 +290,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .board-card-menu {
     z-index: 9999 !important;
 }
+
+/* Метка «в избранном» на карточках: маленькая звезда без кнопочной рамки. Видна у избранной
+   карточки, пока нет наведения; при наведении её место занимают звезда и «⋯» как кнопки.
+   На тач-устройствах кнопки видны всегда, метка не нужна. */
+.card-star-mark {
+    position: absolute; top: 10px; right: 10px; z-index: 1;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.92); color: var(--accent);
+    box-shadow: 0 1px 3px rgba(34, 38, 46, 0.14);
+    pointer-events: none;
+}
+.card-star-mark svg { width: 13px; height: 13px; }
+@media (hover: none) { .card-star-mark { display: none; } }

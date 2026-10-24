@@ -65,6 +65,13 @@ func (m *Memory) Get(_ context.Context, key string) (io.ReadCloser, ObjectInfo, 
 	return io.NopCloser(bytes.NewReader(obj.data)), ObjectInfo{Size: int64(len(obj.data)), ContentType: obj.contentType}, nil
 }
 
+func (m *Memory) Exists(_ context.Context, key string) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	_, ok := m.objects[key]
+	return ok, nil
+}
+
 func (m *Memory) List(_ context.Context, prefix string) ([]string, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

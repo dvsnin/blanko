@@ -58,6 +58,11 @@ func (a *API) UploadMedia(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusRequestEntityTooLarge, "too_large", "file is too large")
 		return
 	}
+	// Заявленный тип должен совпадать с сигнатурой содержимого (SVG - текст, его сниффер не узнаёт).
+	if contentType != "image/svg+xml" && http.DetectContentType(data) != contentType {
+		writeError(w, http.StatusBadRequest, "unsupported_media", "content does not match "+contentType)
+		return
+	}
 	sum := sha256.Sum256(data)
 	name := hex.EncodeToString(sum[:]) + "." + ext
 	// Имя по хэшу: повторная запись того же содержимого безвредна, проверять наличие не нужно.

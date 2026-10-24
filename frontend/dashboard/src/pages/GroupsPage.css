@@ -13,7 +13,10 @@
   position: relative; border-radius: var(--radius-xl); background: var(--surface);
   border: 1px solid var(--border);
   display: flex; /* карточки в ряду одной высоты, роль прижата к низу */
+  transition: box-shadow 140ms ease, transform 140ms ease;
 }
+/* Как у досок и шаблонов: при наведении карточка приподнимается */
+.group-card:hover, .group-card:focus-within { box-shadow: 0 10px 26px rgba(34, 38, 46, .12); transform: translateY(-2px); }
 .group-card--active { border: 2px solid var(--teal); }
 .group-card__main {
   display: flex; flex-direction: column; gap: 14px; width: 100%; padding: 18px 20px; box-sizing: border-box;
@@ -53,6 +56,16 @@
 .group-card__role { align-self: flex-end; margin-top: auto; font-size: 13px; font-weight: 700; color: var(--muted); }
 
 .group-card__actions { position: absolute; top: 18px; right: 14px; display: flex; align-items: center; gap: 0; }
+.group-card .card-star-mark { top: 24px; right: 20px; }
+.group-card--menu-open { z-index: 30; }
+/* Как у досок и шаблонов: действия при наведении, у избранной до наведения метка */
+@media (hover: hover) {
+  .group-card__actions { opacity: 0; transition: opacity 120ms ease; }
+  .group-card:hover .group-card__actions, .group-card:focus-within .group-card__actions,
+  .group-card--menu-open .group-card__actions { opacity: 1; }
+  .group-card:hover .card-star-mark, .group-card:focus-within .card-star-mark,
+  .group-card--menu-open .card-star-mark { display: none; }
+}
 .group-card__menu { position: relative; }
 .group-card__menu { display: inline-flex; align-items: center; }
 .group-card__popover {

@@ -19,6 +19,7 @@ export interface Board {
   colorKey?: string;
   isStarred?: boolean;
   canEdit?: boolean;
+  hasPreview?: boolean;
   templateId?: string;
 }
 
@@ -64,6 +65,7 @@ export interface Template {
   authorName?: string;
   isStarred: boolean;
   canEdit: boolean;
+  hasPreview?: boolean;
   createdAt: string;
   updatedAt: string;
 }

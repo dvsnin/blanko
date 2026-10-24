@@ -1,3 +1,4 @@
+import { nav } from '../utils/openBoard';
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, cleanup, fireEvent, screen, within, waitFor } from '@testing-library/react';
 import TemplatesPage from './TemplatesPage';
@@ -97,25 +98,29 @@ describe('TemplatesPage', () => {
     expect(screen.queryByRole('menuitem', { name: 'Дублировать' })).toBeNull();
   });
 
-  it('клик по карточке открывает шаблон, клик по звезде и меню - нет', () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue({ focus() {} } as Window);
+  it('клик по карточке открывает шаблон в той же вкладке, клик по звезде и меню - нет', () => {
+    const assign = vi.spyOn(nav, 'assign').mockImplementation(() => {});
     setup();
     const card = cardOf('Буква и слова на неё');
     fireEvent.click(card.querySelector('.tpl-card__cover') as HTMLElement);
     fireEvent.click(within(card).getByText('Буква и слова на неё'));
-    expect(open).toHaveBeenCalledTimes(2);
-    expect(open).toHaveBeenLastCalledWith('/app/template/p-t2', '_blank');
+    expect(assign).toHaveBeenCalledTimes(2);
+    expect(assign).toHaveBeenLastCalledWith('/app/template/p-t2');
     fireEvent.click(within(card).getByRole('button', { name: 'Действия с шаблоном' }));
     fireEvent.click(within(card).getByRole('button', { name: /избранн/i }));
-    expect(open).toHaveBeenCalledTimes(2);
-    open.mockRestore();
+    expect(assign).toHaveBeenCalledTimes(2);
+    assign.mockRestore();
   });
 
-  it('«Открыть» открывает шаблон на канвасе', () => {
+  it('«Открыть» ведёт в ту же вкладку, Ctrl-клик - в новую', () => {
+    const assign = vi.spyOn(nav, 'assign').mockImplementation(() => {});
     const open = vi.spyOn(window, 'open').mockReturnValue({ focus() {} } as Window);
     setup();
     fireEvent.click(within(cardOf('Буква и слова на неё')).getByRole('button', { name: 'Открыть' }));
+    expect(assign).toHaveBeenCalledWith('/app/template/p-t2');
+    fireEvent.click(within(cardOf('Буква и слова на неё')).getByRole('button', { name: 'Открыть' }), { ctrlKey: true });
     expect(open).toHaveBeenCalledWith('/app/template/p-t2', '_blank');
+    assign.mockRestore();
     open.mockRestore();
   });
 

@@ -41,6 +41,24 @@ func TestCreateTemplate(t *testing.T) {
 	})
 }
 
+func TestListTemplates(t *testing.T) {
+	e := newEnv(t)
+	owner := e.account("owner@example.com")
+	withPreview := e.template(&owner, "С превью")
+	e.template(&owner, "Без превью")
+	e.uploadPreview("owner@example.com", doc.KindTemplate, withPreview.ID, "image/jpeg", jpegBody)
+
+	_, body := e.post("owner@example.com", "/template/list", map[string]any{})
+	got := map[string]any{}
+	for _, it := range items(body) {
+		m := it.(map[string]any)
+		got[m["name"].(string)] = m["hasPreview"]
+	}
+	if got["С превью"] != true || got["Без превью"] != false {
+		t.Fatalf("hasPreview = %v", got)
+	}
+}
+
 func TestDuplicateTemplate(t *testing.T) {
 	e := newEnv(t)
 	owner := e.account("owner@example.com")

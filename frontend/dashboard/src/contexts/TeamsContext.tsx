@@ -77,6 +77,7 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     colorKey,
     isStarred: dto.isStarred,
     canEdit: dto.canEdit,
+    hasPreview: dto.hasPreview,
     templateId: dto.templateId || undefined,
   };
 }
@@ -146,6 +147,9 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Вернулись на вкладку кабинета: превью и «изменено» могли устареть, пока рисовали в другой.
+  useVisibleRefresh(refresh);
 
   // Цвета групп без повторов, как у досок внутри группы
   const coloredTeams = useMemo(() => assignColors(teams), [teams]);
@@ -456,4 +460,22 @@ export function useTeams(): TeamsContextValue {
   const ctx = useContext(TeamsContext);
   if (!ctx) throw new Error("useTeams must be used within TeamsProvider");
   return ctx;
+}
+
+/** Период, чаще которого возврат на вкладку списки не перечитывает. */
+export const VISIBLE_REFRESH_MIN_MS = 30_000;
+
+/** Перечитывает данные, когда вкладка снова становится видимой, не чаще раза в VISIBLE_REFRESH_MIN_MS. */
+export function useVisibleRefresh(refresh: () => Promise<void>) {
+  const lastAt = useRef(Date.now());
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastAt.current < VISIBLE_REFRESH_MIN_MS) return;
+      lastAt.current = Date.now();
+      void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refresh]);
 }

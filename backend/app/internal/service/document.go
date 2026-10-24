@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,6 +97,29 @@ func (s *DocumentService) copyPrefix(ctx context.Context, srcKind doc.Kind, srcI
 	// Ссылка несёт префикс владельца, строка с UUID уникальна: разбирать JSON не нужно.
 	body = bytes.ReplaceAll(body, []byte("asset:"+src), []byte("asset:"+dst))
 	return s.Store.Put(ctx, doc.DocumentKey(dstKind, dstID), bytes.NewReader(body), int64(len(body)), "application/json")
+}
+
+// HasPreviews проверяет наличие снимков у набора документов параллельно (до 8 запросов разом).
+// Ошибка хранилища считается отсутствием снимка: карточка покажет цветную плитку.
+func (s *DocumentService) HasPreviews(ctx context.Context, kind doc.Kind, ids []uuid.UUID) []bool {
+	out := make([]bool, len(ids))
+	sem := make(chan struct{}, 8)
+	var wg sync.WaitGroup
+	for i, id := range ids {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(i int, id uuid.UUID) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			ok, err := s.Store.Exists(ctx, doc.PreviewKey(kind, id))
+			if err != nil {
+				log.Printf("doc: preview exists %s/%s: %v", kind, id, err)
+			}
+			out[i] = ok
+		}(i, id)
+	}
+	wg.Wait()
+	return out
 }
 
 // touchUpdated: updated_at документа отражает правки содержимого. Зовётся хабом после записи снапшота.

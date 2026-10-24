@@ -47,10 +47,18 @@ func (r *AccountRepo) Create(ctx context.Context, a *model.Account) error {
 }
 
 // GetByEmail возвращает учётную запись по email.
+func (r *AccountRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Account, error) {
+	return r.getBy(ctx, "id = ? AND deleted_at IS NULL", id)
+}
+
 func (r *AccountRepo) GetByEmail(ctx context.Context, email string) (*model.Account, error) {
+	return r.getBy(ctx, "email = ? AND deleted_at IS NULL", email)
+}
+
+func (r *AccountRepo) getBy(ctx context.Context, where string, arg any) (*model.Account, error) {
 	b := psql.Select("id", "email", "name", "created_at", "updated_at").
 		From("account").
-		Where("email = ? AND deleted_at IS NULL", email).
+		Where(where, arg).
 		Limit(1)
 
 	row, err := queryRowBuilder(ctx, r.db, b)

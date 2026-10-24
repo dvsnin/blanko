@@ -1,3 +1,4 @@
+import { useVisibleRefresh } from "./TeamsContext";
 import {
   createContext,
   useCallback,
@@ -42,6 +43,7 @@ export function templateFromDTO(dto: TemplateDTO): Template {
     authorName: dto.authorName || undefined,
     isStarred: dto.isStarred,
     canEdit: dto.canEdit,
+    hasPreview: dto.hasPreview,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
   };
@@ -84,6 +86,7 @@ export function TemplatesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+  useVisibleRefresh(refresh);
 
   const index = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
   const byId = useCallback((id?: string) => (id ? index.get(id) : undefined), [index]);

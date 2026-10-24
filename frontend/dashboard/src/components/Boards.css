@@ -105,15 +105,16 @@
 .board-card:hover,
 .board-card--menu-open { box-shadow: 0 10px 26px rgba(34, 38, 46, 0.12); transform: translateY(-2px); }
 
-/* Звезда и «⋯»: без наведения (тач-панель) видны всегда; где наведение есть, появляются при нём,
-   а у избранной звезда видна всегда и только «⋯» ждёт наведения */
+/* Звезда и «⋯»: без наведения (тач-панель) видны всегда; где наведение есть, появляются при нём.
+   У избранной карточки до наведения стоит метка .card-star-mark, при наведении её сменяют кнопки */
 @media (hover: hover) {
     .board-card .board-card__corner { opacity: 0; transition: opacity 120ms ease; }
     .board-card:hover .board-card__corner,
     .board-card:focus-within .board-card__corner,
-    .board-card--menu-open .board-card__corner,
-    .board-card--starred .board-card__corner { opacity: 1; }
-    .board-card--starred:not(:hover):not(:focus-within):not(.board-card--menu-open) .board-card__corner .board-menu-wrapper { visibility: hidden; }
+    .board-card--menu-open .board-card__corner { opacity: 1; }
+    .board-card:hover .card-star-mark,
+    .board-card:focus-within .card-star-mark,
+    .board-card--menu-open .card-star-mark { display: none; }
 }
 
 .board-info {
@@ -134,6 +135,8 @@
 }
 
 .board-title {
+    display: block;
+    text-decoration: none;
     padding: 0;
     border: none;
     background: none;

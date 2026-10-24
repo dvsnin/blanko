@@ -202,9 +202,10 @@ export default function GroupsPage() {
             return (
               <div
                 key={team.id}
-                className={`group-card${isActive ? " group-card--active" : ""}`}
+                className={`group-card${isActive ? " group-card--active" : ""}${team.isStarred ? " group-card--starred" : ""}${menuTeamId === team.id ? " group-card--menu-open" : ""}`}
                 onMouseLeave={() => { if (menuTeamId === team.id) setMenuTeamId(null); }}
               >
+                {team.isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
                 <button type="button" className="group-card__main" onClick={() => openBoards(team.id)}>
                   <span className="group-card__top">
                     <span className={`group-card__mark cover--${colorOf(team)}`} aria-hidden>

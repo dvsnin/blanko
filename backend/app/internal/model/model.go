@@ -101,6 +101,8 @@ type BoardView struct {
 	IsStarred bool
 	// CanEdit: создатель доски или owner/admin команды. Считается в сервисе.
 	CanEdit bool
+	// HasPreview: в хранилище есть снимок содержимого для обложки.
+	HasPreview bool
 }
 
 // Template: AuthorAccountID == nil у предустановленных.
@@ -124,4 +126,5 @@ type TemplateView struct {
 	AuthorName string
 	IsStarred  bool
 	CanEdit    bool
+	HasPreview bool
 }

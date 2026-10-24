@@ -24,6 +24,7 @@ type TemplateDTO struct {
 	AuthorName  string    `json:"authorName"`
 	IsStarred   bool      `json:"isStarred"`
 	CanEdit     bool      `json:"canEdit"`
+	HasPreview  bool      `json:"hasPreview"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -42,6 +43,7 @@ func templateViewToDTO(v model.TemplateView) TemplateDTO {
 		AuthorName:  v.AuthorName,
 		IsStarred:   v.IsStarred,
 		CanEdit:     v.CanEdit,
+		HasPreview:  v.HasPreview,
 		CreatedAt:   t.CreatedAt,
 		UpdatedAt:   t.UpdatedAt,
 	}

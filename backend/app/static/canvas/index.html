@@ -16,6 +16,11 @@
 
         .topbar { height: 56px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; box-shadow: 0 1px 0 rgba(15,23,42,0.04); z-index: 40; position: relative; }
         .brand-row { display: flex; align-items: center; gap: 12px; }
+        /* Выход в кабинет хлебными крошками: логотип и раздел ведут назад в той же вкладке */
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: #64748b; font-size: 14px; font-weight: 600; text-decoration: none; padding: 4px 8px 4px 4px; border-radius: 10px; transition: background .15s, color .15s; }
+        .back-link:hover { background: #f1f5f9; color: #0f1724; }
+        .back-link .logo { width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+        .crumb-sep { color: #cbd5e1; font-size: 16px; font-weight: 400; }
         .board-meta { display: flex; align-items: center; gap: 18px; }
         .board-name { font-size: 20px; font-weight: 700; color: #0f1724; line-height: 1; }
         .save-state { font-size: 13px; color: #64748b; }
@@ -62,6 +67,11 @@
 
 <div class="topbar">
     <div class="brand-row">
+        <a class="back-link" id="backLink" href="/app/dashboard#/boards" aria-label="Вернуться в кабинет">
+            <span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.5" cy="7.5" r="4" fill="#F2B134"/><path d="M12.5 3.5h8v8h-8z" fill="#1F8A85"/><path d="M4 20.5l5.5-9 5.5 9z" fill="#D5512E"/></svg></span>
+            <span id="backLabel">Доски</span>
+        </a>
+        <span class="crumb-sep" aria-hidden="true">/</span>
         <div class="board-meta">
             <div class="board-name" id="boardName">%%BOARD_TITLE%%</div>
             <span class="save-state" id="saveState">Загрузка</span>
@@ -145,6 +155,10 @@
         retry: document.getElementById("overlayRetry"),
     };
     const docWord = APP_DOC.kind === "template" ? "шаблон" : "доску";
+    if (APP_DOC.kind === "template") {
+        document.getElementById("backLink").href = "/app/dashboard#/templates";
+        document.getElementById("backLabel").textContent = "Шаблоны";
+    }
     let offlineTimer = null;   // оверлей «Нет связи» показываем с задержкой, чтобы не мигал на мгновенных обрывах
     let reconnectTimer = null;
     const sessionKey = `blanko-session-${APP_DOC.kind}-${APP_DOC.id}`;

@@ -21,6 +21,7 @@ type ObjectInfo struct {
 type ObjectStore interface {
 	Put(ctx context.Context, key string, body io.Reader, size int64, contentType string) error
 	Get(ctx context.Context, key string) (io.ReadCloser, ObjectInfo, error)
+	Exists(ctx context.Context, key string) (bool, error)
 	List(ctx context.Context, prefix string) ([]string, error)
 	// Copy - серверное копирование, без скачивания.
 	Copy(ctx context.Context, src, dst string) error

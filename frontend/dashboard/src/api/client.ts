@@ -90,6 +90,7 @@ export interface TemplateDTO {
   authorName: string;
   isStarred: boolean;
   canEdit: boolean;
+  hasPreview: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -127,6 +128,8 @@ export interface BoardDTO {
   isStarred: boolean;
   /** Создатель доски или owner/admin группы: можно переименовать, удалить, перенести. */
   canEdit: boolean;
+  /** В хранилище есть снимок содержимого для обложки. */
+  hasPreview: boolean;
   createdAt: string;
   updatedAt: string;
   lastOpenedAt: string;

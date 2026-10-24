@@ -21,7 +21,7 @@ import { assignColors, colorOf } from "../utils/colors";
 import { formatRelative } from "../utils/relativeTime";
 import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
-import { openBoardWindow } from "../utils/openBoard";
+import { openBoard, openInNewTab, boardUrl } from "../utils/openBoard";
 import type { Team } from "../types";
 import type { AgeKey } from "../constants/templates";
 
@@ -171,7 +171,7 @@ export default function BoardsPage() {
       if (newBoard) {
         showToast("Доска создана");
         markBoardOpened(newBoard.id);
-        openBoardWindow(newBoard);
+        openBoard(newBoard);
       } else {
         showToast("Не удалось создать доску");
       }
@@ -206,8 +206,8 @@ export default function BoardsPage() {
   }, [boards, sortBy, now]);
 
   // Превью снимает канвас; updatedAt в запросе сбрасывает кэш после правок.
-  const previewUrl = (b: { id: string; updatedAt?: string }) =>
-    `/app/preview/boards/${b.id}?v=${encodeURIComponent(b.updatedAt || "")}`;
+  const previewUrl = (b: { id: string; updatedAt?: string; hasPreview?: boolean }) =>
+    b.hasPreview ? `/app/preview/boards/${b.id}?v=${encodeURIComponent(b.updatedAt || "")}` : undefined;
 
   const handleDuplicate = (board: { id: string }) => {
     closeMenu();
@@ -395,7 +395,7 @@ export default function BoardsPage() {
     };
   }, [menuBoardId]);
 
-  const renderContextMenu = (b: { id: string; title: string; templateId?: string; canEdit?: boolean }, variant: "grid" | "list") => (
+  const renderContextMenu = (b: { id: string; publicId: string; title: string; templateId?: string; canEdit?: boolean }, variant: "grid" | "list") => (
     <div
       ref={menuRef}
       className={`board-card-menu${variant === "list" ? " board-card-menu--list" : ""}`}
@@ -405,7 +405,7 @@ export default function BoardsPage() {
     >
       <button type="button" className="board-card-menu-item" onClick={() => { console.log("Share", b.id); }}><span className="board-card-menu-icon">↗︎</span><span className="board-card-menu-label">Поделиться</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => { console.log("Copy link", b.id); }}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
-      <button type="button" className="board-card-menu-item" onClick={() => { console.log("Open in new tab", b.id); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
+      <button type="button" className="board-card-menu-item" onClick={() => { closeMenu(); markBoardOpened(b.id); openInNewTab(boardUrl(b)); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
       <button type="button" className="board-card-menu-item" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
@@ -535,9 +535,11 @@ export default function BoardsPage() {
                       data-board-id={b.id}
                       ref={(el) => { if (isMenuOpen) menuCardRef.current = el; }}
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
-                      onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
+                      onClick={(e) => { markBoardOpened(b.id); openBoard(b, e); }}
+                      onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                     >
                       <BoardCover board={b} size="card" template={tpl} previewUrl={previewUrl(b)} />
+                      {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
 
                       <span className="board-card__corner" onClick={(e) => e.stopPropagation()}>
                         <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
@@ -562,14 +564,14 @@ export default function BoardsPage() {
 
                       <div className="board-info">
                         <div className="board-info-text">
-                          <button
-                            type="button"
+                          <a
                             className="board-title"
+                            href={boardUrl(b)}
                             title={b.title}
-                            onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); openBoardWindow(b); }}
+                            onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); }}
                           >
                             {b.title}
-                          </button>
+                          </a>
                           {cover.topic && <span className="visually-hidden">Тема: {cover.topic.label}.</span>}
                           <div className="board-sub" title={`Изменено: ${formatRelative(b.updatedAt, now)}, ${b.owner}`}>{formatRelative(b.updatedAt, now)} · {shortName(b.owner)}</div>
                         </div>
@@ -594,18 +596,20 @@ export default function BoardsPage() {
                             data-board-id={b.id}
                             className={`board-row ${isMenuOpen ? "board-row--menu-open" : ""} ${isStarred ? "board-row--starred" : ""}`}
                             onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
-                            onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
+                            onClick={(e) => { markBoardOpened(b.id); openBoard(b, e); }}
+                            onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                           >
                             <BoardCover board={b} size="small" template={tpl} previewUrl={previewUrl(b)} />
+                            {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
                             <div className="board-row__text">
-                              <button
-                                type="button"
+                              <a
                                 className="board-row-title"
+                                href={boardUrl(b)}
                                 title={b.title}
-                                onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); openBoardWindow(b); }}
+                                onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); }}
                               >
                                 {b.title}
-                              </button>
+                              </a>
                               <div className="board-row-sub" title={`Изменено: ${formatRelative(b.updatedAt, now)}, ${b.owner}`}>{formatRelative(b.updatedAt, now)} · {shortName(b.owner)}</div>
                             </div>
                             <div className="board-row__actions" onClick={(e) => e.stopPropagation()}>

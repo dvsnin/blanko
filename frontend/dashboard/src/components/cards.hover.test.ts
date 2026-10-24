@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import boards from "./Boards.css?raw";
 import list from "./Boards.list.css?raw";
 import tpl from "./TemplateCard.css?raw";
+import groups from "../pages/GroupsPage.css?raw";
 
 /** Возвращает тела всех блоков `@media (hover: hover) { ... }` и остаток файла вне их. */
 function splitHoverMedia(css: string): { inside: string; outside: string } {
@@ -27,17 +28,22 @@ function splitHoverMedia(css: string): { inside: string; outside: string } {
   return { inside, outside };
 }
 
-// На тач-панели нет наведения: скрывать «⋯» у избранных и мету у шаблона можно только там, где наведение есть.
+// На тач-панели нет наведения: прятать действия можно только там, где наведение есть,
+// а у избранной карточки видны обе кнопки, звезда и «⋯», всегда.
 describe("карточки: правила «только при наведении» живут внутри @media (hover: hover)", () => {
   it.each([
-    ["Boards.css", boards, ".board-menu-wrapper"],
-    ["Boards.list.css", list, ".board-menu-wrapper"],
-    ["TemplateCard.css", tpl, ".tpl-menu"],
-  ])("%s: скрытие меню у избранных", (_name, css, menuSel) => {
+    ["Boards.css", boards, "--starred .board-card__corner"],
+    ["Boards.list.css", list, "--starred .board-row__actions"],
+    ["TemplateCard.css", tpl, "--starred .tpl-card__corner"],
+    ["GroupsPage.css", groups, "--starred .group-card__actions"],
+  ])("%s: действия скрыты только в media, метка избранного уходит при наведении", (_name, css, starredSel) => {
     const { inside, outside } = splitHoverMedia(css);
-    const hideRule = new RegExp(`--starred[^{]*${menuSel.replace(".", "\\.")}[^{]*\\{[^}]*visibility:\\s*hidden`);
-    expect(inside).toMatch(hideRule);
-    expect(outside).not.toMatch(hideRule);
+    const hiddenActions = /(__corner|__actions)\s*\{[^}]*opacity:\s*0\s*;/;
+    expect(inside).toMatch(hiddenActions);
+    expect(outside).not.toMatch(hiddenActions);
+    expect(inside).not.toContain(starredSel); // избранное не включает кнопки: у него метка
+    expect(inside).toMatch(/:hover \.card-star-mark[^{]*\{[^}]*display:\s*none/);
+    expect(css).not.toMatch(/visibility:\s*hidden/);
     expect(outside).not.toMatch(/!important/);
   });
 

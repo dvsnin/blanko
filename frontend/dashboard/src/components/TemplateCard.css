@@ -30,7 +30,7 @@
 }
 .tpl-card__meta { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Без наведения (тач-панель) кнопки видны всегда вместе с метой. Где наведение есть, звезда и «⋯»
-   появляются при нём (у избранной звезда всегда), а кнопки занимают место меты */
+   появляются при нём (у избранной до наведения метка .card-star-mark), а кнопки занимают место меты */
 .tpl-card__actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
 .tpl-card__actions .btn { height: 32px; padding: 0 10px; font-size: 13px; border-radius: 10px; }
 .tpl-card__create { flex: 1; min-width: 0; gap: 6px; }
@@ -39,8 +39,9 @@
 @media (hover: hover) {
   .tpl-card__corner { opacity: 0; transition: opacity 120ms ease; }
   .tpl-card:hover .tpl-card__corner, .tpl-card:focus-within .tpl-card__corner,
-  .tpl-card--menu-open .tpl-card__corner, .tpl-card--starred .tpl-card__corner { opacity: 1; }
-  .tpl-card--starred:not(:hover):not(:focus-within):not(.tpl-card--menu-open) .tpl-card__corner .tpl-menu { visibility: hidden; }
+  .tpl-card--menu-open .tpl-card__corner { opacity: 1; }
+  .tpl-card:hover .card-star-mark, .tpl-card:focus-within .card-star-mark,
+  .tpl-card--menu-open .card-star-mark { display: none; }
   .tpl-card__actions { display: none; margin-top: 4px; }
   .tpl-card:hover .tpl-card__actions, .tpl-card:focus-within .tpl-card__actions { display: flex; }
   .tpl-card:hover .tpl-card__meta, .tpl-card:focus-within .tpl-card__meta { display: none; }

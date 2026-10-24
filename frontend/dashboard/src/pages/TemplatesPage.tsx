@@ -9,7 +9,7 @@ import { useTeams } from "../contexts/TeamsContext";
 import { useTemplates } from "../contexts/TemplatesContext";
 import { navigate } from "../hooks/useHashRoute";
 import { useToast } from "../hooks/useToast";
-import { openBoardWindow, openTemplateWindow } from "../utils/openBoard";
+import { openBoard, openTemplate } from "../utils/openBoard";
 import { filterTemplates, topicCounts } from "../utils/templates";
 import type { Template } from "../types";
 
@@ -41,7 +41,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
       const board = await createBoard(t.name, t.id);
       if (board) {
         markBoardOpened(board.id);
-        openBoardWindow(board);
+        openBoard(board);
         navigate({ name: "boards" });
       } else {
         showToast("Не удалось создать доску");
@@ -168,7 +168,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
                     template={t}
                     canCreate={!!activeTeam}
                     onCreate={() => create(t)}
-                    onOpen={() => openTemplateWindow(t)}
+                    onOpen={(e) => openTemplate(t, e)}
                     onToggleStar={() => void toggleStarTemplate(t.id)}
                     notify={showToast}
                     onDuplicate={() => duplicate(t)}

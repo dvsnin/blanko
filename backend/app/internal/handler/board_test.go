@@ -47,8 +47,23 @@ func TestListBoards(t *testing.T) {
 			if got := items(body)[0].(map[string]any)["canEdit"]; got != tc.wantCanEdit {
 				t.Fatalf("canEdit = %v, want %v", got, tc.wantCanEdit)
 			}
+			if got := items(body)[0].(map[string]any)["hasPreview"]; got != false {
+				t.Fatalf("hasPreview = %v, want false", got)
+			}
 		})
 	}
+
+	t.Run("hasPreview after upload", func(t *testing.T) {
+		b := e.board(team, owner, "С превью")
+		e.uploadPreview("owner@example.com", doc.KindBoard, b.ID, "image/jpeg", jpegBody)
+		_, body := e.post("owner@example.com", "/board/list", map[string]any{"teamId": team.ID.String()})
+		for _, it := range items(body) {
+			m := it.(map[string]any)
+			if m["id"] == b.ID.String() && m["hasPreview"] != true {
+				t.Fatalf("hasPreview = %v, want true", m["hasPreview"])
+			}
+		}
+	})
 }
 
 // seedDoc кладёт в хранилище документ с одной картинкой под префикс документа.
@@ -183,11 +198,14 @@ func TestMoveBoard(t *testing.T) {
 		return len(items(list))
 	}
 
-	t.Run("owner moves to other team", func(t *testing.T) {
-		b := e.board(from, owner, "Переезд")
+	t.Run("owner moves other member's board", func(t *testing.T) {
+		b := e.board(from, member, "Переезд")
 		status, body := e.post("owner@example.com", "/board/move", map[string]any{"id": b.ID.String(), "teamId": to.ID.String()})
 		if status != 200 || body["teamId"] != to.ID.String() {
 			t.Fatalf("status %d %v", status, body)
+		}
+		if body["ownerId"] != member.ID.String() || body["ownerName"] != member.Name {
+			t.Fatalf("owner in response = %v / %v, want %s", body["ownerId"], body["ownerName"], member.Name)
 		}
 		if count(from) != 0 || count(to) != 1 {
 			t.Fatalf("from=%d to=%d", count(from), count(to))
