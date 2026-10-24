@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config - настройки приложения, читаемые из окружения.
@@ -25,6 +26,19 @@ type Config struct {
 	OrgName string
 	// AdminEmails из ADMIN_EMAILS: первый - владелец, остальные админы.
 	AdminEmails []string
+
+	// S3-совместимое хранилище содержимого досок и медиа.
+	S3Endpoint  string
+	S3AccessKey string
+	S3SecretKey string
+	S3Bucket    string
+	S3Region    string
+	// DocFlushInterval - период записи изменённых комнат в хранилище.
+	DocFlushInterval time.Duration
+	// ShutdownTimeout - бюджет на закрытие сокетов и сброс комнат при остановке.
+	ShutdownTimeout time.Duration
+	// MediaMaxBytes - лимит одного загружаемого файла.
+	MediaMaxBytes int64
 }
 
 // Load собирает конфиг из переменных окружения с разумными значениями по умолчанию.
@@ -39,11 +53,43 @@ func Load() (*Config, error) {
 
 		OrgName:     getEnv("ORG_NAME", "Детский сад"),
 		AdminEmails: splitList(getEnv("ADMIN_EMAILS", "")),
+
+		S3Endpoint:       getEnv("S3_ENDPOINT", ""),
+		S3AccessKey:      getEnv("S3_ACCESS_KEY", ""),
+		S3SecretKey:      getEnv("S3_SECRET_KEY", ""),
+		S3Bucket:         getEnv("S3_BUCKET", "blanko"),
+		S3Region:         getEnv("S3_REGION", "us-east-1"),
+		DocFlushInterval: getEnvDuration("DOC_FLUSH_INTERVAL", time.Second),
+		ShutdownTimeout:  getEnvDuration("SHUTDOWN_TIMEOUT", 25*time.Second),
+		MediaMaxBytes:    getEnvInt64("MEDIA_MAX_BYTES", 20<<20),
 	}
 	if cfg.PostgresDSN == "" {
 		return nil, fmt.Errorf("POSTGRES_DSN is required")
 	}
+	for name, v := range map[string]string{"S3_ENDPOINT": cfg.S3Endpoint, "S3_ACCESS_KEY": cfg.S3AccessKey, "S3_SECRET_KEY": cfg.S3SecretKey} {
+		if v == "" {
+			return nil, fmt.Errorf("%s is required", name)
+		}
+	}
 	return cfg, nil
+}
+
+func getEnvDuration(key string, def time.Duration) time.Duration {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return def
+}
+
+func getEnvInt64(key string, def int64) int64 {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return n
+		}
+	}
+	return def
 }
 
 func getEnv(key, def string) string {

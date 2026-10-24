@@ -174,6 +174,8 @@ export const api = {
     delete: (id: string) => post<void>("/board/delete", { id }),
     star: (id: string) => post<void>("/board/star", { id }),
     unstar: (id: string) => post<void>("/board/unstar", { id }),
+    duplicate: (id: string) => post<BoardDTO>("/board/duplicate", { id }),
+    move: (id: string, teamId: string) => post<BoardDTO>("/board/move", { id, teamId }),
   },
 
   templates: {

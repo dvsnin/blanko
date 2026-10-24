@@ -25,6 +25,8 @@ type BoardFields struct {
 	Name              string
 	TeamAccess        model.BoardAccess
 	LinkAccessEnabled *bool
+	// TeamID - перенос доски в другую команду.
+	TeamID *uuid.UUID
 }
 
 // Create вставляет новую доску.
@@ -148,6 +150,10 @@ func (r *BoardRepo) Update(ctx context.Context, id uuid.UUID, f BoardFields) err
 	}
 	if f.LinkAccessEnabled != nil {
 		b = b.Set("link_access_enabled", *f.LinkAccessEnabled)
+		touched = true
+	}
+	if f.TeamID != nil {
+		b = b.Set("team_id", *f.TeamID)
 		touched = true
 	}
 	if !touched {

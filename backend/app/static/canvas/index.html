@@ -18,6 +18,7 @@
         .brand-row { display: flex; align-items: center; gap: 12px; }
         .board-meta { display: flex; align-items: center; gap: 18px; }
         .board-name { font-size: 20px; font-weight: 700; color: #0f1724; line-height: 1; }
+        .save-state { font-size: 13px; color: #64748b; }
 
         .top-actions { display: flex; gap: 10px; align-items: center; }
         .btn { background: #fff; border: 1px solid #e6e9f2; padding: 9px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #0f1724; transition: background .15s, border-color .15s; }
@@ -35,6 +36,12 @@
 
         /* tldraw sets its own font family via .tl-container - подхватываем Inter */
         .tl-container { font-family: Inter, system-ui, -apple-system, sans-serif; }
+
+        /* Панель участников (share panel tldraw): аватары, клик - следовать за человеком */
+        .people-panel { display: flex; gap: 6px; align-items: center; padding: 6px 8px; pointer-events: all; }
+        .people-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(2,6,23,0.18); transition: transform 120ms ease, border-color 120ms ease; }
+        .people-avatar:hover { transform: translateY(-1px); }
+        .people-avatar.following { border-color: #0f1724; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(2,6,23,0.25); }
     </style>
 </head>
 <body>
@@ -45,6 +52,7 @@
     <div class="brand-row">
         <div class="board-meta">
             <div class="board-name" id="boardName">%%BOARD_TITLE%%</div>
+            <span class="save-state" id="saveState">Загрузка</span>
         </div>
     </div>
 
@@ -57,26 +65,25 @@
 <div id="tldraw-root"></div>
 
 <!--
-  Canvas теперь построен на tldraw (через ESM CDN - без билд-шага, чтобы не
-  заводить отдельное React-приложение ради мока доски).
-  Содержит всё "как в Miro": select, sticky notes (с палитрой цветов),
-  text, shapes (rect/ellipse/diamond/arrow/...), freehand pencil, pan/zoom.
-  Состояние автоматически сохраняется в IndexedDB по persistenceKey=boardId
-  - каждая доска со своим content'ом, переживает перезагрузку.
+  Канвас на tldraw через ESM CDN, без билд-шага. Содержимое документа живёт на
+  сервере: канвас держит вебсокет /app/ws/{kind}/{id}, шлёт диффы записей и
+  применяет чужие. IndexedDB не используется. Протокол: docs/superpowers/specs/2026-10-24-board-storage-ws-design.md.
 -->
 <script type="module">
     import React from "https://esm.sh/react@18.3.1";
     import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
-    import { Tldraw } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
+    import {
+        Tldraw, createTLStore, getSnapshot, loadSnapshot, defaultShapeUtils, defaultBindingUtils,
+        InstancePresenceRecordType, USER_COLORS, useEditor, useValue,
+    } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
 
     // tldraw 3.15.3 - последняя версия без лицензионного ключа; с 4.0 без ключа
     // холст гаснет (в том числе на *.localhost). Апгрейд только с TLDRAW_LICENSE_KEY.
     // Watermark "made with tldraw" скрывать нельзя.
     const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
-    // boardId пробрасывается server-side (window.APP_UID),
-    // dashData - то же, что на /app/dashboard (accountId/name/email).
-    const boardId = (window.APP_UID || window.location.pathname.split("/").pop() || "scratch").toString();
+    // APP_DOC инжектит сервер: kind, id (uuid), publicId, canEdit.
+    const APP_DOC = window.APP_DOC || { kind: "board", id: "", publicId: "", canEdit: true };
     const profileName = (window.dashData && window.dashData.name) ? String(window.dashData.name) : "User";
     const profileInitial = (profileName.trim().charAt(0) || "U").toUpperCase();
     try { document.getElementById("profileInitial").textContent = profileInitial; } catch {}
@@ -90,21 +97,318 @@
         }
     });
 
+    // --- медиа: файлы лежат в хранилище под префиксом документа, src самодостаточный ---
+    const assets = {
+        async upload(asset, file) {
+            const fd = new FormData();
+            fd.append("file", file, file.name);
+            const res = await fetch(`/app/media/${APP_DOC.kind}/${APP_DOC.id}`, { method: "POST", body: fd, credentials: "include" });
+            if (!res.ok) throw new Error("upload failed: " + res.status);
+            return { src: (await res.json()).src };
+        },
+        resolve(asset) {
+            const src = asset.props.src;
+            return src && src.startsWith("asset:") ? "/app/media/" + src.slice("asset:".length) : src;
+        },
+    };
+
+    const store = createTLStore({ assets, shapeUtils: defaultShapeUtils, bindingUtils: defaultBindingUtils });
+
+    // --- состояние соединения ---
+    const statusEl = document.getElementById("saveState");
+    const sessionKey = `blanko-session-${APP_DOC.kind}-${APP_DOC.id}`;
+    let editor = null;
+    let ws = null;
+    let canEdit = false;
+    let gotInit = false;        // первый init применён
+    let seq = 0;
+    let attempt = 0;
+    let sendScheduled = false;
+    let ackTimer = null;
+    const pending = { put: new Map(), remove: new Set() };
+    const inflight = new Map();  // seq -> сообщение push без ack
+
+    function setStatus() {
+        let text;
+        if (!ws || ws.readyState !== WebSocket.OPEN) text = (gotInit || attempt > 0) ? "Нет связи" : "Загрузка";
+        else if (!gotInit) text = "Загрузка";
+        else if (pending.put.size || pending.remove.size || inflight.size) text = "Сохраняется";
+        else text = "Сохранено";
+        if (statusEl && statusEl.textContent !== text) statusEl.textContent = text;
+    }
+
+    function readSession() {
+        try { return JSON.parse(localStorage.getItem(sessionKey) || "null") || undefined; } catch { return undefined; }
+    }
+    let sessionTimer = null;
+    function saveSessionThrottled() {
+        if (sessionTimer) return;
+        sessionTimer = setTimeout(() => {
+            sessionTimer = null;
+            try { localStorage.setItem(sessionKey, JSON.stringify(getSnapshot(editor.store).session)); } catch {}
+        }, 1000);
+    }
+
+    function emptyDocument() {
+        return { schema: editor.store.schema.serialize(), store: {} };
+    }
+
+    // --- presence: свой курсор и камера остальным, чужие курсоры к себе в store ---
+    // userId свой на вкладку: два окна одного человека - два курсора.
+    const presenceUserId = "u-" + Math.random().toString(36).slice(2, 10);
+    const presenceRecordId = InstancePresenceRecordType.createId(presenceUserId);
+    const presenceColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+    let presenceTimer = null;
+    let lastPresenceJson = "";
+
+    function schedulePresence() {
+        if (presenceTimer) return;
+        presenceTimer = setTimeout(() => { presenceTimer = null; sendPresence(); }, 50);
+    }
+
+    function sendPresence() {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !gotInit || !editor) return;
+        let record;
+        try {
+            const point = editor.inputs.currentPagePoint;
+            const camera = editor.getCamera();
+            const bounds = editor.getViewportScreenBounds();
+            record = InstancePresenceRecordType.create({
+                id: presenceRecordId,
+                userId: presenceUserId,
+                userName: profileName,
+                color: presenceColor,
+                currentPageId: editor.getCurrentPageId(),
+                cursor: { x: point.x, y: point.y, type: "default", rotation: 0 },
+                camera: { x: camera.x, y: camera.y, z: camera.z },
+                screenBounds: { x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h },
+                followingUserId: editor.getInstanceState().followingUserId || null,
+                // Выделение и рамка выделения видны остальным: "фигура занята, с ней работают".
+                selectedShapeIds: editor.getSelectedShapeIds(),
+                brush: editor.getInstanceState().brush || null,
+                scribbles: editor.getInstanceState().scribbles || [],
+                chatMessage: "",
+                lastActivityTimestamp: Date.now(),
+            });
+        } catch (e) {
+            return;
+        }
+        // Без активности не шлём: timestamp не считается изменением, курсор у остальных гаснет сам.
+        const comparable = JSON.stringify({ ...record, lastActivityTimestamp: 0 });
+        if (comparable === lastPresenceJson) return;
+        lastPresenceJson = comparable;
+        ws.send(JSON.stringify({ type: "presence", record }));
+    }
+
+    function onPresence(msg) {
+        const rec = msg.record;
+        if (!rec || rec.typeName !== "instance_presence" || rec.id === presenceRecordId) return;
+        try {
+            editor.store.mergeRemoteChanges(() => editor.store.put([rec]));
+        } catch (e) {
+            console.warn("presence apply:", e);
+        }
+    }
+
+    function onPresenceGone(msg) {
+        if (!msg.id || !editor || !editor.store.has(msg.id)) return;
+        try { editor.store.mergeRemoteChanges(() => editor.store.remove([msg.id])); } catch {}
+    }
+
+    // При обрыве связи чужие курсоры заведомо мертвы - убираем, бэклог придёт с новым init.
+    function clearRemotePresence() {
+        if (!editor) return;
+        const ids = editor.store.allRecords().filter((r) => r.typeName === "instance_presence").map((r) => r.id);
+        if (!ids.length) return;
+        try { editor.store.mergeRemoteChanges(() => editor.store.remove(ids)); } catch {}
+    }
+
+    // Панель участников в share-зоне tldraw: кружок на человека, клик - режим "следовать".
+    function PeoplePanel() {
+        const ed = useEditor();
+        const peers = useValue("peers", () => ed.store.query.records("instance_presence").get(), [ed]);
+        const followingUserId = useValue("following", () => ed.getInstanceState().followingUserId, [ed]);
+        if (!peers.length) return null;
+        return React.createElement(
+            "div",
+            { className: "people-panel" },
+            peers.map((p) => {
+                const isFollowing = followingUserId === p.userId;
+                return React.createElement("button", {
+                    key: p.userId,
+                    type: "button",
+                    className: "people-avatar" + (isFollowing ? " following" : ""),
+                    style: { backgroundColor: p.color },
+                    title: isFollowing ? `Перестать следовать за «${p.userName}»` : `Следовать за «${p.userName}»`,
+                    onClick: () => {
+                        try {
+                            if (isFollowing) ed.stopFollowingUser();
+                            else ed.startFollowingUser(p.userId);
+                        } catch (e) { console.warn("follow:", e); }
+                    },
+                }, (p.userName || "?").trim().charAt(0).toUpperCase());
+            }),
+        );
+    }
+
+    const uiComponents = { SharePanel: PeoplePanel };
+
+    // --- отправка: всё, что накопилось за кадр, уходит одним push ---
+    function onChange(entry) {
+        const { added, updated, removed } = entry.changes;
+        for (const rec of Object.values(added)) { pending.put.set(rec.id, rec); pending.remove.delete(rec.id); }
+        for (const [, to] of Object.values(updated)) { pending.put.set(to.id, to); pending.remove.delete(to.id); }
+        for (const rec of Object.values(removed)) { pending.remove.add(rec.id); pending.put.delete(rec.id); }
+        scheduleSend();
+    }
+
+    function scheduleSend() {
+        setStatus();
+        if (sendScheduled) return;
+        sendScheduled = true;
+        requestAnimationFrame(() => { sendScheduled = false; flushPending(); });
+    }
+
+    function flushPending() {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !gotInit || !canEdit) return;
+        if (!pending.put.size && !pending.remove.size) return;
+        const msg = {
+            type: "push", seq: ++seq, schema: editor.store.schema.serialize(),
+            put: Object.fromEntries(pending.put), remove: [...pending.remove],
+        };
+        pending.put.clear(); pending.remove.clear();
+        inflight.set(msg.seq, msg);
+        ws.send(JSON.stringify(msg));
+        armAckTimer();
+        setStatus();
+    }
+
+    // Таймер измеряет тишину сервера: перевзводится на каждом ack, пока есть неподтверждённые push.
+    // При непрерывном рисовании inflight не пустеет, но ack идут, и соединение живо.
+    function armAckTimer() {
+        if (ackTimer) clearTimeout(ackTimer);
+        ackTimer = null;
+        if (!inflight.size) return;
+        ackTimer = setTimeout(() => {
+            ackTimer = null;
+            if (inflight.size && ws) { try { ws.close(); } catch {} }
+        }, 10000);
+    }
+
+    function onAck(msg) {
+        inflight.delete(msg.seq);
+        armAckTimer();
+        setStatus();
+    }
+
+    // Записи с локальной неподтверждённой правкой из patch пропускаем: сервер применил чужую
+    // правку раньше нашей, итог у него наш, и после ack все клиенты сходятся.
+    function locallyDirtyIds() {
+        const ids = new Set([...pending.put.keys(), ...pending.remove]);
+        for (const m of inflight.values()) {
+            for (const id of Object.keys(m.put || {})) ids.add(id);
+            for (const id of m.remove || []) ids.add(id);
+        }
+        return ids;
+    }
+
+    function onPatch(msg) {
+        const dirty = locallyDirtyIds();
+        const put = Object.values(msg.put || {}).filter((rec) => !dirty.has(rec.id));
+        const remove = (msg.remove || []).filter((id) => !dirty.has(id) && editor.store.has(id));
+        if (!put.length && !remove.length) return;
+        editor.store.mergeRemoteChanges(() => {
+            if (put.length) editor.store.put(put);
+            if (remove.length) editor.store.remove(remove);
+        });
+    }
+
+    // Переподключение: сервер главный, свои несохранённые правки докладываем поверх.
+    function onInit(msg) {
+        canEdit = !!msg.canEdit;
+        if (!gotInit) {
+            if (msg.document) loadSnapshot(editor.store, { document: msg.document, session: readSession() });
+            gotInit = true;
+            editor.store.listen(saveSessionThrottled, { scope: "session" });
+            // Камера и указатель живут в session-записях: этого хватает как триггера presence.
+            editor.store.listen(schedulePresence, { scope: "session" });
+            if (!canEdit) {
+                try { editor.updateInstanceState({ isReadonly: true }); } catch {}
+            } else {
+                editor.store.listen(onChange, { source: "user", scope: "document" });
+                if (!msg.document) {
+                    // Пустая комната: отдать дефолтные записи (document, page), чтобы сервер их знал.
+                    for (const rec of Object.values(getSnapshot(editor.store).document.store)) pending.put.set(rec.id, rec);
+                }
+            }
+        } else {
+            const session = getSnapshot(editor.store).session;
+            const mine = [...inflight.values()];
+            inflight.clear();
+            editor.store.mergeRemoteChanges(() => {
+                loadSnapshot(editor.store, { document: msg.document || emptyDocument(), session });
+                for (const m of mine) {
+                    const put = Object.values(m.put || {});
+                    if (put.length) editor.store.put(put);
+                    if (m.remove && m.remove.length) editor.store.remove(m.remove.filter((id) => editor.store.has(id)));
+                }
+                const put = [...pending.put.values()];
+                if (put.length) editor.store.put(put);
+                const rem = [...pending.remove].filter((id) => editor.store.has(id));
+                if (rem.length) editor.store.remove(rem);
+            });
+            for (const m of mine) {
+                for (const rec of Object.values(m.put || {})) { pending.put.set(rec.id, rec); pending.remove.delete(rec.id); }
+                for (const id of m.remove || []) { pending.remove.add(id); pending.put.delete(id); }
+            }
+        }
+        attempt = 0;
+        scheduleSend();
+        // Сервер после реконнекта нас не помнит - представляемся заново.
+        lastPresenceJson = "";
+        schedulePresence();
+    }
+
+    function connect() {
+        const proto = location.protocol === "https:" ? "wss://" : "ws://";
+        ws = new WebSocket(`${proto}${location.host}/app/ws/${APP_DOC.kind}/${APP_DOC.id}`);
+        ws.onmessage = (ev) => {
+            let msg;
+            try { msg = JSON.parse(ev.data); } catch { return; }
+            if (msg.type === "init") onInit(msg);
+            else if (msg.type === "ack") onAck(msg);
+            else if (msg.type === "patch") onPatch(msg);
+            else if (msg.type === "presence") onPresence(msg);
+            else if (msg.type === "presence_gone") onPresenceGone(msg);
+            else if (msg.type === "error") console.warn("ws error:", msg.code);
+        };
+        ws.onclose = (ev) => {
+            ws = null;
+            if (ackTimer) { clearTimeout(ackTimer); ackTimer = null; }
+            clearRemotePresence();
+            setStatus();
+            if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; return; }
+            const delay = Math.min(10000, 1000 * Math.pow(2, attempt++));
+            setTimeout(connect, delay);
+        };
+        ws.onerror = () => { try { ws && ws.close(); } catch {} };
+    }
+
     createRoot(document.getElementById("tldraw-root")).render(
         React.createElement(Tldraw, {
             licenseKey,
-            // IndexedDB-персист per-board: каждая доска автономна, переживает reload
-            persistenceKey: "blanko-board-" + boardId,
-            onMount: (editor) => {
-                // Начальное имя юзера в tldraw (влияет на подпись изменений и т.п.).
-                // locale фиксируем явно: по умолчанию tldraw берёт язык из
-                // navigator.languages, а на чужой машине он может быть любым.
-                try {
-                    editor.user.updateUserPreferences({ name: profileName, locale: "ru" });
-                } catch {}
-                if (window.APP_READ_ONLY) {
+            store,
+            components: uiComponents,
+            onMount: (ed) => {
+                editor = ed;
+                window.blankoEditor = ed; // для проверок со стенда из консоли
+                // locale фиксируем явно: по умолчанию tldraw берёт язык из navigator.languages.
+                try { editor.user.updateUserPreferences({ name: profileName, locale: "ru" }); } catch {}
+                if (!APP_DOC.canEdit) {
                     try { editor.updateInstanceState({ isReadonly: true }); } catch {}
                 }
+                setStatus();
+                connect();
             },
         }),
     );

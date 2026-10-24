@@ -76,6 +76,12 @@ type updateBoardRequest struct {
 	LinkAccessEnabled *bool   `json:"linkAccessEnabled,omitempty"`
 }
 
+type moveBoardRequest struct {
+	WithAccount
+	ID     string `json:"id"`
+	TeamID string `json:"teamId"`
+}
+
 type boardIDRequest struct {
 	WithAccount
 	ID string `json:"id"`
@@ -201,6 +207,48 @@ func (a *API) setBoardStar(w http.ResponseWriter, r *http.Request, starred bool)
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DuplicateBoard POST /api/v1/board/duplicate
+func (a *API) DuplicateBoard(w http.ResponseWriter, r *http.Request) {
+	var req boardIDRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	bid, ok := parseID(w, req.ID, "board")
+	if !ok {
+		return
+	}
+	view, err := a.services.Board.Duplicate(r.Context(), id, bid)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, boardViewToDTO(*view))
+}
+
+// MoveBoard POST /api/v1/board/move
+func (a *API) MoveBoard(w http.ResponseWriter, r *http.Request) {
+	var req moveBoardRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	bid, ok := parseID(w, req.ID, "board")
+	if !ok {
+		return
+	}
+	tid, ok := parseID(w, req.TeamID, "team")
+	if !ok {
+		return
+	}
+	view, err := a.services.Board.Move(r.Context(), id, bid, tid)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, boardViewToDTO(*view))
+}
+
 // --- Register ---
 
 // Register регистрирует все API-маршруты под указанным subrouter.
@@ -233,6 +281,8 @@ func (a *API) Register(r *mux.Router) {
 	post("/board/delete", a.DeleteBoard)
 	post("/board/star", a.StarBoard)
 	post("/board/unstar", a.UnstarBoard)
+	post("/board/duplicate", a.DuplicateBoard)
+	post("/board/move", a.MoveBoard)
 
 	// Templates
 	post("/template/list", a.ListTemplates)

@@ -7,7 +7,7 @@ FRONTEND_FILTERS = @blanko/dashboard
 ENV_FILE = deploy/.env
 ENV_EXAMPLE = deploy/.env.example
 
-.PHONY: up down build-frontend deps env
+.PHONY: up down build-frontend deps env test-backend
 
 # Поднять все сервисы с пересборкой (по умолчанию собирает фронтенд перед билдом контейнеров)
 up: prebuild_check env
@@ -50,6 +50,14 @@ build-frontend:
 		pnpm --filter $$pkg build || exit $$?; \
 	done
 	@echo "Frontend build finished."
+
+# Интеграционные тесты бэкенда: нужен Postgres стенда и база app_test
+# (один раз: docker exec deploy-postgres_backend-1 psql -U <user> -d <db> -c 'create database app_test').
+# DSN собирается из deploy/.env; можно передать свой: make test-backend TEST_POSTGRES_DSN=...
+envval = $(shell grep -E '^$(1)=' $(ENV_FILE) | head -1 | cut -d= -f2-)
+TEST_POSTGRES_DSN ?= postgres://$(call envval,APP_POSTGRES_USER):$(call envval,APP_POSTGRES_PASSWORD)@localhost:$(call envval,APP_POSTGRES_PORT)/app_test?sslmode=disable
+test-backend: env
+	cd backend/app && TEST_POSTGRES_DSN="$(TEST_POSTGRES_DSN)" go test -race ./...
 
 # Если нужно только установить зависимости в monorepo
 deps:

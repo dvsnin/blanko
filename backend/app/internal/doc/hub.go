@@ -1,0 +1,215 @@
+package doc
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/dvsnin/blanko/backend/app/internal/storage"
+)
+
+// ErrClosing - сервер останавливается, новые подключения не принимаются.
+var ErrClosing = errors.New("hub is shutting down")
+
+// Hub - все открытые комнаты процесса.
+type Hub struct {
+	// OnFlushed зовётся после успешной записи снапшота (сервис обновляет updated_at).
+	OnFlushed func(kind Kind, id uuid.UUID)
+
+	store    storage.ObjectStore
+	interval time.Duration
+
+	mu    sync.Mutex
+	rooms map[string]*Room
+
+	closing atomic.Bool
+	// handlers: живые ws-хендлеры, Shutdown их дожидается.
+	handlers sync.WaitGroup
+}
+
+func NewHub(store storage.ObjectStore, interval time.Duration) *Hub {
+	return &Hub{store: store, interval: interval, rooms: map[string]*Room{}}
+}
+
+func roomKey(kind Kind, id uuid.UUID) string { return string(kind) + "/" + id.String() }
+
+// Track регистрирует хендлер; возвращённую функцию зовут при его выходе.
+func (h *Hub) Track() func() {
+	h.handlers.Add(1)
+	return h.handlers.Done
+}
+
+func (h *Hub) Closing() bool { return h.closing.Load() }
+
+// Join подключает клиента к комнате, при необходимости загружая документ из хранилища.
+func (h *Hub) Join(ctx context.Context, kind Kind, id uuid.UUID, c Client) (*Room, error) {
+	if h.closing.Load() {
+		return nil, ErrClosing
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	key := roomKey(kind, id)
+	room, ok := h.rooms[key]
+	if !ok {
+		d, err := h.load(ctx, kind, id)
+		if err != nil {
+			return nil, err
+		}
+		room = newRoom(kind, id, d)
+		h.rooms[key] = room
+	}
+	room.addClient(c)
+	return room, nil
+}
+
+func (h *Hub) load(ctx context.Context, kind Kind, id uuid.UUID) (*Document, error) {
+	body, _, err := h.store.Get(ctx, DocumentKey(kind, id))
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("load %s: %w", DocumentKey(kind, id), err)
+	}
+	defer body.Close()
+	var d Document
+	if err := json.NewDecoder(body).Decode(&d); err != nil {
+		return nil, fmt.Errorf("decode %s: %w", DocumentKey(kind, id), err)
+	}
+	return &d, nil
+}
+
+// Leave отключает клиента; последний уходящий сбрасывает комнату и выгружает её.
+func (h *Hub) Leave(ctx context.Context, kind Kind, id uuid.UUID, c Client) {
+	h.mu.Lock()
+	room, ok := h.rooms[roomKey(kind, id)]
+	h.mu.Unlock()
+	if !ok {
+		return
+	}
+	if room.removeClient(c) > 0 {
+		return
+	}
+	if err := h.flushRoom(ctx, room); err != nil {
+		// Остаётся в памяти с dirty, подберёт тикер.
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if cur, ok := h.rooms[roomKey(kind, id)]; ok && cur == room && room.clientCount() == 0 {
+		delete(h.rooms, roomKey(kind, id))
+	}
+}
+
+// Flush принудительно сбрасывает комнату (перед копированием документа).
+func (h *Hub) Flush(ctx context.Context, kind Kind, id uuid.UUID) error {
+	h.mu.Lock()
+	room, ok := h.rooms[roomKey(kind, id)]
+	h.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return h.flushRoom(ctx, room)
+}
+
+// Close выгружает комнату без сохранения и закрывает клиентов (документ удалён).
+func (h *Hub) Close(kind Kind, id uuid.UUID) {
+	h.mu.Lock()
+	room, ok := h.rooms[roomKey(kind, id)]
+	delete(h.rooms, roomKey(kind, id))
+	h.mu.Unlock()
+	if ok {
+		room.closeClients(4404, "deleted")
+	}
+}
+
+// Run - тикер записи изменённых комнат, работает до отмены ctx.
+func (h *Hub) Run(ctx context.Context) {
+	t := time.NewTicker(h.interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			for _, room := range h.snapshotRooms() {
+				_ = h.flushRoom(context.WithoutCancel(ctx), room)
+			}
+		}
+	}
+}
+
+// Shutdown: новые подключения отклоняются, сокеты закрываются, все изменённые комнаты записываются.
+func (h *Hub) Shutdown(ctx context.Context) error {
+	h.closing.Store(true)
+	rooms := h.snapshotRooms()
+	for _, room := range rooms {
+		room.closeClients(1001, "server shutting down")
+	}
+	done := make(chan struct{})
+	go func() { h.handlers.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		log.Printf("doc: shutdown: handlers still running: %v", ctx.Err())
+	}
+	var firstErr error
+	for _, room := range rooms {
+		if room.isTouched() {
+			room.dirty.Store(true)
+		}
+		if err := h.flushRoom(ctx, room); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+func (h *Hub) snapshotRooms() []*Room {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]*Room, 0, len(h.rooms))
+	for _, r := range h.rooms {
+		out = append(out, r)
+	}
+	return out
+}
+
+// flushRoom пишет снапшот, если комната dirty. Ошибка возвращает dirty обратно.
+// Под flushMu: снимок и запись одной комнаты не перемешиваются между вызывающими.
+func (h *Hub) flushRoom(ctx context.Context, room *Room) error {
+	room.flushMu.Lock()
+	defer room.flushMu.Unlock()
+	if !room.dirty.Swap(false) {
+		return nil
+	}
+	d := room.Snapshot()
+	if d == nil {
+		return nil
+	}
+	if len(d.Schema) == 0 {
+		d.Schema = json.RawMessage("{}")
+	}
+	body, err := json.Marshal(d)
+	if err != nil {
+		room.dirty.Store(true)
+		return err
+	}
+	key := DocumentKey(room.kind, room.id)
+	if err := h.store.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "application/json"); err != nil {
+		room.dirty.Store(true)
+		log.Printf("doc: flush %s: %v", key, err)
+		return err
+	}
+	if h.OnFlushed != nil {
+		h.OnFlushed(room.kind, room.id)
+	}
+	return nil
+}

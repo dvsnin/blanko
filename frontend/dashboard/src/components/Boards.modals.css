@@ -280,3 +280,21 @@
     .team-settings-content { padding: 16px; min-height: 200px; }
     .team-settings-modal--fixed { min-height: 360px; }
 }
+/* ===== Список вариантов (перенос доски в группу) ===== */
+.boards-modal-options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.boards-modal-option {
+    width: 100%;
+    text-align: left;
+    height: 44px;
+    padding: 0 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+}
+.boards-modal-option:hover { border-color: rgba(37,100,255,0.3); background: #f6f9ff; }
+.board-card-menu-item[disabled] { opacity: 0.45; cursor: default; }

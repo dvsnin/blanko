@@ -19,12 +19,13 @@ const (
 
 // API - корневая структура API, владеющая сервисами.
 type API struct {
-	services *service.Services
+	services      *service.Services
+	mediaMaxBytes int64
 }
 
-// NewAPI создаёт API с переданными сервисами.
-func NewAPI(s *service.Services) *API {
-	return &API{services: s}
+// NewAPI создаёт API с переданными сервисами и лимитом загружаемого файла.
+func NewAPI(s *service.Services, mediaMaxBytes int64) *API {
+	return &API{services: s, mediaMaxBytes: mediaMaxBytes}
 }
 
 // AuthMiddleware достаёт email/name из заголовков oauth2-proxy, резолвит identity
@@ -104,6 +105,9 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "validation", err.Error())
 	case errors.Is(err, service.ErrUnauthorized):
 		writeError(w, http.StatusUnauthorized, "unauthorized", err.Error())
+	case errors.Is(err, service.ErrStorageUnavailable):
+		log.Printf("storage error: %v", err)
+		writeError(w, http.StatusInternalServerError, "storage_unavailable", "storage unavailable")
 	default:
 		log.Printf("internal error: %v", err)
 		writeError(w, http.StatusInternalServerError, "internal", "internal server error")

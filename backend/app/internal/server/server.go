@@ -30,11 +30,11 @@ type Server struct {
 }
 
 // New создаёт сервер, прикрученный к pgxpool и сервисам.
-func New(pool *pgxpool.Pool, services *service.Services, tldrawLicenseKey string) *Server {
+func New(pool *pgxpool.Pool, services *service.Services, tldrawLicenseKey string, mediaMaxBytes int64) *Server {
 	return &Server{
 		pool:             pool,
 		services:         services,
-		api:              handler.NewAPI(services),
+		api:              handler.NewAPI(services, mediaMaxBytes),
 		tldrawLicenseKey: tldrawLicenseKey,
 	}
 }
@@ -59,6 +59,13 @@ func (s *Server) Router() http.Handler {
 
 	// Страница дашборда
 	r.HandleFunc("/app/dashboard", s.dashboardHandler)
+
+	// Вебсокет документа (комната доски или шаблона), та же авторизация, что и у API
+	r.Handle("/app/ws/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.DocWS))).Methods(http.MethodGet)
+
+	// Медиа документов: загрузка по kind в единственном числе, отдача по ключу хранилища
+	r.Handle("/app/media/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.UploadMedia))).Methods(http.MethodPost)
+	r.Handle("/app/media/{kind}s/{id}/media/{name}", s.api.AuthMiddleware(http.HandlerFunc(s.api.GetMedia))).Methods(http.MethodGet)
 
 	// Страница доски - uid трактуется как public_id
 	r.HandleFunc("/app/board/{uid}", s.boardHandler)
@@ -236,19 +243,21 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	// Тянем настоящее имя доски из БД по public_id. При ошибке fallback на uid -
-	// страница должна отрендериться даже если БД недоступна.
-	title := uid
-	if board, err := s.services.Board.GetByPublicID(r.Context(), uid); err == nil && board != nil {
-		if name := strings.TrimSpace(board.Name); name != "" {
-			title = name
-		}
-		if err := s.services.Board.MarkOpened(r.Context(), uid); err != nil {
-			log.Printf("board mark opened %s: %v", uid, err)
-		}
+	// Канвасу нужен id доски для вебсокета и медиа, поэтому без доски страницы нет.
+	board, err := s.services.Board.GetByPublicID(r.Context(), uid)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	title := strings.TrimSpace(board.Name)
+	if title == "" {
+		title = uid
+	}
+	if err := s.services.Board.MarkOpened(r.Context(), uid); err != nil {
+		log.Printf("board mark opened %s: %v", uid, err)
 	}
 	// ACL досок пока нет: всегда запись.
-	s.renderCanvas(w, r, title, uid, false)
+	s.renderCanvas(w, r, title, canvasDoc{Kind: "board", ID: board.ID.String(), PublicID: uid, CanEdit: true})
 }
 
 // templateHandler: автор и админы получают запись, остальные только чтение.
@@ -276,10 +285,18 @@ func (s *Server) templateHandler(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		title = uid
 	}
-	s.renderCanvas(w, r, title, uid, readOnly)
+	s.renderCanvas(w, r, title, canvasDoc{Kind: "template", ID: tpl.ID.String(), PublicID: uid, CanEdit: !readOnly})
 }
 
-func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title, uid string, readOnly bool) {
+// canvasDoc - то, что канвас узнаёт о документе: window.APP_DOC.
+type canvasDoc struct {
+	Kind     string `json:"kind"`
+	ID       string `json:"id"`
+	PublicID string `json:"publicId"`
+	CanEdit  bool   `json:"canEdit"`
+}
+
+func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title string, d canvasDoc) {
 	_, currentFile, _, _ := runtime.Caller(0)
 	baseDir := filepath.Join(filepath.Dir(currentFile), "..", "..")
 	indexPath := filepath.Join(baseDir, "static", "canvas", "index.html")
@@ -292,13 +309,10 @@ func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title, uid
 	indexHTML := string(indexBytes)
 	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
 
-	// APP_UID идёт в persistenceKey канваса; APP_READ_ONLY - режим только чтения.
-	uidJSON, _ := json.Marshal(uid)
-	readOnlyJSON, _ := json.Marshal(readOnly)
+	docJSON, _ := json.Marshal(d)
 	dashJSON := s.buildDashDataJSON(r)
 	licenseJSON, _ := json.Marshal(s.tldrawLicenseKey)
-	injectTag := "<script>window.APP_UID = " + string(uidJSON) +
-		"; window.APP_READ_ONLY = " + string(readOnlyJSON) +
+	injectTag := "<script>window.APP_DOC = " + string(docJSON) +
 		"; window.dashData = " + dashJSON +
 		"; window.TLDRAW_LICENSE_KEY = " + string(licenseJSON) + ";</script>\n"
 	indexHTML = strings.Replace(indexHTML, "</head>", injectTag+"</head>", 1)

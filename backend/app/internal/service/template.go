@@ -9,8 +9,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/dvsnin/blanko/backend/app/internal/doc"
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/repository"
 )
@@ -33,7 +35,6 @@ const (
 	templateDescMax = 500
 	durationMin     = 5
 	durationMax     = 120
-	copySuffix      = " (копия)"
 )
 
 type TemplateInput struct {
@@ -95,15 +96,6 @@ func canEditTemplate(t model.Template, id Identity) bool {
 	return id.OrgRole.IsAdmin()
 }
 
-func duplicateName(name string) string {
-	r := []rune(name)
-	limit := templateNameMax - utf8.RuneCountInString(copySuffix)
-	if len(r) > limit {
-		r = r[:limit]
-	}
-	return string(r) + copySuffix
-}
-
 // ruSortKey: сортировка по-русски без ICU-коллации в БД.
 func ruSortKey(s string) string {
 	return strings.ReplaceAll(strings.ToLower(s), "ё", "е")
@@ -117,6 +109,7 @@ func sortTemplatesRu(views []model.TemplateView) {
 
 type TemplateService struct {
 	pool *pgxpool.Pool
+	docs *DocumentService
 }
 
 func (s *TemplateService) CanEdit(t model.Template, id Identity) bool {
@@ -178,7 +171,6 @@ func (s *TemplateService) Create(ctx context.Context, id Identity, in TemplateIn
 			}
 			return nil, err
 		}
-		// TODO(collab): скопировать содержимое канваса board.PublicID -> template.PublicID.
 	}
 	author := id.Account.ID
 	t := &model.Template{
@@ -189,7 +181,17 @@ func (s *TemplateService) Create(ctx context.Context, id Identity, in TemplateIn
 		DurationMin:     in.DurationMin,
 		AuthorAccountID: &author,
 	}
-	if err := repository.NewTemplateRepo(s.pool).Create(ctx, t); err != nil {
+	// Строка и содержимое вместе: упало копирование - шаблона нет.
+	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := repository.NewTemplateRepo(tx).Create(ctx, t); err != nil {
+			return err
+		}
+		if fromBoardID == nil {
+			return nil
+		}
+		return s.docs.Copy(ctx, doc.KindBoard, *fromBoardID, doc.KindTemplate, t.ID)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return &model.TemplateView{Template: *t, AuthorName: id.Account.Name, CanEdit: true}, nil
@@ -257,6 +259,7 @@ func (s *TemplateService) Delete(ctx context.Context, id Identity, templateID uu
 		}
 		return err
 	}
+	s.docs.Hub.Close(doc.KindTemplate, templateID)
 	return nil
 }
 
@@ -280,10 +283,15 @@ func (s *TemplateService) Duplicate(ctx context.Context, id Identity, templateID
 		Glyph:           src.Glyph,
 		AuthorAccountID: &author,
 	}
-	if err := repo.Create(ctx, t); err != nil {
+	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := repository.NewTemplateRepo(tx).Create(ctx, t); err != nil {
+			return err
+		}
+		return s.docs.Copy(ctx, doc.KindTemplate, src.ID, doc.KindTemplate, t.ID)
+	})
+	if err != nil {
 		return nil, err
 	}
-	// TODO(collab): скопировать содержимое канваса src.PublicID -> t.PublicID.
 	return &model.TemplateView{Template: *t, AuthorName: id.Account.Name, CanEdit: true}, nil
 }
 

@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/dvsnin/blanko/backend/app/internal/doc"
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/repository"
+	"github.com/dvsnin/blanko/backend/app/internal/storage"
 )
 
 // Ошибки уровня сервиса.
@@ -35,15 +37,18 @@ type Services struct {
 	Team     *TeamService
 	Board    *BoardService
 	Template *TemplateService
+	Document *DocumentService
 }
 
-// New создаёт все сервисы, используя общий pgxpool.
-func New(pool *pgxpool.Pool) *Services {
+// New создаёт все сервисы: общий pgxpool, хранилище содержимого и хаб комнат.
+func New(pool *pgxpool.Pool, store storage.ObjectStore, hub *doc.Hub) *Services {
 	s := &Services{Pool: pool}
 	s.Auth = &AuthService{pool: pool}
 	s.Team = &TeamService{pool: pool}
-	s.Board = &BoardService{pool: pool}
-	s.Template = &TemplateService{pool: pool}
+	s.Document = &DocumentService{pool: pool, Store: store, Hub: hub}
+	s.Board = &BoardService{pool: pool, docs: s.Document}
+	s.Template = &TemplateService{pool: pool, docs: s.Document}
+	hub.OnFlushed = s.Document.touchUpdated
 	return s
 }
 
@@ -325,6 +330,7 @@ func (s *TeamService) getView(ctx context.Context, teamID, accountID uuid.UUID, 
 
 type BoardService struct {
 	pool *pgxpool.Pool
+	docs *DocumentService
 }
 
 type BoardCreateInput struct {
@@ -395,7 +401,6 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 				name = t.Name
 			}
 		}
-		// TODO(collab): скопировать содержимое канваса шаблона -> board.PublicID.
 	}
 	board := &model.Board{
 		Name:              name,
@@ -405,7 +410,17 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 		LinkAccessEnabled: false,
 		TemplateID:        templateID,
 	}
-	if err := repository.NewBoardRepo(s.pool).Create(ctx, board); err != nil {
+	// Строка и содержимое вместе: упало копирование - доски нет.
+	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := repository.NewBoardRepo(tx).Create(ctx, board); err != nil {
+			return err
+		}
+		if templateID == nil {
+			return nil
+		}
+		return s.docs.Copy(ctx, doc.KindTemplate, *templateID, doc.KindBoard, board.ID)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
@@ -456,7 +471,62 @@ func (s *BoardService) Delete(ctx context.Context, id Identity, boardID uuid.UUI
 	if err := s.requireBoardWrite(ctx, board, id.Account.ID); err != nil {
 		return err
 	}
-	return repo.SoftDelete(ctx, boardID)
+	if err := repo.SoftDelete(ctx, boardID); err != nil {
+		return err
+	}
+	s.docs.Hub.Close(doc.KindBoard, boardID)
+	return nil
+}
+
+// Duplicate: копия доски в той же команде вместе с содержимым, владелец - текущий пользователь.
+func (s *BoardService) Duplicate(ctx context.Context, id Identity, boardID uuid.UUID) (*model.BoardView, error) {
+	src, err := repository.NewBoardRepo(s.pool).GetByID(ctx, boardID)
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	if err := s.requireTeamMember(ctx, src.TeamID, id.Account.ID); err != nil {
+		return nil, err
+	}
+	board := &model.Board{
+		Name:       duplicateName(src.Name),
+		TeamID:     src.TeamID,
+		AccountID:  id.Account.ID,
+		TeamAccess: src.TeamAccess,
+		TemplateID: src.TemplateID,
+	}
+	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := repository.NewBoardRepo(tx).Create(ctx, board); err != nil {
+			return err
+		}
+		return s.docs.Copy(ctx, doc.KindBoard, src.ID, doc.KindBoard, board.ID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
+}
+
+// Move переносит доску в другую команду. Право: как на правку доски, плюс членство в целевой команде.
+// Хранилище не трогается: префикс объектов привязан к id доски.
+func (s *BoardService) Move(ctx context.Context, id Identity, boardID, teamID uuid.UUID) (*model.BoardView, error) {
+	repo := repository.NewBoardRepo(s.pool)
+	board, err := repo.GetByID(ctx, boardID)
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	if err := s.requireBoardWrite(ctx, board, id.Account.ID); err != nil {
+		return nil, err
+	}
+	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {
+		return nil, err
+	}
+	if board.TeamID != teamID {
+		if err := repo.Update(ctx, boardID, repository.BoardFields{TeamID: &teamID}); err != nil {
+			return nil, mapNotFound(err)
+		}
+		board.TeamID = teamID
+	}
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
 }
 
 // SetStarred переключает избранное для доски у текущего пользователя.

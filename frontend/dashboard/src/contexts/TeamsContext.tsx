@@ -46,6 +46,10 @@ export interface TeamsContextValue {
   createBoard: (title?: string, templateId?: string) => Promise<Board | null>;
   renameBoard: (boardId: string, newTitle: string) => Promise<void>;
   deleteBoard: (boardId: string) => Promise<void>;
+  /** Копия доски вместе с содержимым в той же группе; null при ошибке. */
+  duplicateBoard: (boardId: string) => Promise<Board | null>;
+  /** Перенос доски в другую группу пользователя. */
+  moveBoard: (boardId: string, teamId: string) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
   /** Оптимистично помечает доску открытой сейчас (сервер сам обновляет при открытии). */
   markBoardOpened: (boardId: string) => void;
@@ -309,6 +313,48 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, []);
 
+  const duplicateBoard = useCallback(async (boardId: string): Promise<Board | null> => {
+    try {
+      const created = await api.boards.duplicate(boardId);
+      const board = boardFromDTO(created);
+      setTeams((prev) =>
+        prev.map((t) =>
+          t.id === created.teamId
+            ? { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? t.boards.length) + 1 }
+            : t,
+        ),
+      );
+      return board;
+    } catch (e) {
+      console.error("duplicateBoard failed:", e);
+      return null;
+    }
+  }, []);
+
+  const moveBoard = useCallback(async (boardId: string, teamId: string) => {
+    try {
+      const moved = await api.boards.move(boardId, teamId);
+      setTeams((prev) => {
+        const source = prev.find((t) => (t.boards || []).some((b) => b.id === boardId));
+        const existing = source?.boards.find((b) => b.id === boardId);
+        const board = existing ? { ...existing, updatedAt: moved.updatedAt } : boardFromDTO(moved);
+        return prev.map((t) => {
+          if (t.id === moved.teamId) {
+            if ((t.boards || []).some((b) => b.id === boardId)) return t;
+            return { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? t.boards.length) + 1 };
+          }
+          if ((t.boards || []).some((b) => b.id === boardId)) {
+            return { ...t, boards: t.boards.filter((b) => b.id !== boardId), boardCount: Math.max(0, (t.boardCount ?? t.boards.length) - 1) };
+          }
+          return t;
+        });
+      });
+    } catch (e) {
+      console.error("moveBoard failed:", e);
+      throw e;
+    }
+  }, []);
+
   const toggleStarBoard = useCallback(async (boardId: string) => {
     // Читаем актуальное состояние из ref, чтобы не полагаться на таймиг
     // выполнения updater-а в setState (он вызывается во время рендера, а не сразу).
@@ -373,6 +419,8 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       createBoard,
       renameBoard,
       deleteBoard,
+      duplicateBoard,
+      moveBoard,
       toggleStarBoard,
       markBoardOpened,
       refresh,
@@ -392,6 +440,8 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       createBoard,
       renameBoard,
       deleteBoard,
+      duplicateBoard,
+      moveBoard,
       toggleStarBoard,
       markBoardOpened,
       refresh,

@@ -42,6 +42,7 @@ export default function BoardsPage() {
     toggleStarBoard,
     loading,
   } = useTeams();
+  const { teams: allTeams, activeTeamId: currentTeamId, duplicateBoard, moveBoard } = useTeams();
   const { byId: byTemplateId, createTemplate } = useTemplates();
 
   const { user } = useUser();
@@ -99,7 +100,8 @@ export default function BoardsPage() {
   const [menuPlacement, setMenuPlacement] = useState("left");
 
 
-  const [dialog, setDialog] = useState<{ type: "rename" | "delete"; boardId: string } | null>(null);
+  const [dialog, setDialog] = useState<{ type: "rename" | "delete" | "move"; boardId: string } | null>(null);
+  const otherTeams = allTeams.filter((t) => t.id !== currentTeamId);
   const [saveAsTemplate, setSaveAsTemplate] = useState<{ id: string; title: string; templateId?: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
@@ -187,6 +189,24 @@ export default function BoardsPage() {
   };
 
   const closeDialog = () => { setDialog(null); setRenameDraft(""); };
+
+  const handleDuplicate = (board: { id: string }) => {
+    closeMenu();
+    void duplicateBoard(board.id).then((copy) => showToast(copy ? "Копия создана" : "Не удалось дублировать"));
+  };
+
+  const openMoveDialog = (board: { id: string }) => {
+    setDialog({ type: "move", boardId: board.id });
+    closeMenu();
+  };
+
+  const handleMoveTo = (team: { id: string; name: string }) => {
+    if (!dialog || dialog.type !== "move") return;
+    void moveBoard(dialog.boardId, team.id)
+      .then(() => showToast(`Доска перенесена в "${team.name}"`))
+      .catch(() => showToast("Не удалось перенести"));
+    closeDialog();
+  };
 
   const openSaveAsTemplate = (board: { id: string; title: string; templateId?: string }) => {
     setSaveAsTemplate(board);
@@ -370,6 +390,8 @@ export default function BoardsPage() {
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
+      <button type="button" className="board-card-menu-item" onClick={() => handleDuplicate(b)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Дублировать</span></button>
+      <button type="button" className="board-card-menu-item" disabled={otherTeams.length === 0} aria-disabled={otherTeams.length === 0} onClick={() => openMoveDialog(b)}><span className="board-card-menu-icon">⊞</span><span className="board-card-menu-label">Перенести в группу</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => openSaveAsTemplate(b)}><span className="board-card-menu-icon">▦</span><span className="board-card-menu-label">Сохранить как шаблон</span></button>
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
@@ -722,6 +744,31 @@ export default function BoardsPage() {
               >
                 Сохранить
               </button>
+              <button type="button" className="secondary-btn" onClick={closeDialog}>Отмена</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialog?.type === "move" && (
+        <div
+          className="boards-modal-backdrop"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) closeDialog(); }}
+        >
+          <div className="boards-modal" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="boards-modal-header">
+              <h3 className="boards-modal-title">Перенести доску</h3>
+              <button type="button" className="boards-modal-close" aria-label="Закрыть" onClick={closeDialog}>×</button>
+            </div>
+            <div className="boards-modal-body">
+              <p>Куда перенести <strong>{boards.find((x) => x.id === dialog.boardId)?.title}</strong>?</p>
+              <div className="boards-modal-options" role="list">
+                {otherTeams.map((t) => (
+                  <button key={t.id} type="button" role="listitem" className="boards-modal-option" onClick={() => handleMoveTo(t)}>{t.name}</button>
+                ))}
+              </div>
+            </div>
+            <div className="boards-modal-footer">
               <button type="button" className="secondary-btn" onClick={closeDialog}>Отмена</button>
             </div>
           </div>
