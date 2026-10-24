@@ -47,3 +47,11 @@ describe("карточки: правила «только при наведен�
     expect(outside).not.toMatch(/\.tpl-card__meta\s*\{[^}]*display:\s*none/);
   });
 });
+
+// Попап меню рисуется внутри карточки: без z-index у карточки с открытым меню соседи ниже по DOM
+// перекрывают его (заметно на шаблонах, где меню не в портале).
+describe("карточка с открытым меню выше соседей", () => {
+  it("TemplateCard.css: .tpl-card--menu-open поднимает z-index", () => {
+    expect(tpl).toMatch(/\.tpl-card--menu-open[^{]*\{[^}]*z-index:\s*[1-9]/);
+  });
+});

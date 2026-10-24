@@ -4,6 +4,8 @@
   border-radius: 14px; overflow: visible; cursor: pointer; transition: box-shadow 140ms ease, transform 140ms ease;
 }
 .tpl-card:hover, .tpl-card--menu-open { box-shadow: 0 10px 26px rgba(34, 38, 46, .12); transform: translateY(-2px); }
+/* Меню рисуется внутри карточки: с открытым меню карточка выше соседей, иначе следующий ряд его перекроет */
+.tpl-card--menu-open { z-index: 30; }
 .tpl-card__cover {
   position: relative; height: 96px; border-radius: 14px 14px 0 0; overflow: hidden;
 }
