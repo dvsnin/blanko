@@ -74,14 +74,9 @@ func (a *API) UploadMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	sum := sha256.Sum256(data)
 	name := hex.EncodeToString(sum[:]) + "." + ext
+	// Имя по хэшу: повторная запись того же содержимого безвредна, проверять наличие не нужно.
 	key := doc.MediaKey(kind, docID, name)
-	store := a.services.Document.Store
-	if rc, _, err := store.Get(r.Context(), key); err == nil {
-		rc.Close()
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		writeServiceError(w, service.ErrStorageUnavailable)
-		return
-	} else if err := store.Put(r.Context(), key, bytes.NewReader(data), int64(len(data)), contentType); err != nil {
+	if err := a.services.Document.Store.Put(r.Context(), key, bytes.NewReader(data), int64(len(data)), contentType); err != nil {
 		log.Printf("media: put %s: %v", key, err)
 		writeServiceError(w, service.ErrStorageUnavailable)
 		return

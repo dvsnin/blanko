@@ -148,11 +148,14 @@ func (c *wsClient) sendJSON(v any) {
 }
 
 // Close шлёт close-фрейм и рвёт соединение; повторные вызовы игнорируются.
+// Фрейм уходит в отдельной горутине: вызывающий (чужая горутина чтения, Shutdown) не ждёт сеть.
 func (c *wsClient) Close(code int, reason string) {
 	c.closeOnce.Do(func() {
 		close(c.done)
-		_ = c.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(time.Second))
-		_ = c.conn.Close()
+		go func() {
+			_ = c.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(time.Second))
+			_ = c.conn.Close()
+		}()
 	})
 }
 

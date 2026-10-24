@@ -376,7 +376,7 @@ export default function BoardsPage() {
     };
   }, [menuBoardId]);
 
-  const renderContextMenu = (b: { id: string; title: string; templateId?: string }, variant: "grid" | "list") => (
+  const renderContextMenu = (b: { id: string; title: string; templateId?: string; canEdit?: boolean }, variant: "grid" | "list") => (
     <div
       ref={menuRef}
       className={`board-card-menu${variant === "list" ? " board-card-menu--list" : ""}`}
@@ -389,12 +389,12 @@ export default function BoardsPage() {
       <button type="button" className="board-card-menu-item" onClick={() => { console.log("Open in new tab", b.id); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item" onClick={() => console.log("Info", b.id)}><span className="board-card-menu-icon">ⓘ</span><span className="board-card-menu-label">Инфо</span></button>
-      <button type="button" className="board-card-menu-item" onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
+      <button type="button" className="board-card-menu-item" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => handleDuplicate(b)}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Дублировать</span></button>
-      <button type="button" className="board-card-menu-item" disabled={otherTeams.length === 0} aria-disabled={otherTeams.length === 0} onClick={() => openMoveDialog(b)}><span className="board-card-menu-icon">⊞</span><span className="board-card-menu-label">Перенести в группу</span></button>
+      <button type="button" className="board-card-menu-item" disabled={!b.canEdit || otherTeams.length === 0} aria-disabled={!b.canEdit || otherTeams.length === 0} onClick={() => openMoveDialog(b)}><span className="board-card-menu-icon">⊞</span><span className="board-card-menu-label">Перенести в группу</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => openSaveAsTemplate(b)}><span className="board-card-menu-icon">▦</span><span className="board-card-menu-label">Сохранить как шаблон</span></button>
       <div className="board-card-menu-separator" />
-      <button type="button" className="board-card-menu-item board-card-menu-item--danger" onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
+      <button type="button" className="board-card-menu-item board-card-menu-item--danger" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openDeleteDialog(b)}><span className="board-card-menu-icon">🗑</span><span className="board-card-menu-label">Удалить</span></button>
     </div>
   );
 

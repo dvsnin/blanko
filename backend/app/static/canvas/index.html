@@ -194,6 +194,11 @@
         } else if (kind === "deleted") {
             o.title.textContent = APP_DOC.kind === "template" ? "Шаблон удалён" : "Доска удалена";
             o.text.textContent = "Закройте вкладку";
+        } else if (kind === "failed") {
+            o.retry.hidden = false;
+            o.spinner.hidden = true;
+            o.title.textContent = `Не удалось загрузить ${docWord}`;
+            o.text.textContent = "Сервер не смог прочитать документ. Попробуйте ещё раз или сообщите администратору";
         }
     }
 
@@ -354,16 +359,28 @@
         requestAnimationFrame(() => { sendScheduled = false; flushPending(); });
     }
 
+    // Один push не больше pushChunkBytes: лимит сервера 16 МиБ, запас на схему и служебные поля.
+    const pushChunkBytes = 4 * 1024 * 1024;
+
     function flushPending() {
         if (!ws || ws.readyState !== WebSocket.OPEN || !gotInit || !canEdit) return;
         if (!pending.put.size && !pending.remove.size) return;
-        const msg = {
-            type: "push", seq: ++seq, schema: editor.store.schema.serialize(),
-            put: Object.fromEntries(pending.put), remove: [...pending.remove],
-        };
+        const schema = editor.store.schema.serialize();
+        const entries = [...pending.put.entries()];
+        const remove = [...pending.remove];
         pending.put.clear(); pending.remove.clear();
-        inflight.set(msg.seq, msg);
-        ws.send(JSON.stringify(msg));
+        let put = {}, size = 0;
+        const send = (chunkPut, chunkRemove) => {
+            const msg = { type: "push", seq: ++seq, schema, put: chunkPut, remove: chunkRemove };
+            inflight.set(msg.seq, msg);
+            ws.send(JSON.stringify(msg));
+        };
+        for (const [id, rec] of entries) {
+            const len = JSON.stringify(rec).length;
+            if (size && size + len > pushChunkBytes) { send(put, []); put = {}; size = 0; }
+            put[id] = rec; size += len;
+        }
+        send(put, remove);
         armAckTimer();
         setStatus();
     }
@@ -474,6 +491,9 @@
             applyReadonly();
             setStatus();
             if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; showOverlay("deleted"); return; }
+            // 1011: сервер не смог загрузить документ, 1009: наше сообщение больше лимита.
+            // Автоматический реконнект тут бессмыслен: повторится то же самое.
+            if (ev.code === 1011 || ev.code === 1009) { attempt++; showOverlay("failed"); return; }
             attempt++;
             if (gotInit) scheduleOfflineOverlay();
             const delay = Math.min(10000, 1000 * Math.pow(2, attempt - 1));

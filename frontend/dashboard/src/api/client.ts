@@ -125,6 +125,8 @@ export interface BoardDTO {
   linkAccessEnabled: boolean;
   templateId: string;
   isStarred: boolean;
+  /** Создатель доски или owner/admin группы: можно переименовать, удалить, перенести. */
+  canEdit: boolean;
   createdAt: string;
   updatedAt: string;
   lastOpenedAt: string;

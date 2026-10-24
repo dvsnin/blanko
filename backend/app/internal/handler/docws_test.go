@@ -99,6 +99,30 @@ func TestDocWS(t *testing.T) {
 		}
 	})
 
+	t.Run("message without type", func(t *testing.T) {
+		b := e.board(team, owner, "Без типа")
+		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		writeMsg(t, c, map[string]any{"seq": 1, "put": map[string]any{"shape:a": shape("shape:a")}})
+		if msg := readMsg(t, c, time.Second); msg["type"] != "error" || msg["code"] != "bad_message" {
+			t.Fatalf("msg = %v", msg)
+		}
+	})
+
+	t.Run("broken document closes 1011", func(t *testing.T) {
+		b := e.board(team, owner, "Битый документ")
+		if err := e.store.Put(e.ctx, key(b.ID), strings.NewReader("not json"), 8, "application/json"); err != nil {
+			t.Fatal(err)
+		}
+		c, _, err := e.dial("owner@example.com", doc.KindBoard, b.ID)
+		if err != nil {
+			t.Fatalf("dial: %v", err)
+		}
+		defer c.Close()
+		if code := readClose(t, c, time.Second); code != 1011 {
+			t.Fatalf("close code = %d, want 1011", code)
+		}
+	})
+
 	t.Run("bad message", func(t *testing.T) {
 		b := e.board(team, owner, "Мусор")
 		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
@@ -302,14 +326,12 @@ func TestDocWS(t *testing.T) {
 	})
 
 	t.Run("shutdown flushes", func(t *testing.T) {
-		e2 := newEnv(t)
+		e2 := newEnvWith(t, time.Hour) // тикер не сработает: объект после Shutdown - заслуга сброса при остановке
 		o := e2.account("owner@example.com")
 		b := e2.board(e2.team(o), o, "Остановка")
 		c, _ := e2.mustDial("owner@example.com", doc.KindBoard, b.ID)
-		e2.store.FailPuts.Store(true) // тикер не успеет записать сам
 		writeMsg(t, c, pushMsg(1, map[string]any{"shape:a": shape("shape:a")}, nil))
 		readMsg(t, c, time.Second)
-		e2.store.FailPuts.Store(false)
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		if err := e2.hub.Shutdown(ctx); err != nil {

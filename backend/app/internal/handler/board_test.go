@@ -9,23 +9,28 @@ import (
 
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
 	"github.com/dvsnin/blanko/backend/app/internal/model"
+	"github.com/dvsnin/blanko/backend/app/internal/repository"
 )
 
 func TestListBoards(t *testing.T) {
 	e := newEnv(t)
 	owner := e.account("owner@example.com")
+	member := e.account("member@example.com")
 	e.account("other@example.com")
 	team := e.team(owner)
+	e.addMember(team, member)
 	e.board(team, owner, "Первая")
 
 	cases := []struct {
-		name       string
-		email      string
-		wantStatus int
-		wantItems  int
+		name        string
+		email       string
+		wantStatus  int
+		wantItems   int
+		wantCanEdit bool
 	}{
-		{"member sees boards", "owner@example.com", 200, 1},
-		{"non member forbidden", "other@example.com", 403, 0},
+		{"owner sees boards and may edit", "owner@example.com", 200, 1, true},
+		{"member sees boards but may not edit others", "member@example.com", 200, 1, false},
+		{"non member forbidden", "other@example.com", 403, 0, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -33,8 +38,14 @@ func TestListBoards(t *testing.T) {
 			if status != tc.wantStatus {
 				t.Fatalf("status = %d, want %d (%v)", status, tc.wantStatus, body)
 			}
-			if status == 200 && len(items(body)) != tc.wantItems {
+			if status != 200 {
+				return
+			}
+			if len(items(body)) != tc.wantItems {
 				t.Fatalf("items = %d, want %d", len(items(body)), tc.wantItems)
+			}
+			if got := items(body)[0].(map[string]any)["canEdit"]; got != tc.wantCanEdit {
+				t.Fatalf("canEdit = %v, want %v", got, tc.wantCanEdit)
 			}
 		})
 	}
@@ -196,6 +207,22 @@ func TestMoveBoard(t *testing.T) {
 		status, _ := e.post("stranger@example.com", "/board/move", map[string]any{"id": b.ID.String(), "teamId": to.ID.String()})
 		if status != 403 {
 			t.Fatalf("status %d, want 403", status)
+		}
+		_, list := e.post("stranger@example.com", "/board/list", map[string]any{"teamId": onlyFrom.ID.String()})
+		if len(items(list)) != 1 {
+			t.Fatalf("board left its team after refused move: %d items", len(items(list)))
+		}
+	})
+
+	t.Run("target team deleted", func(t *testing.T) {
+		gone := e.team(owner)
+		if err := repository.NewTeamRepo(e.pool).SoftDelete(e.ctx, gone.ID); err != nil {
+			t.Fatal(err)
+		}
+		b := e.board(from, owner, "В никуда")
+		status, _ := e.post("owner@example.com", "/board/move", map[string]any{"id": b.ID.String(), "teamId": gone.ID.String()})
+		if status != 404 {
+			t.Fatalf("status %d, want 404", status)
 		}
 	})
 

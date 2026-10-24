@@ -51,7 +51,10 @@ type env struct {
 	srv      *httptest.Server
 }
 
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWith(t, 50*time.Millisecond) }
+
+// newEnvWith - окружение с заданным периодом сброса комнат (час, чтобы тикер не мешал).
+func newEnvWith(t *testing.T, flushInterval time.Duration) *env {
 	t.Helper()
 	dsn := os.Getenv("TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -78,7 +81,7 @@ func newEnv(t *testing.T) *env {
 	}
 
 	store := storage.NewMemory()
-	hub := doc.NewHub(store, 50*time.Millisecond)
+	hub := doc.NewHub(store, flushInterval)
 	go hub.Run(ctx)
 	services := service.New(pool, store, hub)
 	s := server.New(pool, services, "", testMediaMaxBytes)

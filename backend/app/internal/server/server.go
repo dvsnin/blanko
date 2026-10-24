@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"log"
@@ -245,8 +246,13 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Канвасу нужен id доски для вебсокета и медиа, поэтому без доски страницы нет.
 	board, err := s.services.Board.GetByPublicID(r.Context(), uid)
-	if err != nil {
+	if errors.Is(err, service.ErrNotFound) {
 		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		log.Printf("board page %s: %v", uid, err)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 	title := strings.TrimSpace(board.Name)

@@ -76,6 +76,7 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     createdAt: dto.createdAt,
     colorKey,
     isStarred: dto.isStarred,
+    canEdit: dto.canEdit,
     templateId: dto.templateId || undefined,
   };
 }
@@ -320,7 +321,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       setTeams((prev) =>
         prev.map((t) =>
           t.id === created.teamId
-            ? { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? t.boards.length) + 1 }
+            ? { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? (t.boards || []).length) + 1 }
             : t,
         ),
       );
@@ -341,10 +342,10 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
         return prev.map((t) => {
           if (t.id === moved.teamId) {
             if ((t.boards || []).some((b) => b.id === boardId)) return t;
-            return { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? t.boards.length) + 1 };
+            return { ...t, boards: [board, ...(t.boards || [])], boardCount: (t.boardCount ?? (t.boards || []).length) + 1 };
           }
           if ((t.boards || []).some((b) => b.id === boardId)) {
-            return { ...t, boards: t.boards.filter((b) => b.id !== boardId), boardCount: Math.max(0, (t.boardCount ?? t.boards.length) - 1) };
+            return { ...t, boards: (t.boards || []).filter((b) => b.id !== boardId), boardCount: Math.max(0, (t.boardCount ?? (t.boards || []).length) - 1) };
           }
           return t;
         });

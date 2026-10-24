@@ -372,10 +372,26 @@ func (s *BoardService) MarkOpened(ctx context.Context, publicID string) error {
 
 // ListByTeam возвращает доски команды. Пользователь должен быть участником команды.
 func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.BoardView, error) {
-	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {
+	role, err := repository.NewTeamRepo(s.pool).GetRoleForAccount(ctx, teamID, id.Account.ID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, ErrForbidden
+		}
 		return nil, err
 	}
-	return repository.NewBoardRepo(s.pool).ListByTeam(ctx, teamID, id.Account.ID)
+	views, err := repository.NewBoardRepo(s.pool).ListByTeam(ctx, teamID, id.Account.ID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range views {
+		views[i].CanEdit = canEditBoard(views[i].Board, id.Account.ID, role)
+	}
+	return views, nil
+}
+
+// canEditBoard - единственное правило права на правку доски: создатель или owner/admin команды.
+func canEditBoard(board model.Board, accountID uuid.UUID, role model.TeamRole) bool {
+	return board.AccountID == accountID || role == model.TeamRoleOwner || role == model.TeamRoleAdmin
 }
 
 // Create создаёт доску в команде.
@@ -423,7 +439,7 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
-	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name, CanEdit: true}, nil
 }
 
 // Update обновляет доску. Право: создатель или owner/admin команды.
@@ -455,7 +471,7 @@ func (s *BoardService) Update(ctx context.Context, id Identity, boardID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
-	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name, CanEdit: true}, nil
 }
 
 // Delete удаляет доску (soft).
@@ -503,7 +519,7 @@ func (s *BoardService) Duplicate(ctx context.Context, id Identity, boardID uuid.
 	if err != nil {
 		return nil, err
 	}
-	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name, CanEdit: true}, nil
 }
 
 // Move переносит доску в другую команду. Право: как на правку доски, плюс членство в целевой команде.
@@ -517,6 +533,10 @@ func (s *BoardService) Move(ctx context.Context, id Identity, boardID, teamID uu
 	if err := s.requireBoardWrite(ctx, board, id.Account.ID); err != nil {
 		return nil, err
 	}
+	// Целевая команда должна существовать: членство в мягко удалённой команде ещё лежит в БД.
+	if _, err := repository.NewTeamRepo(s.pool).GetByID(ctx, teamID); err != nil {
+		return nil, mapNotFound(err)
+	}
 	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {
 		return nil, err
 	}
@@ -526,7 +546,7 @@ func (s *BoardService) Move(ctx context.Context, id Identity, boardID, teamID uu
 		}
 		board.TeamID = teamID
 	}
-	return &model.BoardView{Board: *board, OwnerName: id.Account.Name}, nil
+	return &model.BoardView{Board: *board, OwnerName: id.Account.Name, CanEdit: true}, nil
 }
 
 // SetStarred переключает избранное для доски у текущего пользователя.

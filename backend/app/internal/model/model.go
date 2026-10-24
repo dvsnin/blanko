@@ -99,6 +99,8 @@ type BoardView struct {
 	Board     Board
 	OwnerName string
 	IsStarred bool
+	// CanEdit: создатель доски или owner/admin команды. Считается в сервисе.
+	CanEdit bool
 }
 
 // Template: AuthorAccountID == nil у предустановленных.

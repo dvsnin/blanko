@@ -56,7 +56,9 @@ func (s *DocumentService) Copy(ctx context.Context, srcKind doc.Kind, srcID uuid
 	}
 	src, dst := doc.Prefix(srcKind, srcID), doc.Prefix(dstKind, dstID)
 	if err := s.copyPrefix(ctx, srcKind, srcID, dstKind, dstID); err != nil {
-		if derr := storage.DeletePrefix(ctx, s.Store, dst); derr != nil {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+		if derr := storage.DeletePrefix(cleanupCtx, s.Store, dst); derr != nil {
 			log.Printf("doc: cleanup %s after failed copy: %v", dst, derr)
 		}
 		return fmt.Errorf("%w: copy %s -> %s: %v", ErrStorageUnavailable, src, dst, err)

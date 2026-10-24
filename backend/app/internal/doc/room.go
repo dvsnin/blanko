@@ -25,6 +25,10 @@ type Room struct {
 	dirty atomic.Bool
 	// flushMu сериализует сброс: тикер, Leave, Flush и Shutdown не должны класть снапшоты вперемешку.
 	flushMu sync.Mutex
+
+	// loading закрывается, когда документ загружен (или загрузка провалилась: loadErr).
+	loading chan struct{}
+	loadErr error
 }
 
 type presenceEntry struct {

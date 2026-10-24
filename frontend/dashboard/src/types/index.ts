@@ -18,6 +18,7 @@ export interface Board {
   lastOpened: string;
   colorKey?: string;
   isStarred?: boolean;
+  canEdit?: boolean;
   templateId?: string;
 }
 

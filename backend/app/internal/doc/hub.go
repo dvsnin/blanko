@@ -67,27 +67,66 @@ func (h *Hub) Len() int {
 }
 
 // Join подключает клиента к комнате, при необходимости загружая документ из хранилища.
+// Загрузка идёт вне мьютекса хаба: медленное хранилище не блокирует остальные комнаты,
+// а параллельные подключения к той же комнате ждут одной общей загрузки.
 func (h *Hub) Join(ctx context.Context, kind Kind, id uuid.UUID, c Client) (*Room, error) {
+	key := roomKey(kind, id)
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	if h.closing {
+		h.mu.Unlock()
 		return nil, ErrClosing
 	}
-	key := roomKey(kind, id)
 	room, ok := h.rooms[key]
 	if !ok {
+		room = newRoom(kind, id, nil)
+		room.loading = make(chan struct{})
+		h.rooms[key] = room
+		h.mu.Unlock()
+
 		d, err := h.load(ctx, kind, id)
+		room.mu.Lock()
+		if err != nil {
+			room.loadErr = err
+		} else if d != nil {
+			room.schema = d.Schema
+			for k, v := range d.Store {
+				room.records[k] = v
+			}
+		}
+		room.mu.Unlock()
+		close(room.loading)
+		if err != nil {
+			h.mu.Lock()
+			if cur, ok := h.rooms[key]; ok && cur == room {
+				delete(h.rooms, key)
+			}
+			h.mu.Unlock()
+			return nil, err
+		}
+	} else {
+		h.mu.Unlock()
+		select {
+		case <-room.loading:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+		room.mu.RLock()
+		err := room.loadErr
+		room.mu.RUnlock()
 		if err != nil {
 			return nil, err
 		}
-		room = newRoom(kind, id, d)
-		h.rooms[key] = room
 	}
 	room.addClient(c)
 	return room, nil
 }
 
+// loadTimeout - предел ожидания документа из хранилища при открытии комнаты.
+const loadTimeout = 15 * time.Second
+
 func (h *Hub) load(ctx context.Context, kind Kind, id uuid.UUID) (*Document, error) {
+	ctx, cancel := context.WithTimeout(ctx, loadTimeout)
+	defer cancel()
 	body, _, err := h.store.Get(ctx, DocumentKey(kind, id))
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil, nil
