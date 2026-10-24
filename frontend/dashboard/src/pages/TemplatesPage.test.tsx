@@ -97,6 +97,20 @@ describe('TemplatesPage', () => {
     expect(screen.queryByRole('menuitem', { name: 'Дублировать' })).toBeNull();
   });
 
+  it('клик по карточке открывает шаблон, клик по звезде и меню - нет', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue({ focus() {} } as Window);
+    setup();
+    const card = cardOf('Буква и слова на неё');
+    fireEvent.click(card.querySelector('.tpl-card__cover') as HTMLElement);
+    fireEvent.click(within(card).getByText('Буква и слова на неё'));
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(open).toHaveBeenLastCalledWith('/app/template/p-t2', '_blank');
+    fireEvent.click(within(card).getByRole('button', { name: 'Действия с шаблоном' }));
+    fireEvent.click(within(card).getByRole('button', { name: /избранн/i }));
+    expect(open).toHaveBeenCalledTimes(2);
+    open.mockRestore();
+  });
+
   it('«Открыть» открывает шаблон на канвасе', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue({ focus() {} } as Window);
     setup();
@@ -107,9 +121,9 @@ describe('TemplatesPage', () => {
 
   it('мета карточки: тема, возраст, источник', () => {
     setup();
-    expect(within(cardOf('Буква и слова на неё')).getByText(/Анна Петрова/)).toBeTruthy();
+    expect(within(cardOf('Буква и слова на неё')).getByText(/Анна П\./)).toBeTruthy();
     expect(within(cardOf('Счёт до 5 с яблоками')).queryByText(/Blanko/)).toBeNull();
-    expect(cardOf('Счёт до 5 с яблоками').querySelector('.tpl-card__meta')?.textContent).toBe('Математика · 3-4 года');
+    expect(cardOf('Счёт до 5 с яблоками').querySelector('.tpl-card__meta')?.textContent).toBe('Математика · 3-4 года · 20 мин');
     expect(within(cardOf('Времена года')).getByText(/все возрасты/)).toBeTruthy();
   });
 

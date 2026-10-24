@@ -21,9 +21,22 @@
 }
 
 .board-cover--card {
-  height: 140px;
-  border-radius: 12px 12px 0 0;
+  height: 96px;
+  border-radius: 14px 14px 0 0;
 }
+
+/* Снимок содержимого поверх плитки: до загрузки прозрачен, плитка под ним остаётся */
+.board-cover__preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #fff;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.board-cover__preview.is-loaded { opacity: 1; }
 
 .board-cover--small {
   width: 44px;
@@ -65,17 +78,6 @@
 .board-cover__shape--corner-2 { bottom: -34px; left: -18px; }
 .board-cover__shape--corner-3 { bottom: -34px; right: -18px; }
 
-.board-cover__glyph {
-  position: relative;
-  font-size: 58px;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--cover-ink);
-}
-
-/* small: shapes scaled by 0.35 */
-.board-cover--small .board-cover__glyph { font-size: 16px; }
-
 .board-cover--small .board-cover__shape--circle { width: 42px; height: 42px; }
 .board-cover--small .board-cover__shape--square { width: 36px; height: 36px; border-radius: 9px; }
 .board-cover--small .board-cover__shape--triangle {
@@ -89,14 +91,3 @@
 .board-cover--small .board-cover__shape--corner-2 { bottom: -12px; left: -6px; }
 .board-cover--small .board-cover__shape--corner-3 { bottom: -12px; right: -6px; }
 
-.board-cover__topic {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.3;
-}

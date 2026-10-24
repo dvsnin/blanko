@@ -294,6 +294,12 @@ func (e *env) updatedAt(table string, id uuid.UUID) time.Time {
 // upload шлёт multipart с одним файлом в POST /app/media/{kind}/{id}.
 func (e *env) upload(email string, kind doc.Kind, id uuid.UUID, filename, contentType string, body []byte) (int, map[string]any) {
 	e.t.Helper()
+	return e.uploadTo(email, "/app/media/"+string(kind)+"/"+id.String(), filename, contentType, body)
+}
+
+// uploadTo шлёт multipart с одним файлом в произвольный путь.
+func (e *env) uploadTo(email, path, filename, contentType string, body []byte) (int, map[string]any) {
+	e.t.Helper()
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	hdr := textproto.MIMEHeader{}
@@ -305,7 +311,7 @@ func (e *env) upload(email string, kind doc.Kind, id uuid.UUID, filename, conten
 	}
 	_, _ = part.Write(body)
 	_ = mw.Close()
-	resp := e.rawPost(email, "/app/media/"+string(kind)+"/"+id.String(), mw.FormDataContentType(), &buf)
+	resp := e.rawPost(email, path, mw.FormDataContentType(), &buf)
 	defer resp.Body.Close()
 	out := map[string]any{}
 	data, _ := io.ReadAll(resp.Body)

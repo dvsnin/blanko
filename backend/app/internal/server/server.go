@@ -68,6 +68,11 @@ func (s *Server) Router() http.Handler {
 	r.Handle("/app/media/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.UploadMedia))).Methods(http.MethodPost)
 	r.Handle("/app/media/{kind}s/{id}/media/{name}", s.api.AuthMiddleware(http.HandlerFunc(s.api.GetMedia))).Methods(http.MethodGet)
 
+	// Превью содержимого для обложек
+	r.Handle("/app/preview/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.UploadPreview))).Methods(http.MethodPost)
+	r.Handle("/app/preview/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.DeletePreview))).Methods(http.MethodDelete)
+	r.Handle("/app/preview/{kind}s/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.GetPreview))).Methods(http.MethodGet)
+
 	// Страница доски - uid трактуется как public_id
 	r.HandleFunc("/app/board/{uid}", s.boardHandler)
 

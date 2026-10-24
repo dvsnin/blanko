@@ -401,7 +401,75 @@
         inflight.delete(msg.seq);
         armAckTimer();
         setStatus();
+        if (!inflight.size) { previewDirty = true; previewGen++; schedulePreview(); }
     }
+
+    // --- превью для обложки в кабинете: снимок после затишья, не чаще раза в минуту ---
+    const previewIdleMs = 10000;
+    const previewMinIntervalMs = 60000;
+    let previewTimer = null;
+    let previewDirty = false;
+    let previewGen = 0;        // растёт с каждой правкой: снимок сбрасывает dirty, только если новее правок
+    let previewLastAt = 0;
+    let previewBusy = false;
+    let previewExists = false; // был ли снимок у этой доски (чтобы не слать DELETE пустой новой доске)
+
+    function schedulePreview(delay = previewIdleMs) {
+        if (!canEdit) return;
+        if (previewTimer) clearTimeout(previewTimer);
+        previewTimer = setTimeout(() => { previewTimer = null; void takePreview(); }, delay);
+    }
+
+    async function takePreview(opts = {}) {
+        if (!editor || !canEdit || !previewDirty) return;
+        if (previewBusy) { schedulePreview(2000); return; }
+        const wait = previewLastAt + previewMinIntervalMs - Date.now();
+        if (wait > 0 && !opts.force) { schedulePreview(wait); return; }
+        previewBusy = true;
+        const gen = previewGen;
+        try {
+            const ids = [...editor.getCurrentPageShapeIds()];
+            const url = `/app/preview/${APP_DOC.kind}/${APP_DOC.id}`;
+            let res;
+            if (!ids.length) {
+                if (!previewExists) { if (gen === previewGen) previewDirty = false; return; }
+                res = await fetch(url, { method: "DELETE", credentials: "include", keepalive: true });
+                if (res.ok) previewExists = false;
+            } else {
+                res = await uploadPreview(url, ids, 0.8);
+                // 413: доска с фотографиями, снимаем мельче и сжимаем сильнее
+                if (res.status === 413) res = await uploadPreview(url, ids, 0.55, 0.6);
+                if (res.ok) previewExists = true;
+            }
+            if (!res.ok) {
+                console.warn("preview: http", res.status);
+                if (res.status >= 500) schedulePreview(30000); // хранилище отлежится, повторим
+                return;
+            }
+            if (gen === previewGen) previewDirty = false;
+            previewLastAt = Date.now();
+        } catch (e) {
+            console.warn("preview:", e);
+            schedulePreview(30000);
+        } finally {
+            previewBusy = false;
+        }
+    }
+
+    async function uploadPreview(url, ids, quality, shrink = 1) {
+        const bounds = editor.getCurrentPageBounds();
+        const scale = Math.min(1, (640 * shrink) / Math.max(bounds.w, bounds.h, 1));
+        const { blob } = await editor.toImage(ids, { format: "jpeg", quality, background: true, padding: 32, scale, pixelRatio: 1, darkMode: false });
+        const fd = new FormData();
+        fd.append("file", blob, "preview.jpg");
+        return fetch(url, { method: "POST", body: fd, credentials: "include", keepalive: true });
+    }
+
+    // Уход со страницы: снимок без ожидания интервала, пока документ ещё жив (visibilitychange
+    // приходит раньше pagehide). На самом pagehide рендерить уже поздно, это best effort.
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden" && previewDirty) void takePreview({ force: true });
+    });
 
     // Записи с локальной неподтверждённой правкой из patch пропускаем: сервер применил чужую
     // правку раньше нашей, итог у него наш, и после ack все клиенты сходятся.
@@ -431,6 +499,7 @@
         if (!gotInit) {
             if (msg.document) loadSnapshot(editor.store, { document: msg.document, session: readSession() });
             gotInit = true;
+            previewExists = editor.getCurrentPageShapeIds().size > 0;
             editor.store.listen(saveSessionThrottled, { scope: "session" });
             // Камера и указатель живут в session-записях: этого хватает как триггера presence.
             editor.store.listen(schedulePresence, { scope: "session" });

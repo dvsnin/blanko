@@ -1,36 +1,48 @@
+/* Карточка шаблона, вариант A: обложка 96 px без знака, мета одной строкой, кнопки при наведении */
 .tpl-card {
   position: relative; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 18px; overflow: visible;
+  border-radius: 14px; overflow: visible; cursor: pointer; transition: box-shadow 140ms ease, transform 140ms ease;
 }
+.tpl-card:hover, .tpl-card--menu-open { box-shadow: 0 10px 26px rgba(34, 38, 46, .12); transform: translateY(-2px); }
 .tpl-card__cover {
-  position: relative; height: 150px; border-radius: 18px 18px 0 0; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
+  position: relative; height: 96px; border-radius: 14px 14px 0 0; overflow: hidden;
 }
 .tpl-card__shape { position: absolute; border-radius: 50%; opacity: .18; }
 .tpl-card__shape--a { width: 110px; height: 110px; left: -24px; top: -36px; }
 .tpl-card__shape--b { width: 84px; height: 84px; right: 36px; bottom: -34px; }
-.tpl-card__glyph { position: relative; font-size: 48px; font-weight: 800; line-height: 1; }
+.tpl-card__preview {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff;
+  opacity: 0; transition: opacity 160ms ease;
+}
+.tpl-card__preview.is-loaded { opacity: 1; }
 .tpl-card__corner {
   position: absolute; right: 8px; top: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
 }
 .tpl-card__corner .star-wrap,
 .tpl-card__corner .menu-wrap { border-radius: 10px; background: rgba(255, 255, 255, .9); }
-.tpl-card__duration {
-  position: absolute; right: 10px; bottom: 10px; padding: 2px 8px; border-radius: 999px;
-  background: rgba(255, 255, 255, .9); font-size: 12px; font-weight: 700; color: var(--ink);
-}
-.tpl-card__body { display: flex; flex-direction: column; gap: 10px; padding: 14px; flex: 1; }
-.tpl-card__title + .tpl-card__meta { margin-top: -4px; }
+/* Высота тела одинакова с метой и с кнопками, чтобы карточка не прыгала при наведении */
+.tpl-card__body { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; flex: 1; box-sizing: border-box; min-height: 74px; }
 .tpl-card__title {
-  margin: 0; font-size: 16px; font-weight: 800; line-height: 1.25;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin: 0; font-size: 14px; font-weight: 800; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.tpl-card__meta { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
-.tpl-card__author { margin-top: -4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tpl-card__actions { display: flex; align-items: center; gap: 8px; margin-top: auto; }
-.tpl-card__create { flex: 1; min-width: 0; gap: 8px; }
-.tpl-card__plus { flex: 0 0 16px; width: 16px; height: 16px; }
+.tpl-card__meta { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Без наведения (тач-панель) кнопки видны всегда вместе с метой. Где наведение есть, звезда и «⋯»
+   появляются при нём (у избранной звезда всегда), а кнопки занимают место меты */
+.tpl-card__actions { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.tpl-card__actions .btn { height: 32px; padding: 0 10px; font-size: 13px; border-radius: 10px; }
+.tpl-card__create { flex: 1; min-width: 0; gap: 6px; }
+.tpl-card__plus { flex: 0 0 14px; width: 14px; height: 14px; }
 .tpl-card__create:disabled { opacity: .5; cursor: not-allowed; }
+@media (hover: hover) {
+  .tpl-card__corner { opacity: 0; transition: opacity 120ms ease; }
+  .tpl-card:hover .tpl-card__corner, .tpl-card:focus-within .tpl-card__corner,
+  .tpl-card--menu-open .tpl-card__corner, .tpl-card--starred .tpl-card__corner { opacity: 1; }
+  .tpl-card--starred:not(:hover):not(:focus-within):not(.tpl-card--menu-open) .tpl-card__corner .tpl-menu { visibility: hidden; }
+  .tpl-card__actions { display: none; margin-top: 4px; }
+  .tpl-card:hover .tpl-card__actions, .tpl-card:focus-within .tpl-card__actions { display: flex; }
+  .tpl-card:hover .tpl-card__meta, .tpl-card:focus-within .tpl-card__meta { display: none; }
+}
 
 .tpl-menu { position: relative; }
 .tpl-menu { display: inline-flex; align-items: center; }

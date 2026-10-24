@@ -46,7 +46,7 @@
 .tpl-results__bar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .tpl-found { font-size: 14px; font-weight: 700; color: var(--muted); }
 
-.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 
 .tpl-empty { padding: 40px 20px; text-align: center; color: var(--muted); font-weight: 600; border: 2px dashed var(--border); border-radius: 16px; }
 .tpl-empty__text { margin: 0 0 12px; }

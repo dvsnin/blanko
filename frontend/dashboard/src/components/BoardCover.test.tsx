@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import BoardCover from './BoardCover';
 import css from './BoardCover.css?raw';
 import { COVER_KEYS, coverFor } from '../utils/cover';
@@ -10,36 +10,48 @@ const board = { id: 'b1', title: 'Счёт до 5', owner: 'Анна Петро�
 describe('BoardCover', () => {
   afterEach(cleanup);
 
-  it('card: глиф, класс цвета, фигура; аватара на обложке нет (он под названием)', () => {
-    const { container } = render(<BoardCover board={board} size="card" />);
+  it('card: класс цвета и фигура, без глифа и без чипа темы', () => {
+    const { container } = render(<BoardCover board={board} size="card" template={FIXTURE[1]} />);
     const c = coverFor(board);
     const root = container.firstElementChild as HTMLElement;
     expect(root.className).toContain(`cover--${c.colorKey}`);
     expect(root.className).toContain('board-cover--card');
-    expect(container.querySelector('.board-cover__glyph')?.textContent).toBe('5');
     expect(container.querySelector(`.board-cover__shape--${c.shape}.board-cover__shape--corner-${c.corner}`)).not.toBeNull();
-    expect(container.querySelector('.board-cover__author')).toBeNull();
+    expect(container.querySelector('.board-cover__glyph')).toBeNull();
+    expect(container.querySelector('.board-cover__topic')).toBeNull();
+    expect(container.textContent).toBe('');
   });
-  it('small: без аватара', () => {
+
+  it('small: та же плитка меньшего размера', () => {
     const { container } = render(<BoardCover board={board} size="small" />);
-    expect(container.querySelector('.board-cover__author')).toBeNull();
     expect(container.querySelector('.board-cover--small')).not.toBeNull();
+    expect(container.querySelector('.board-cover__glyph')).toBeNull();
   });
-  it('card + template: чип темы и глиф из шаблона', () => {
-    const { container } = render(<BoardCover board={{ ...board, templateId: 't2' }} size="card" template={FIXTURE[1]} />);
-    expect(container.querySelector('.board-cover__topic')?.textContent).toBe('Грамота');
-    expect(container.querySelector('.board-cover__glyph')?.textContent).toBe('Б');
+
+  it('previewUrl: картинка скрыта до загрузки, видна после, при ошибке исчезает', () => {
+    const { container } = render(<BoardCover board={board} size="card" previewUrl="/app/preview/boards/b1?v=1" />);
+    const img = container.querySelector('img.board-cover__preview') as HTMLImageElement;
+    expect(img).not.toBeNull();
+    expect(img.getAttribute('src')).toBe('/app/preview/boards/b1?v=1');
+    expect(img.className).not.toContain('is-loaded');
+    fireEvent.load(img);
+    expect(img.className).toContain('is-loaded');
+    fireEvent.error(img);
+    expect(container.querySelector('img.board-cover__preview')).toBeNull();
   });
-  it('без шаблона чипа нет (в том числе у доски с templateId удалённого шаблона)', () => {
-    const { container } = render(<BoardCover board={{ ...board, templateId: 'ghost' }} size="card" />);
-    expect(container.querySelector('.board-cover__topic')).toBeNull();
-    expect(container.querySelector('.board-cover__glyph')?.textContent).toBe('5');
+
+  it('без previewUrl картинки нет', () => {
+    const { container } = render(<BoardCover board={board} size="card" />);
+    expect(container.querySelector('img')).toBeNull();
   });
-  it('small: чипа нет даже с шаблоном', () => {
-    const { container } = render(<BoardCover board={{ ...board, templateId: 't2' }} size="small" template={FIXTURE[1]} />);
-    expect(container.querySelector('.board-cover__topic')).toBeNull();
-  });
-  it('палитра в CSS совпадает с COVER_KEYS', () => {
-    for (const key of COVER_KEYS) expect(css).toMatch(new RegExp(`\\.cover--${key}\\s*\\{[^}]*--cover-bg[^}]*--cover-accent[^}]*--cover-ink`));
+
+  it('CSS: у каждого цвета есть правило с тремя переменными', () => {
+    for (const key of COVER_KEYS) {
+      const m = css.match(new RegExp(`\\.cover--${key}\\s*\\{([^}]*)\\}`));
+      expect(m, key).not.toBeNull();
+      expect(m![1]).toContain('--cover-bg');
+      expect(m![1]).toContain('--cover-accent');
+      expect(m![1]).toContain('--cover-ink');
+    }
   });
 });

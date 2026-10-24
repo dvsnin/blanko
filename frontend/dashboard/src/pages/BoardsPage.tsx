@@ -6,6 +6,7 @@ import "../components/Boards.list.css";
 import BoardCover from "../components/BoardCover";
 import StarToggle from "../components/StarToggle";
 import MenuButton from "../components/MenuButton";
+import { shortName } from "../utils/shortName";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
@@ -189,6 +190,24 @@ export default function BoardsPage() {
   };
 
   const closeDialog = () => { setDialog(null); setRenameDraft(""); };
+
+  // Список: при сортировке «Недавние» две секции, иначе одна без заголовка.
+  const listSections = useMemo(() => {
+    if (sortBy !== "recent") return [{ key: "all", title: "", items: boards }];
+    const weekAgo = now.getTime() - 7 * 86_400_000;
+    const ts = (iso?: string) => (iso ? new Date(iso).getTime() : 0);
+    const recent = boards.filter((b) => ts(b.lastOpenedAt || b.updatedAt) >= weekAgo);
+    const older = boards.filter((b) => ts(b.lastOpenedAt || b.updatedAt) < weekAgo);
+    if (!recent.length || !older.length) return [{ key: "all", title: "", items: boards }];
+    return [
+      { key: "recent", title: "На этой неделе", items: recent },
+      { key: "older", title: "Раньше", items: older },
+    ];
+  }, [boards, sortBy, now]);
+
+  // Превью снимает канвас; updatedAt в запросе сбрасывает кэш после правок.
+  const previewUrl = (b: { id: string; updatedAt?: string }) =>
+    `/app/preview/boards/${b.id}?v=${encodeURIComponent(b.updatedAt || "")}`;
 
   const handleDuplicate = (board: { id: string }) => {
     closeMenu();
@@ -518,7 +537,7 @@ export default function BoardsPage() {
                       onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
                       onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
                     >
-                      <BoardCover board={b} size="card" template={tpl} />
+                      <BoardCover board={b} size="card" template={tpl} previewUrl={previewUrl(b)} />
 
                       <span className="board-card__corner" onClick={(e) => e.stopPropagation()}>
                         <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
@@ -552,8 +571,7 @@ export default function BoardsPage() {
                             {b.title}
                           </button>
                           {cover.topic && <span className="visually-hidden">Тема: {cover.topic.label}.</span>}
-                          <div className="board-sub">Изменено: {formatRelative(b.updatedAt, now)}</div>
-                          <div className="board-card__author" title={b.owner}>{b.owner}</div>
+                          <div className="board-sub" title={`Изменено: ${formatRelative(b.updatedAt, now)}, ${b.owner}`}>{formatRelative(b.updatedAt, now)} · {shortName(b.owner)}</div>
                         </div>
                       </div>
                     </div>
@@ -562,70 +580,60 @@ export default function BoardsPage() {
               </div>
             ) : (
               <div className="boards-list">
-                <div className="boards-list-header" role="row">
-                  <div>Название</div>
-                  <div style={{ textAlign: "center" }} aria-hidden></div>
-                  <div style={{ textAlign: "center" }}>Последнее открытие</div>
-                  <div style={{ textAlign: "left" }}>Владелец</div>
-                  <div style={{ textAlign: "right" }} aria-hidden> </div>
-                </div>
-
-                {boards.map((b, index) => {
-                  const isStarred = b.isStarred ?? false;
-                  const isMenuOpen = menuBoardId === b.id;
-                  const isLastRow = index === boards.length - 1;
-                  const tpl = byTemplateId(b.templateId);
-                  const cover = coverForBoard(b, tpl);
-                  return (
-                    <div
-                      key={b.id}
-                      data-board-id={b.id}
-                      className={`boards-list-row ${isMenuOpen ? "boards-list-row--menu-open" : ""}`}
-                      onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
-                    >
-                      <div className="boards-name-cell" onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}>
-                        <BoardCover board={b} size="small" template={tpl} />
-                        <div className="boards-name-text">
-                          <div className="board-row-title">{b.title}</div>
-                          {cover.topic && (
-                            <div className="board-row-topic" style={{ color: cover.topic.color }}>{cover.topic.label}</div>
-                          )}
-                          <div className="board-row-sub">Изменено: {b.owner}, {formatRelative(b.updatedAt, now)}</div>
-                        </div>
-                      </div>
-
-                      <div className="boards-col" style={{ textAlign: "center" }} aria-hidden> </div>
-                      <div className="boards-col" style={{ textAlign: "center" }}>{b.lastOpened}</div>
-                      <div className="boards-col owner" style={{ textAlign: "left" }}>{b.owner}</div>
-
-                      <div className="boards-actions-cell" onClick={(e) => e.stopPropagation()}>
-                        <div onClick={(e) => { e.stopPropagation(); }}>
-                          <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
-                        </div>
-
-                        <div style={{ position: "relative" }} className="board-menu-wrapper" onClick={(e) => e.stopPropagation()}>
-                          <MenuButton
-                            variant="list"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
-                              menuAnchorRef.current = e.currentTarget;
-                              const forceTop = isLastRow;
-                              setMenuPlacement(forceTop ? "top" : "left");
-                              handleMenuToggle(b.id);
-                            }}
-                          />
-
-                          {menuBoardId === b.id && (
-                            <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
-                              {renderContextMenu(b, "list")}
-                            </MenuPortal>
-                          )}
-                        </div>
-                      </div>
+                {listSections.map((sec) => (
+                  <section key={sec.key} className="boards-list__section">
+                    {sec.title && <h3 className="boards-list__title">{sec.title}</h3>}
+                    <div className="boards-list__grid">
+                      {sec.items.map((b) => {
+                        const isStarred = b.isStarred ?? false;
+                        const isMenuOpen = menuBoardId === b.id;
+                        const tpl = byTemplateId(b.templateId);
+                        return (
+                          <div
+                            key={b.id}
+                            data-board-id={b.id}
+                            className={`board-row ${isMenuOpen ? "board-row--menu-open" : ""} ${isStarred ? "board-row--starred" : ""}`}
+                            onMouseLeave={() => { if (menuBoardId === b.id) closeMenu(); }}
+                            onClick={() => { markBoardOpened(b.id); openBoardWindow(b); }}
+                          >
+                            <BoardCover board={b} size="small" template={tpl} previewUrl={previewUrl(b)} />
+                            <div className="board-row__text">
+                              <button
+                                type="button"
+                                className="board-row-title"
+                                title={b.title}
+                                onClick={(e) => { e.stopPropagation(); markBoardOpened(b.id); openBoardWindow(b); }}
+                              >
+                                {b.title}
+                              </button>
+                              <div className="board-row-sub" title={`Изменено: ${formatRelative(b.updatedAt, now)}, ${b.owner}`}>{formatRelative(b.updatedAt, now)} · {shortName(b.owner)}</div>
+                            </div>
+                            <div className="board-row__actions" onClick={(e) => e.stopPropagation()}>
+                              <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
+                              <div style={{ position: "relative" }} className="board-menu-wrapper">
+                                <MenuButton
+                                  variant="list"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    try { (e.currentTarget as HTMLElement).dataset.boardId = String(b.id); } catch {}
+                                    menuAnchorRef.current = e.currentTarget;
+                                    setMenuPlacement("left");
+                                    handleMenuToggle(b.id);
+                                  }}
+                                />
+                                {menuBoardId === b.id && (
+                                  <MenuPortal isOpen={true} anchorRef={menuAnchorRef} placement={menuPlacement} onClose={closeMenu}>
+                                    {renderContextMenu(b, "list")}
+                                  </MenuPortal>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
               </div>
             )}
 

@@ -40,23 +40,9 @@ func (a *API) UploadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, a.mediaMaxBytes+64<<10)
-	mr, err := r.MultipartReader()
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", "multipart body expected")
+	part, contentType, ok := firstFilePart(w, r)
+	if !ok {
 		return
-	}
-	var part io.Reader
-	var contentType string
-	for {
-		p, err := mr.NextPart()
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "bad_request", "field file is required")
-			return
-		}
-		if p.FormName() == "file" {
-			part, contentType = p, p.Header.Get("Content-Type")
-			break
-		}
 	}
 	ext, ok := mediaExt[contentType]
 	if !ok {
