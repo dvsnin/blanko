@@ -264,6 +264,43 @@ func TestDocWS(t *testing.T) {
 		}
 	})
 
+	t.Run("shutdown flushes with expired context", func(t *testing.T) {
+		// Ожидание хендлеров съело весь бюджет: сброс всё равно должен пройти со своим таймаутом.
+		e2 := newEnv(t)
+		o := e2.account("owner@example.com")
+		b := e2.board(e2.team(o), o, "Поздняя остановка")
+		c, _ := e2.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		e2.store.FailPuts.Store(true)
+		writeMsg(t, c, pushMsg(1, map[string]any{"shape:a": shape("shape:a")}, nil))
+		readMsg(t, c, time.Second)
+		e2.store.FailPuts.Store(false)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		if err := e2.hub.Shutdown(ctx); err != nil {
+			t.Fatalf("shutdown: %v", err)
+		}
+		if e2.store.Bytes(key(b.ID)) == nil {
+			t.Fatal("object not flushed when ctx already expired")
+		}
+	})
+
+	t.Run("empty room evicted after store recovers", func(t *testing.T) {
+		e2 := newEnv(t)
+		o := e2.account("owner@example.com")
+		b := e2.board(e2.team(o), o, "Зависшая комната")
+		c, _ := e2.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		e2.store.FailPuts.Store(true)
+		writeMsg(t, c, pushMsg(1, map[string]any{"shape:a": shape("shape:a")}, nil))
+		readMsg(t, c, time.Second)
+		c.Close() // Leave: сброс падает, комната остаётся с dirty
+		time.Sleep(100 * time.Millisecond)
+		if e2.hub.Len() != 1 {
+			t.Fatalf("rooms = %d, want 1 while store is down", e2.hub.Len())
+		}
+		e2.store.FailPuts.Store(false)
+		eventually(t, 2*time.Second, func() bool { return e2.store.Bytes(key(b.ID)) != nil && e2.hub.Len() == 0 })
+	})
+
 	t.Run("shutdown flushes", func(t *testing.T) {
 		e2 := newEnv(t)
 		o := e2.account("owner@example.com")

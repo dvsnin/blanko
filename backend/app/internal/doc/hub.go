@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,8 +28,9 @@ type Hub struct {
 
 	mu    sync.Mutex
 	rooms map[string]*Room
-
-	closing atomic.Bool
+	// closing ставится и читается под mu вместе с handlers.Add: после Shutdown ни одна
+	// комната не создаётся и ни один хендлер не регистрируется.
+	closing bool
 	// handlers: живые ws-хендлеры, Shutdown их дожидается.
 	handlers sync.WaitGroup
 }
@@ -42,20 +42,37 @@ func NewHub(store storage.ObjectStore, interval time.Duration) *Hub {
 func roomKey(kind Kind, id uuid.UUID) string { return string(kind) + "/" + id.String() }
 
 // Track регистрирует хендлер; возвращённую функцию зовут при его выходе.
-func (h *Hub) Track() func() {
+// false - сервер останавливается, хендлер должен сразу выйти.
+func (h *Hub) Track() (func(), bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.closing {
+		return func() {}, false
+	}
 	h.handlers.Add(1)
-	return h.handlers.Done
+	return h.handlers.Done, true
 }
 
-func (h *Hub) Closing() bool { return h.closing.Load() }
+func (h *Hub) Closing() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.closing
+}
+
+// Len - число комнат в памяти (для тестов и диагностики).
+func (h *Hub) Len() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.rooms)
+}
 
 // Join подключает клиента к комнате, при необходимости загружая документ из хранилища.
 func (h *Hub) Join(ctx context.Context, kind Kind, id uuid.UUID, c Client) (*Room, error) {
-	if h.closing.Load() {
-		return nil, ErrClosing
-	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.closing {
+		return nil, ErrClosing
+	}
 	key := roomKey(kind, id)
 	room, ok := h.rooms[key]
 	if !ok {
@@ -140,15 +157,31 @@ func (h *Hub) Run(ctx context.Context) {
 			return
 		case <-t.C:
 			for _, room := range h.snapshotRooms() {
-				_ = h.flushRoom(context.WithoutCancel(ctx), room)
+				if err := h.flushRoom(context.WithoutCancel(ctx), room); err == nil {
+					h.evictIfIdle(room)
+				}
 			}
 		}
 	}
 }
 
+// evictIfIdle выгружает комнату без клиентов и без несохранённых правок (например, после
+// неудачного сброса в Leave, который позже удался тикером).
+func (h *Hub) evictIfIdle(room *Room) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	key := roomKey(room.kind, room.id)
+	if cur, ok := h.rooms[key]; ok && cur == room && room.clientCount() == 0 && !room.dirty.Load() {
+		delete(h.rooms, key)
+	}
+}
+
 // Shutdown: новые подключения отклоняются, сокеты закрываются, все изменённые комнаты записываются.
+// На запись свой бюджет: если ожидание хендлеров съело ctx, снапшоты всё равно уходят.
 func (h *Hub) Shutdown(ctx context.Context) error {
-	h.closing.Store(true)
+	h.mu.Lock()
+	h.closing = true
+	h.mu.Unlock()
 	rooms := h.snapshotRooms()
 	for _, room := range rooms {
 		room.closeClients(1001, "server shutting down")
@@ -160,17 +193,26 @@ func (h *Hub) Shutdown(ctx context.Context) error {
 	case <-ctx.Done():
 		log.Printf("doc: shutdown: handlers still running: %v", ctx.Err())
 	}
+	flushCtx := ctx
+	if ctx.Err() != nil {
+		var cancel context.CancelFunc
+		flushCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), shutdownFlushBudget)
+		defer cancel()
+	}
 	var firstErr error
 	for _, room := range rooms {
 		if room.isTouched() {
 			room.dirty.Store(true)
 		}
-		if err := h.flushRoom(ctx, room); err != nil && firstErr == nil {
+		if err := h.flushRoom(flushCtx, room); err != nil && firstErr == nil {
 			firstErr = err
 		}
 	}
 	return firstErr
 }
+
+// shutdownFlushBudget - запасное время на запись снапшотов, если основной ctx уже истёк.
+const shutdownFlushBudget = 5 * time.Second
 
 func (h *Hub) snapshotRooms() []*Room {
 	h.mu.Lock()

@@ -34,6 +34,18 @@
 
         #tldraw-root { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; }
 
+        /* Оверлей поверх холста: загрузка, потеря связи, удалённый документ. Пока виден, холст только для чтения. */
+        .overlay { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(243,246,249,0.78); backdrop-filter: blur(3px); }
+        .overlay[hidden] { display: none; }
+        .overlay-card { background: #fff; border-radius: 16px; padding: 28px 32px; min-width: 280px; text-align: center; box-shadow: 0 18px 50px rgba(15,23,42,0.12); }
+        .overlay-title { font-size: 18px; font-weight: 700; color: #0f1724; margin: 14px 0 6px; }
+        .overlay-text { font-size: 14px; color: #64748b; min-height: 20px; }
+        .overlay-retry { margin-top: 16px; }
+        .overlay-retry[hidden] { display: none; }
+        .spinner { width: 36px; height: 36px; margin: 0 auto; border-radius: 50%; border: 3px solid #e6e9f2; border-top-color: #4f8bff; animation: spin 0.9s linear infinite; }
+        .spinner[hidden] { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         /* tldraw sets its own font family via .tl-container - подхватываем Inter */
         .tl-container { font-family: Inter, system-ui, -apple-system, sans-serif; }
 
@@ -63,6 +75,15 @@
 </div>
 
 <div id="tldraw-root"></div>
+
+<div class="overlay" id="overlay" role="status" aria-live="polite">
+    <div class="overlay-card">
+        <div class="spinner" id="overlaySpinner"></div>
+        <div class="overlay-title" id="overlayTitle">Загружаем доску</div>
+        <div class="overlay-text" id="overlayText">Подключаемся к серверу</div>
+        <button type="button" class="btn overlay-retry" id="overlayRetry" hidden>Повторить сейчас</button>
+    </div>
+</div>
 
 <!--
   Канвас на tldraw через ESM CDN, без билд-шага. Содержимое документа живёт на
@@ -116,6 +137,16 @@
 
     // --- состояние соединения ---
     const statusEl = document.getElementById("saveState");
+    const overlay = {
+        root: document.getElementById("overlay"),
+        spinner: document.getElementById("overlaySpinner"),
+        title: document.getElementById("overlayTitle"),
+        text: document.getElementById("overlayText"),
+        retry: document.getElementById("overlayRetry"),
+    };
+    const docWord = APP_DOC.kind === "template" ? "шаблон" : "доску";
+    let offlineTimer = null;   // оверлей «Нет связи» показываем с задержкой, чтобы не мигал на мгновенных обрывах
+    let reconnectTimer = null;
     const sessionKey = `blanko-session-${APP_DOC.kind}-${APP_DOC.id}`;
     let editor = null;
     let ws = null;
@@ -128,6 +159,10 @@
     const pending = { put: new Map(), remove: new Set() };
     const inflight = new Map();  // seq -> сообщение push без ack
 
+    function isConnected() {
+        return !!ws && ws.readyState === WebSocket.OPEN && gotInit;
+    }
+
     function setStatus() {
         let text;
         if (!ws || ws.readyState !== WebSocket.OPEN) text = (gotInit || attempt > 0) ? "Нет связи" : "Загрузка";
@@ -136,6 +171,56 @@
         else text = "Сохранено";
         if (statusEl && statusEl.textContent !== text) statusEl.textContent = text;
     }
+
+    // Холст редактируется только при живом соединении и праве записи: до init и при обрыве
+    // правки не принимаются, иначе их стёр бы loadSnapshot или они бы зависли без отправки.
+    function applyReadonly() {
+        if (!editor) return;
+        try { editor.updateInstanceState({ isReadonly: !(canEdit && isConnected()) }); } catch {}
+    }
+
+    function showOverlay(kind) {
+        const o = overlay;
+        if (kind === "hidden") { o.root.hidden = true; return; }
+        o.root.hidden = false;
+        o.spinner.hidden = kind === "deleted";
+        o.retry.hidden = kind !== "offline";
+        if (kind === "loading") {
+            o.title.textContent = `Загружаем ${docWord}`;
+            o.text.textContent = "Подключаемся к серверу";
+        } else if (kind === "offline") {
+            o.title.textContent = "Нет связи";
+            o.text.textContent = attempt > 1 ? `Переподключаемся, попытка ${attempt}` : "Переподключаемся";
+        } else if (kind === "deleted") {
+            o.title.textContent = APP_DOC.kind === "template" ? "Шаблон удалён" : "Доска удалена";
+            o.text.textContent = "Закройте вкладку";
+        }
+    }
+
+    function scheduleOfflineOverlay() {
+        if (offlineTimer) return;
+        offlineTimer = setTimeout(() => { offlineTimer = null; if (!isConnected()) showOverlay("offline"); }, 1000);
+    }
+
+    function clearOfflineOverlay() {
+        if (offlineTimer) { clearTimeout(offlineTimer); offlineTimer = null; }
+        showOverlay("hidden");
+    }
+
+    overlay.retry.addEventListener("click", () => {
+        if (ws) return;
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        overlay.text.textContent = "Подключаемся";
+        connect();
+    });
+
+    // Закрытие вкладки с неотправленными правками: браузер спросит подтверждение.
+    window.addEventListener("beforeunload", (e) => {
+        if (pending.put.size || pending.remove.size || inflight.size) {
+            e.preventDefault();
+            e.returnValue = "";
+        }
+    });
 
     function readSession() {
         try { return JSON.parse(localStorage.getItem(sessionKey) || "null") || undefined; } catch { return undefined; }
@@ -332,9 +417,7 @@
             editor.store.listen(saveSessionThrottled, { scope: "session" });
             // Камера и указатель живут в session-записях: этого хватает как триггера presence.
             editor.store.listen(schedulePresence, { scope: "session" });
-            if (!canEdit) {
-                try { editor.updateInstanceState({ isReadonly: true }); } catch {}
-            } else {
+            if (canEdit) {
                 editor.store.listen(onChange, { source: "user", scope: "document" });
                 if (!msg.document) {
                     // Пустая комната: отдать дефолтные записи (document, page), чтобы сервер их знал.
@@ -363,6 +446,8 @@
             }
         }
         attempt = 0;
+        clearOfflineOverlay();
+        applyReadonly();
         scheduleSend();
         // Сервер после реконнекта нас не помнит - представляемся заново.
         lastPresenceJson = "";
@@ -386,10 +471,13 @@
             ws = null;
             if (ackTimer) { clearTimeout(ackTimer); ackTimer = null; }
             clearRemotePresence();
+            applyReadonly();
             setStatus();
-            if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; return; }
-            const delay = Math.min(10000, 1000 * Math.pow(2, attempt++));
-            setTimeout(connect, delay);
+            if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; showOverlay("deleted"); return; }
+            attempt++;
+            if (gotInit) scheduleOfflineOverlay();
+            const delay = Math.min(10000, 1000 * Math.pow(2, attempt - 1));
+            reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, delay);
         };
         ws.onerror = () => { try { ws && ws.close(); } catch {} };
     }
@@ -404,9 +492,8 @@
                 window.blankoEditor = ed; // для проверок со стенда из консоли
                 // locale фиксируем явно: по умолчанию tldraw берёт язык из navigator.languages.
                 try { editor.user.updateUserPreferences({ name: profileName, locale: "ru" }); } catch {}
-                if (!APP_DOC.canEdit) {
-                    try { editor.updateInstanceState({ isReadonly: true }); } catch {}
-                }
+                applyReadonly(); // до init холст только для чтения
+                showOverlay("loading");
                 setStatus();
                 connect();
             },

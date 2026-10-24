@@ -35,7 +35,10 @@ func NewMemory() *Memory {
 	return &Memory{objects: map[string]memObject{}}
 }
 
-func (m *Memory) Put(_ context.Context, key string, body io.Reader, _ int64, contentType string) error {
+func (m *Memory) Put(ctx context.Context, key string, body io.Reader, _ int64, contentType string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if m.FailPuts.Load() {
 		return ErrPutFailed
 	}

@@ -28,8 +28,9 @@ const (
 	wsWriteWait  = 10 * time.Second
 	wsSendQueue  = 256
 
-	closeSlowConsumer = 1008
-	closeNotFound     = 4404
+	closeServerShutdown = 1001
+	closeSlowConsumer   = 1008
+	closeNotFound       = 4404
 )
 
 type wsIn struct {
@@ -194,7 +195,12 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer hub.Track()()
+	done, ok := hub.Track()
+	if !ok {
+		client.Close(closeServerShutdown, "server shutting down")
+		return
+	}
+	defer done()
 	ctx := r.Context()
 	room, err := hub.Join(ctx, kind, docID, client)
 	if err != nil {
