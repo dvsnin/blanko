@@ -60,6 +60,7 @@ func main() {
 	hub := doc.NewHub(store, cfg.DocFlushInterval)
 	go hub.Run(ctx)
 	services := service.New(pool, store, hub)
+	go services.Document.RunPurge(ctx, cfg.PurgeInterval, cfg.PurgeAfter)
 	s := server.New(pool, services, cfg.TldrawLicenseKey, cfg.MediaMaxBytes)
 
 	httpServer := &http.Server{

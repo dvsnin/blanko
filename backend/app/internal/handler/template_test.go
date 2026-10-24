@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -39,6 +40,25 @@ func TestCreateTemplate(t *testing.T) {
 			t.Fatalf("objects for empty template: %v", keys)
 		}
 	})
+}
+
+func TestDeleteTemplate(t *testing.T) {
+	e := newEnv(t)
+	owner := e.account("owner@example.com")
+	tpl := e.template(&owner, "Удаляемый")
+	e.seedDoc(doc.KindTemplate, tpl.ID)
+	if status, _ := e.post("owner@example.com", "/template/delete", map[string]any{"id": tpl.ID.String()}); status != 204 {
+		t.Fatalf("status %d, want 204", status)
+	}
+	if _, err := e.pool.Exec(e.ctx, "UPDATE template SET deleted_at = now() - interval '31 days' WHERE id = $1", tpl.ID); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := e.services.Document.PurgeDeleted(e.ctx, 30*24*time.Hour); err != nil || n != 1 {
+		t.Fatalf("purge: n=%d err=%v", n, err)
+	}
+	if keys, _ := e.store.List(e.ctx, doc.Prefix(doc.KindTemplate, tpl.ID)); len(keys) != 0 {
+		t.Fatalf("objects left after purge: %v", keys)
+	}
 }
 
 func TestDuplicateTemplate(t *testing.T) {

@@ -164,6 +164,54 @@ func TestCreateBoard(t *testing.T) {
 	})
 }
 
+func TestDeleteBoard(t *testing.T) {
+	e := newEnv(t)
+	owner := e.account("owner@example.com")
+	e.account("other@example.com")
+	team := e.team(owner)
+	b := e.board(team, owner, "Удаляемая")
+	e.seedDoc(doc.KindBoard, b.ID)
+
+	t.Run("non member forbidden", func(t *testing.T) {
+		if status, _ := e.post("other@example.com", "/board/delete", map[string]any{"id": b.ID.String()}); status != 403 {
+			t.Fatalf("status %d, want 403", status)
+		}
+	})
+
+	t.Run("soft delete keeps objects", func(t *testing.T) {
+		if status, _ := e.post("owner@example.com", "/board/delete", map[string]any{"id": b.ID.String()}); status != 204 {
+			t.Fatalf("status %d, want 204", status)
+		}
+		_, list := e.post("owner@example.com", "/board/list", map[string]any{"teamId": team.ID.String()})
+		if len(items(list)) != 0 {
+			t.Fatal("deleted board still listed")
+		}
+		if e.store.Bytes(doc.DocumentKey(doc.KindBoard, b.ID)) == nil {
+			t.Fatal("objects purged right away, expected 30-day window")
+		}
+	})
+
+	t.Run("purge after retention", func(t *testing.T) {
+		// Свежеудалённая не трогается, удалённая 31 день назад вычищается и помечается.
+		if n, err := e.services.Document.PurgeDeleted(e.ctx, 30*24*time.Hour); err != nil || n != 0 {
+			t.Fatalf("purge fresh: n=%d err=%v", n, err)
+		}
+		if _, err := e.pool.Exec(e.ctx, "UPDATE board SET deleted_at = now() - interval '31 days' WHERE id = $1", b.ID); err != nil {
+			t.Fatal(err)
+		}
+		if n, err := e.services.Document.PurgeDeleted(e.ctx, 30*24*time.Hour); err != nil || n != 1 {
+			t.Fatalf("purge old: n=%d err=%v", n, err)
+		}
+		keys, _ := e.store.List(e.ctx, doc.Prefix(doc.KindBoard, b.ID))
+		if len(keys) != 0 {
+			t.Fatalf("objects left after purge: %v", keys)
+		}
+		if n, err := e.services.Document.PurgeDeleted(e.ctx, 30*24*time.Hour); err != nil || n != 0 {
+			t.Fatalf("purge twice: n=%d err=%v", n, err)
+		}
+	})
+}
+
 func TestDuplicateBoard(t *testing.T) {
 	e := newEnv(t)
 	owner := e.account("owner@example.com")

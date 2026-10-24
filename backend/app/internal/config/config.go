@@ -39,6 +39,10 @@ type Config struct {
 	ShutdownTimeout time.Duration
 	// MediaMaxBytes - лимит одного загружаемого файла.
 	MediaMaxBytes int64
+	// PurgeAfter - через сколько после удаления содержимое доски вычищается из хранилища.
+	PurgeAfter time.Duration
+	// PurgeInterval - как часто запускается очистка.
+	PurgeInterval time.Duration
 }
 
 // Load собирает конфиг из переменных окружения с разумными значениями по умолчанию.
@@ -62,6 +66,8 @@ func Load() (*Config, error) {
 		DocFlushInterval: getEnvDuration("DOC_FLUSH_INTERVAL", time.Second),
 		ShutdownTimeout:  getEnvDuration("SHUTDOWN_TIMEOUT", 25*time.Second),
 		MediaMaxBytes:    getEnvInt64("MEDIA_MAX_BYTES", 20<<20),
+		PurgeAfter:       getEnvDuration("PURGE_AFTER", 30*24*time.Hour),
+		PurgeInterval:    getEnvDuration("PURGE_INTERVAL", 24*time.Hour),
 	}
 	if cfg.PostgresDSN == "" {
 		return nil, fmt.Errorf("POSTGRES_DSN is required")

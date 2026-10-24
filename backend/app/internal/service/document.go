@@ -107,6 +107,74 @@ func (s *DocumentService) copyPrefix(ctx context.Context, srcKind doc.Kind, srcI
 	return s.Store.Put(ctx, doc.DocumentKey(dstKind, dstID), bytes.NewReader(body), int64(len(body)), "application/json")
 }
 
+// PurgeDeleted вычищает из хранилища документы, удалённые раньше чем retention назад,
+// и помечает их purged_at. Возвращает число вычищенных. Ошибка одного документа не
+// останавливает остальные: он останется на следующий проход.
+func (s *DocumentService) PurgeDeleted(ctx context.Context, retention time.Duration) (int, error) {
+	before := time.Now().Add(-retention)
+	purged := 0
+	var firstErr error
+	purge := func(kind doc.Kind, ids []uuid.UUID, mark func(context.Context, uuid.UUID) error) {
+		for _, id := range ids {
+			if err := storage.DeletePrefix(ctx, s.Store, doc.Prefix(kind, id)); err != nil {
+				log.Printf("purge %s %s: %v", kind, id, err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			if err := mark(ctx, id); err != nil {
+				log.Printf("purge mark %s %s: %v", kind, id, err)
+				if firstErr == nil {
+					firstErr = err
+				}
+				continue
+			}
+			purged++
+		}
+	}
+	boards := repository.NewBoardRepo(s.pool)
+	ids, err := boards.ListPurgeable(ctx, before, purgeBatch)
+	if err != nil {
+		return 0, err
+	}
+	purge(doc.KindBoard, ids, boards.MarkPurged)
+	templates := repository.NewTemplateRepo(s.pool)
+	ids, err = templates.ListPurgeable(ctx, before, purgeBatch)
+	if err != nil {
+		return purged, err
+	}
+	purge(doc.KindTemplate, ids, templates.MarkPurged)
+	return purged, firstErr
+}
+
+// RunPurge гоняет PurgeDeleted сразу и затем раз в interval, до отмены ctx.
+func (s *DocumentService) RunPurge(ctx context.Context, interval, retention time.Duration) {
+	run := func() {
+		runCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+		defer cancel()
+		if n, err := s.PurgeDeleted(runCtx, retention); err != nil {
+			log.Printf("purge: %d purged, error: %v", n, err)
+		} else if n > 0 {
+			log.Printf("purge: %d documents purged", n)
+		}
+	}
+	run()
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			run()
+		}
+	}
+}
+
+// purgeBatch - сколько документов одного вида вычищается за проход.
+const purgeBatch = 200
+
 // touchUpdated: updated_at документа отражает правки содержимого. Зовётся хабом после записи снапшота.
 func (s *DocumentService) touchUpdated(kind doc.Kind, id uuid.UUID) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

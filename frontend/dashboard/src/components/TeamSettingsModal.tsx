@@ -57,7 +57,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   const isCreate = !!team?.create || !team?.id;
   const isEmpty = (name || "").trim() === "";
 
-  const tabs = isMember ? ["main"] : ["main", "members", "perms", "invites", "audit"];
+  const tabs = ["main"];
   useEffect(() => {
     if (!tabs.includes(activeTab)) setActiveTab("main");
   }, [role]);
@@ -196,19 +196,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
           </div>
 
           <div className="team-settings-body">
-            <nav className="team-settings-sidebar" aria-label="Настройки группы">
-              <ul>
-                {tabs.includes("main") && <li className={`ts-nav-item ${activeTab === "main" ? "active" : ""}`} onClick={() => setActiveTab("main")}>Основные</li>}
-                {!isMember && (
-                  <>
-                    <li className={`ts-nav-item ${activeTab === "members" ? "active" : ""}`} onClick={() => setActiveTab("members")}>Участники</li>
-                    <li className={`ts-nav-item ${activeTab === "perms" ? "active" : ""}`} onClick={() => setActiveTab("perms")}>Разрешения</li>
-                    <li className={`ts-nav-item ${activeTab === "invites" ? "active" : ""}`} onClick={() => setActiveTab("invites")}>Приглашения</li>
-                    <li className={`ts-nav-item ${activeTab === "audit" ? "active" : ""}`} onClick={() => setActiveTab("audit")}>Аудит логи</li>
-                  </>
-                )}
-              </ul>
-            </nav>
+            {/* Боковая навигация появится вместе со вторым разделом настроек */}
 
             <section className="team-settings-content" aria-live="polite">
               {activeTab === "main" && (
@@ -285,11 +273,6 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                   </div>
                 </>
               )}
-
-              {activeTab === "members" && !isMember && <div className="ts-placeholder">Список участников (заглушка)</div>}
-              {activeTab === "perms" && !isMember && <div className="ts-placeholder">Управление разрешениями (заглушка)</div>}
-              {activeTab === "invites" && !isMember && <div className="ts-placeholder">Приглашения (заглушка)</div>}
-              {activeTab === "audit" && !isMember && <div className="ts-placeholder">Аудит логи (заглушка)</div>}
             </section>
           </div>
         </div>
