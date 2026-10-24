@@ -6,6 +6,7 @@ import "../components/Boards.list.css";
 import BoardCover from "../components/BoardCover";
 import StarToggle from "../components/StarToggle";
 import MenuButton from "../components/MenuButton";
+import { Modal } from "../components/Modal";
 import { shortName } from "../utils/shortName";
 import MenuPortal from "../components/MenuPortal";
 import ViewToggle from "../components/ViewToggle";
@@ -22,7 +23,7 @@ import { formatRelative } from "../utils/relativeTime";
 import { coverForBoard } from "../utils/templates";
 import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
 import { openBoard, openInNewTab, boardUrl } from "../utils/openBoard";
-import type { Team } from "../types";
+import type { BoardAccess, Team } from "../types";
 import type { AgeKey } from "../constants/templates";
 
 export default function BoardsPage() {
@@ -43,7 +44,7 @@ export default function BoardsPage() {
     toggleStarBoard,
     loading,
   } = useTeams();
-  const { teams: allTeams, activeTeamId: currentTeamId, duplicateBoard, moveBoard } = useTeams();
+  const { teams: allTeams, activeTeamId: currentTeamId, duplicateBoard, moveBoard, updateBoardAccess } = useTeams();
   const { byId: byTemplateId, createTemplate } = useTemplates();
 
   const { user } = useUser();
@@ -101,7 +102,7 @@ export default function BoardsPage() {
   const [menuPlacement, setMenuPlacement] = useState("left");
 
 
-  const [dialog, setDialog] = useState<{ type: "rename" | "delete" | "move"; boardId: string } | null>(null);
+  const [dialog, setDialog] = useState<{ type: "rename" | "delete" | "move" | "access"; boardId: string } | null>(null);
   const otherTeams = allTeams.filter((t) => t.id !== currentTeamId);
   const [saveAsTemplate, setSaveAsTemplate] = useState<{ id: string; title: string; templateId?: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -205,9 +206,14 @@ export default function BoardsPage() {
     ];
   }, [boards, sortBy, now]);
 
-  // Превью снимает канвас; updatedAt в запросе сбрасывает кэш после правок.
-  const previewUrl = (b: { id: string; updatedAt?: string; hasPreview?: boolean }) =>
-    b.hasPreview ? `/app/preview/boards/${b.id}?v=${encodeURIComponent(b.updatedAt || "")}` : undefined;
+  const openAccessDialog = (board: { id: string }) => {
+    setDialog({ type: "access", boardId: board.id });
+    closeMenu();
+  };
+
+  const handleAccessChange = (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => {
+    void updateBoardAccess(boardId, patch).catch(() => showToast("Не удалось изменить доступ"));
+  };
 
   const handleCopyLink = (board: { publicId: string }) => {
     closeMenu();
@@ -412,6 +418,7 @@ export default function BoardsPage() {
       onMouseDown={(e) => e.stopPropagation()}
     >
       <button type="button" className="board-card-menu-item" onClick={() => handleCopyLink(b)}><span className="board-card-menu-icon">🔗</span><span className="board-card-menu-label">Скопировать ссылку</span></button>
+      <button type="button" className="board-card-menu-item" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openAccessDialog(b)}><span className="board-card-menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" /><circle cx="17" cy="9" r="2.5" /><path d="M16 14.5c2.6 0 4.5 1.8 4.5 4.5" /></svg></span><span className="board-card-menu-label">Доступ</span></button>
       <button type="button" className="board-card-menu-item" onClick={() => { closeMenu(); markBoardOpened(b.id); openInNewTab(boardUrl(b)); }}><span className="board-card-menu-icon">⧉</span><span className="board-card-menu-label">Открыть в новой вкладке</span></button>
       <div className="board-card-menu-separator" />
       <button type="button" className="board-card-menu-item" disabled={!b.canEdit} aria-disabled={!b.canEdit} onClick={() => openRenameDialog(b)}><span className="board-card-menu-icon">✎</span><span className="board-card-menu-label">Переименовать</span></button>
@@ -544,7 +551,7 @@ export default function BoardsPage() {
                       onClick={(e) => { markBoardOpened(b.id); openBoard(b, e); }}
                       onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                     >
-                      <BoardCover board={b} size="card" template={tpl} previewUrl={previewUrl(b)} />
+                      <BoardCover board={b} size="card" template={tpl} />
                       {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
 
                       <span className="board-card__corner" onClick={(e) => e.stopPropagation()}>
@@ -605,7 +612,7 @@ export default function BoardsPage() {
                             onClick={(e) => { markBoardOpened(b.id); openBoard(b, e); }}
                             onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                           >
-                            <BoardCover board={b} size="small" template={tpl} previewUrl={previewUrl(b)} />
+                            <BoardCover board={b} size="small" template={tpl} />
                             {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
                             <div className="board-row__text">
                               <a
@@ -767,6 +774,56 @@ export default function BoardsPage() {
           </div>
         </div>
       )}
+
+      {dialog?.type === "access" && (() => {
+        const board = boards.find((x) => x.id === dialog.boardId);
+        if (!board) return null;
+        const access = board.teamAccess ?? "edit";
+        const accessHint: Record<BoardAccess, string> = {
+          edit: "Все участники группы рисуют на доске",
+          view: "Участники открывают доску без права правки",
+          deny: "Доска видна только вам и администраторам группы",
+        };
+        return (
+          <Modal isOpen onClose={closeDialog} title="Доступ к доске">
+            <div className="boards-modal-body">
+              <div className="ts-section">
+                <label className="field-label ts-section-label" htmlFor="board-access-team">Участники группы</label>
+                <select
+                  id="board-access-team"
+                  className="boards-modal-input"
+                  value={access}
+                  onChange={(e) => handleAccessChange(board.id, { teamAccess: e.target.value as BoardAccess })}
+                >
+                  <option value="edit">Редактируют</option>
+                  <option value="view">Только смотрят</option>
+                  <option value="deny">Не видят</option>
+                </select>
+                <p className="ts-section-text">{accessHint[access]}</p>
+              </div>
+              <div className="ts-section">
+                <label className="field-label ts-section-label" htmlFor="board-access-link">Доступ по ссылке</label>
+                <select
+                  id="board-access-link"
+                  className="boards-modal-input"
+                  value={board.linkAccessEnabled ? "view" : "off"}
+                  onChange={(e) => handleAccessChange(board.id, { linkAccessEnabled: e.target.value === "view" })}
+                >
+                  <option value="off">Выключен</option>
+                  <option value="view">Только просмотр</option>
+                </select>
+                <p className="ts-section-text">
+                  {board.linkAccessEnabled ? "Любой вошедший откроет доску по ссылке, но править не сможет" : "Доску открывают только участники группы"}
+                </p>
+              </div>
+            </div>
+            <div className="boards-modal-footer">
+              <button type="button" className="primary-btn" onClick={closeDialog}>Готово</button>
+              <button type="button" className="secondary-btn" onClick={() => { closeDialog(); handleCopyLink(board); }}>Скопировать ссылку</button>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {dialog?.type === "move" && (
         <div

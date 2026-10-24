@@ -30,6 +30,7 @@ const (
 
 	closeServerShutdown = 1001
 	closeSlowConsumer   = 1008
+	closeForbidden      = 4403
 	closeNotFound       = 4404
 )
 
@@ -197,7 +198,7 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	canEdit, resolveErr := a.services.Document.Resolve(r.Context(), id, kind, docID)
-	if resolveErr != nil && !errors.Is(resolveErr, service.ErrNotFound) {
+	if resolveErr != nil && !errors.Is(resolveErr, service.ErrNotFound) && !errors.Is(resolveErr, service.ErrForbidden) {
 		writeServiceError(w, resolveErr)
 		return
 	}
@@ -208,6 +209,10 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 	}
 	client := newWSClient(conn)
 	defer client.Close(websocket.CloseNormalClosure, "")
+	if errors.Is(resolveErr, service.ErrForbidden) {
+		client.Close(closeForbidden, "access denied")
+		return
+	}
 	if resolveErr != nil {
 		client.Close(closeNotFound, "document not found")
 		return

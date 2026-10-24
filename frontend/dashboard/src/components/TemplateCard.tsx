@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import "./TemplateCard.css";
 import { shortName } from "../utils/shortName";
 import StarToggle from "./StarToggle";
@@ -33,10 +33,6 @@ export default function TemplateCard({
 }: TemplateCardProps) {
   const ts = topicStyle(t.topic);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [previewLoaded, setPreviewLoaded] = useState(false);
-  const [previewFailed, setPreviewFailed] = useState(false);
-  const previewUrl = t.hasPreview ? `/app/preview/templates/${t.id}?v=${encodeURIComponent(t.updatedAt || "")}` : undefined;
-  useEffect(() => { setPreviewLoaded(false); setPreviewFailed(false); }, [previewUrl]);
   return (
     <article
       className={`tpl-card${menuOpen ? " tpl-card--menu-open" : ""}${t.isStarred ? " tpl-card--starred" : ""}`}
@@ -48,16 +44,6 @@ export default function TemplateCard({
       <div className="tpl-card__cover" style={{ background: ts.bg }} aria-hidden="true">
         <span className="tpl-card__shape tpl-card__shape--a" style={{ background: ts.dot }} />
         <span className="tpl-card__shape tpl-card__shape--b" style={{ background: ts.dot }} />
-        {previewUrl && !previewFailed && (
-          <img
-            className={`tpl-card__preview${previewLoaded ? " is-loaded" : ""}`}
-            src={previewUrl}
-            alt=""
-            loading="lazy"
-            onLoad={() => setPreviewLoaded(true)}
-            onError={() => setPreviewFailed(true)}
-          />
-        )}
       </div>
       {t.isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
       {/* Вне обложки, чтобы меню не обрезалось её overflow */}

@@ -12,11 +12,6 @@
 .tpl-card__shape { position: absolute; border-radius: 50%; opacity: .18; }
 .tpl-card__shape--a { width: 110px; height: 110px; left: -24px; top: -36px; }
 .tpl-card__shape--b { width: 84px; height: 84px; right: 36px; bottom: -34px; }
-.tpl-card__preview {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff;
-  opacity: 0; transition: opacity 160ms ease;
-}
-.tpl-card__preview.is-loaded { opacity: 1; }
 .tpl-card__corner {
   position: absolute; right: 8px; top: 8px; z-index: 2; display: inline-flex; align-items: center; gap: 6px;
 }

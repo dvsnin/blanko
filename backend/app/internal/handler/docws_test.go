@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
+	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/repository"
 )
 
@@ -80,6 +81,42 @@ func TestDocWS(t *testing.T) {
 		store, _ := docm["store"].(map[string]any)
 		if store["shape:c"] == nil {
 			t.Fatalf("init after reconnect = %v", init)
+		}
+	})
+
+	t.Run("board access", func(t *testing.T) {
+		member := e.account("member@example.com")
+		e.addMember(team, member)
+		viewBoard := e.boardWith(team, owner, "Только смотреть", model.BoardAccessView, false)
+		denyBoard := e.boardWith(team, owner, "Скрытая", model.BoardAccessDeny, false)
+		linkBoard := e.boardWith(team, owner, "По ссылке", model.BoardAccessEdit, true)
+		closedBoard := e.boardWith(team, owner, "Закрытая", model.BoardAccessEdit, false)
+
+		if _, init := e.mustDial("member@example.com", doc.KindBoard, viewBoard.ID); init["canEdit"] != false {
+			t.Fatalf("member on view board: %v", init)
+		}
+		if _, init := e.mustDial("owner@example.com", doc.KindBoard, viewBoard.ID); init["canEdit"] != true {
+			t.Fatalf("creator on view board: %v", init)
+		}
+		if _, init := e.mustDial("other@example.com", doc.KindBoard, linkBoard.ID); init["canEdit"] != false {
+			t.Fatalf("outsider on link board: %v", init)
+		}
+		e.orgAdmin("admin@example.com")
+		if _, init := e.mustDial("admin@example.com", doc.KindBoard, closedBoard.ID); init["canEdit"] != true {
+			t.Fatalf("org admin on closed board: %v", init)
+		}
+		for _, tc := range []struct {
+			email string
+			id    uuid.UUID
+		}{{"member@example.com", denyBoard.ID}, {"other@example.com", closedBoard.ID}} {
+			c, _, err := e.dial(tc.email, doc.KindBoard, tc.id)
+			if err != nil {
+				t.Fatalf("dial: %v", err)
+			}
+			if code := readClose(t, c, time.Second); code != 4403 {
+				t.Fatalf("%s: close code = %d, want 4403", tc.email, code)
+			}
+			c.Close()
 		}
 	})
 

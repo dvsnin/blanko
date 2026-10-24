@@ -25,18 +25,6 @@
   border-radius: 14px 14px 0 0;
 }
 
-/* Снимок содержимого поверх плитки: до загрузки прозрачен, плитка под ним остаётся */
-.board-cover__preview {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: #fff;
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-.board-cover__preview.is-loaded { opacity: 1; }
 
 .board-cover--small {
   width: 44px;

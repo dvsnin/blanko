@@ -383,20 +383,57 @@ func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.
 	if err != nil {
 		return nil, err
 	}
-	ids := make([]uuid.UUID, len(views))
-	for i := range views {
-		views[i].CanEdit = canEditBoard(views[i].Board, id.Account.ID, role)
-		ids[i] = views[i].Board.ID
+	// Доски с deny для этого участника в список не попадают; CanEdit - право управлять.
+	visible := views[:0]
+	for _, v := range views {
+		access, err := boardAccess(ctx, s.pool, v.Board, id)
+		if err != nil {
+			return nil, err
+		}
+		if access == model.BoardAccessDeny {
+			continue
+		}
+		v.CanEdit = canEditBoard(v.Board, id.Account.ID, role)
+		visible = append(visible, v)
 	}
-	for i, has := range s.docs.HasPreviews(ctx, doc.KindBoard, ids) {
-		views[i].HasPreview = has
-	}
-	return views, nil
+	return visible, nil
 }
 
-// canEditBoard - единственное правило права на правку доски: создатель или owner/admin команды.
+// canEditBoard - право управлять доской (переименовать, удалить, перенести, настроить доступ):
+// создатель или owner/admin команды.
 func canEditBoard(board model.Board, accountID uuid.UUID, role model.TeamRole) bool {
 	return board.AccountID == accountID || role == model.TeamRoleOwner || role == model.TeamRoleAdmin
+}
+
+// boardAccess - единственное правило доступа к содержимому доски.
+// Админ организации, создатель и owner/admin команды: edit. Участник команды: team_access доски.
+// Не участник: view при включённом доступе по ссылке, иначе deny.
+func boardAccess(ctx context.Context, pool *pgxpool.Pool, board model.Board, id Identity) (model.BoardAccess, error) {
+	if id.OrgRole.IsAdmin() || board.AccountID == id.Account.ID {
+		return model.BoardAccessEdit, nil
+	}
+	role, err := repository.NewTeamRepo(pool).GetRoleForAccount(ctx, board.TeamID, id.Account.ID)
+	if err != nil {
+		if !errors.Is(err, repository.ErrNotFound) {
+			return model.BoardAccessDeny, err
+		}
+		if board.LinkAccessEnabled {
+			return model.BoardAccessView, nil
+		}
+		return model.BoardAccessDeny, nil
+	}
+	if role == model.TeamRoleOwner || role == model.TeamRoleAdmin {
+		return model.BoardAccessEdit, nil
+	}
+	if board.TeamAccess == "" {
+		return model.BoardAccessEdit, nil
+	}
+	return board.TeamAccess, nil
+}
+
+// Access - доступ текущего пользователя к содержимому доски (для страницы, вебсокета, медиа).
+func (s *BoardService) Access(ctx context.Context, board model.Board, id Identity) (model.BoardAccess, error) {
+	return boardAccess(ctx, s.pool, board, id)
 }
 
 // Create создаёт доску в команде.

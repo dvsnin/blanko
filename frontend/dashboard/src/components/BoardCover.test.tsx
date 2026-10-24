@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { render, cleanup, fireEvent } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import BoardCover from './BoardCover';
 import css from './BoardCover.css?raw';
 import { COVER_KEYS, coverFor } from '../utils/cover';
@@ -28,22 +28,7 @@ describe('BoardCover', () => {
     expect(container.querySelector('.board-cover__glyph')).toBeNull();
   });
 
-  it('previewUrl: картинка скрыта до загрузки, видна после, при ошибке исчезает', () => {
-    const { container } = render(<BoardCover board={board} size="card" previewUrl="/app/preview/boards/b1?v=1" />);
-    const img = container.querySelector('img.board-cover__preview') as HTMLImageElement;
-    expect(img).not.toBeNull();
-    expect(img.getAttribute('src')).toBe('/app/preview/boards/b1?v=1');
-    expect(img.className).not.toContain('is-loaded');
-    fireEvent.load(img);
-    expect(img.className).toContain('is-loaded');
-    fireEvent.error(img);
-    expect(container.querySelector('img.board-cover__preview')).toBeNull();
-  });
 
-  it('без previewUrl картинки нет', () => {
-    const { container } = render(<BoardCover board={board} size="card" />);
-    expect(container.querySelector('img')).toBeNull();
-  });
 
   it('CSS: у каждого цвета есть правило с тремя переменными', () => {
     for (const key of COVER_KEYS) {

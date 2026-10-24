@@ -31,9 +31,6 @@ func DocumentKey(kind Kind, id uuid.UUID) string { return Prefix(kind, id) + "do
 
 func MediaKey(kind Kind, id uuid.UUID, name string) string { return Prefix(kind, id) + "media/" + name }
 
-// PreviewKey - снимок содержимого для обложки в кабинете.
-func PreviewKey(kind Kind, id uuid.UUID) string { return Prefix(kind, id) + "preview" }
-
 // MediaSrc - значение asset.props.src в документе; канвас превращает его в /app/media/<key>.
 // Схема asset: - единственная нестандартная, которую пропускает валидатор tldraw.
 func MediaSrc(kind Kind, id uuid.UUID, name string) string {

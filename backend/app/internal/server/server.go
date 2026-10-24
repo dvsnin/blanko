@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/dvsnin/blanko/backend/app/internal/handler"
+	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
@@ -67,11 +68,6 @@ func (s *Server) Router() http.Handler {
 	// Медиа документов: загрузка по kind в единственном числе, отдача по ключу хранилища
 	r.Handle("/app/media/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.UploadMedia))).Methods(http.MethodPost)
 	r.Handle("/app/media/{kind}s/{id}/media/{name}", s.api.AuthMiddleware(http.HandlerFunc(s.api.GetMedia))).Methods(http.MethodGet)
-
-	// Превью содержимого для обложек
-	r.Handle("/app/preview/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.UploadPreview))).Methods(http.MethodPost)
-	r.Handle("/app/preview/{kind}/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.DeletePreview))).Methods(http.MethodDelete)
-	r.Handle("/app/preview/{kind}s/{id}", s.api.AuthMiddleware(http.HandlerFunc(s.api.GetPreview))).Methods(http.MethodGet)
 
 	// Страница доски - uid трактуется как public_id
 	r.HandleFunc("/app/board/{uid}", s.boardHandler)
@@ -264,11 +260,25 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	if title == "" {
 		title = uid
 	}
+	access := model.BoardAccessDeny
+	profile := extractUser(r)
+	if profile.Email != "" {
+		if id, err := s.services.Auth.Resolve(r.Context(), profile.Email, profile.Name); err == nil {
+			if access, err = s.services.Board.Access(r.Context(), *board, *id); err != nil {
+				log.Printf("board page %s: access: %v", uid, err)
+			}
+		} else {
+			log.Printf("board page: identity resolve failed: %v", err)
+		}
+	}
+	if access == model.BoardAccessDeny {
+		s.renderDenied(w)
+		return
+	}
 	if err := s.services.Board.MarkOpened(r.Context(), uid); err != nil {
 		log.Printf("board mark opened %s: %v", uid, err)
 	}
-	// ACL досок пока нет: всегда запись.
-	s.renderCanvas(w, r, title, canvasDoc{Kind: "board", ID: board.ID.String(), PublicID: uid, CanEdit: true})
+	s.renderCanvas(w, r, title, canvasDoc{Kind: "board", ID: board.ID.String(), PublicID: uid, CanEdit: access == model.BoardAccessEdit})
 }
 
 // templateHandler: автор и админы получают запись, остальные только чтение.
@@ -297,6 +307,19 @@ func (s *Server) templateHandler(w http.ResponseWriter, r *http.Request) {
 		title = uid
 	}
 	s.renderCanvas(w, r, title, canvasDoc{Kind: "template", ID: tpl.ID.String(), PublicID: uid, CanEdit: !readOnly})
+}
+
+// renderDenied - страница 403 для доски, к которой у пользователя нет доступа.
+func (s *Server) renderDenied(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusForbidden)
+	_, _ = w.Write([]byte(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Доска недоступна</title>
+<style>body{margin:0;font-family:Nunito,"Segoe UI",system-ui,sans-serif;background:#F6F4EE;color:#22262E;display:flex;align-items:center;justify-content:center;height:100vh}
+.card{background:#fff;border:1px solid #E6E2D9;border-radius:16px;padding:28px 32px;text-align:center;max-width:420px}
+h1{font-size:20px;margin:0 0 8px}p{margin:0 0 18px;color:#5B6472;font-size:14px;line-height:1.5}
+a{display:inline-block;padding:10px 16px;border-radius:12px;background:#E6F4F3;color:#1F8A85;font-weight:700;text-decoration:none}</style></head>
+<body><div class="card"><h1>Доска недоступна</h1><p>У вас нет доступа к этой доске. Попросите владельца добавить вас в группу или открыть доступ по ссылке.</p><a href="/app/dashboard#/boards">В кабинет</a></div></body></html>`))
 }
 
 // canvasDoc - то, что канвас узнаёт о документе: window.APP_DOC.

@@ -2,6 +2,8 @@ import type { AgeKey, TopicKey } from "../constants/templates";
 
 export type TeamRole = "owner" | "admin" | "member";
 
+export type BoardAccess = "deny" | "view" | "edit";
+
 export interface Board {
   id: string;
   publicId: string;
@@ -19,7 +21,10 @@ export interface Board {
   colorKey?: string;
   isStarred?: boolean;
   canEdit?: boolean;
-  hasPreview?: boolean;
+  /** Что могут участники группы с содержимым: edit, view или deny. */
+  teamAccess?: BoardAccess;
+  /** Любой вошедший открывает доску по ссылке только для чтения. */
+  linkAccessEnabled?: boolean;
   templateId?: string;
 }
 
@@ -65,7 +70,6 @@ export interface Template {
   authorName?: string;
   isStarred: boolean;
   canEdit: boolean;
-  hasPreview?: boolean;
   createdAt: string;
   updatedAt: string;
 }

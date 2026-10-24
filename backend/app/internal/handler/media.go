@@ -138,3 +138,22 @@ func (a *API) resolveMediaDoc(w http.ResponseWriter, r *http.Request) (doc.Kind,
 	}
 	return kind, docID, true
 }
+
+// firstFilePart находит поле "file" в multipart-теле; при ошибке ответ уже записан.
+func firstFilePart(w http.ResponseWriter, r *http.Request) (io.Reader, string, bool) {
+	mr, err := r.MultipartReader()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "multipart body expected")
+		return nil, "", false
+	}
+	for {
+		p, err := mr.NextPart()
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "field file is required")
+			return nil, "", false
+		}
+		if p.FormName() == "file" {
+			return p, p.Header.Get("Content-Type"), true
+		}
+	}
+}

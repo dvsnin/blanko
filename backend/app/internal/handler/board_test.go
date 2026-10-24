@@ -47,23 +47,34 @@ func TestListBoards(t *testing.T) {
 			if got := items(body)[0].(map[string]any)["canEdit"]; got != tc.wantCanEdit {
 				t.Fatalf("canEdit = %v, want %v", got, tc.wantCanEdit)
 			}
-			if got := items(body)[0].(map[string]any)["hasPreview"]; got != false {
-				t.Fatalf("hasPreview = %v, want false", got)
-			}
 		})
 	}
 
-	t.Run("hasPreview after upload", func(t *testing.T) {
-		b := e.board(team, owner, "С превью")
-		e.uploadPreview("owner@example.com", doc.KindBoard, b.ID, "image/jpeg", jpegBody)
-		_, body := e.post("owner@example.com", "/board/list", map[string]any{"teamId": team.ID.String()})
+	t.Run("team access", func(t *testing.T) {
+		tm := e.team(owner)
+		e.addMember(tm, member)
+		e.boardWith(tm, owner, "Скрытая", model.BoardAccessDeny, false)
+		e.boardWith(tm, owner, "Только смотреть", model.BoardAccessView, false)
+		e.boardWith(tm, member, "Моя скрытая", model.BoardAccessDeny, false)
+
+		_, body := e.post("member@example.com", "/board/list", map[string]any{"teamId": tm.ID.String()})
+		got := map[string]any{}
 		for _, it := range items(body) {
-			m := it.(map[string]any)
-			if m["id"] == b.ID.String() && m["hasPreview"] != true {
-				t.Fatalf("hasPreview = %v, want true", m["hasPreview"])
-			}
+			x := it.(map[string]any)
+			got[x["name"].(string)] = x["canEdit"]
+		}
+		if _, hidden := got["Скрытая"]; hidden {
+			t.Fatal("deny board visible to member")
+		}
+		if got["Только смотреть"] != false || got["Моя скрытая"] != true {
+			t.Fatalf("canEdit = %v", got)
+		}
+		_, ownerBody := e.post("owner@example.com", "/board/list", map[string]any{"teamId": tm.ID.String()})
+		if len(items(ownerBody)) != 3 {
+			t.Fatalf("owner sees %d boards, want 3", len(items(ownerBody)))
 		}
 	})
+
 }
 
 // seedDoc кладёт в хранилище документ с одной картинкой под префикс документа.

@@ -118,6 +118,26 @@ func (e *env) team(owner model.Account) model.Team {
 	return *team
 }
 
+// orgAdmin делает аккаунт администратором организации (организация создаётся при первом вызове).
+func (e *env) orgAdmin(email string) model.Account {
+	e.t.Helper()
+	acc := e.account(email)
+	repo := repository.NewOrganizationRepo(e.pool)
+	org, err := repo.GetFirst(e.ctx)
+	if errors.Is(err, repository.ErrNotFound) {
+		org = &model.Organization{Name: "Сад", OwnerAccountID: acc.ID}
+		if err := repo.Create(e.ctx, org); err != nil {
+			e.t.Fatalf("org create: %v", err)
+		}
+	} else if err != nil {
+		e.t.Fatalf("org: %v", err)
+	}
+	if err := repo.UpsertMember(e.ctx, org.ID, acc.ID, model.OrgRoleAdmin); err != nil {
+		e.t.Fatalf("org admin: %v", err)
+	}
+	return e.account(email) // перечитать роль
+}
+
 func (e *env) addMember(team model.Team, acc model.Account) {
 	e.t.Helper()
 	if err := repository.NewTeamRepo(e.pool).AddMember(e.ctx, team.ID, acc.ID, model.TeamRoleMember); err != nil {
@@ -126,8 +146,13 @@ func (e *env) addMember(team model.Team, acc model.Account) {
 }
 
 func (e *env) board(team model.Team, owner model.Account, name string) model.Board {
+	return e.boardWith(team, owner, name, model.BoardAccessEdit, false)
+}
+
+// boardWith - доска с заданным доступом участников группы и флагом доступа по ссылке.
+func (e *env) boardWith(team model.Team, owner model.Account, name string, access model.BoardAccess, link bool) model.Board {
 	e.t.Helper()
-	b := &model.Board{Name: name, TeamID: team.ID, AccountID: owner.ID}
+	b := &model.Board{Name: name, TeamID: team.ID, AccountID: owner.ID, TeamAccess: access, LinkAccessEnabled: link}
 	if err := repository.NewBoardRepo(e.pool).Create(e.ctx, b); err != nil {
 		e.t.Fatalf("board create: %v", err)
 	}

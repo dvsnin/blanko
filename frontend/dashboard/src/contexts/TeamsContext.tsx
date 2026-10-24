@@ -8,7 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import type { Team, Board } from "../types";
+import type { BoardAccess, Team, Board } from "../types";
 import type { AgeKey } from "../constants/templates";
 import { colorForId } from "../utils/cover";
 import { assignColors } from "../utils/colors";
@@ -50,6 +50,8 @@ export interface TeamsContextValue {
   duplicateBoard: (boardId: string) => Promise<Board | null>;
   /** Перенос доски в другую группу пользователя. */
   moveBoard: (boardId: string, teamId: string) => Promise<void>;
+  /** Доступ участников группы к содержимому и доступ по ссылке. */
+  updateBoardAccess: (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
   /** Оптимистично помечает доску открытой сейчас (сервер сам обновляет при открытии). */
   markBoardOpened: (boardId: string) => void;
@@ -77,7 +79,8 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     colorKey,
     isStarred: dto.isStarred,
     canEdit: dto.canEdit,
-    hasPreview: dto.hasPreview,
+    teamAccess: dto.teamAccess,
+    linkAccessEnabled: dto.linkAccessEnabled,
     templateId: dto.templateId || undefined,
   };
 }
@@ -360,6 +363,23 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, []);
 
+  const updateBoardAccess = useCallback(async (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => {
+    try {
+      const updated = await api.boards.update(boardId, patch);
+      setTeams((prev) =>
+        prev.map((team) => ({
+          ...team,
+          boards: (team.boards || []).map((b) =>
+            b.id === boardId ? { ...b, teamAccess: updated.teamAccess, linkAccessEnabled: updated.linkAccessEnabled } : b,
+          ),
+        })),
+      );
+    } catch (e) {
+      console.error("updateBoardAccess failed:", e);
+      throw e;
+    }
+  }, []);
+
   const toggleStarBoard = useCallback(async (boardId: string) => {
     // Читаем актуальное состояние из ref, чтобы не полагаться на таймиг
     // выполнения updater-а в setState (он вызывается во время рендера, а не сразу).
@@ -426,6 +446,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       deleteBoard,
       duplicateBoard,
       moveBoard,
+      updateBoardAccess,
       toggleStarBoard,
       markBoardOpened,
       refresh,
@@ -447,6 +468,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       deleteBoard,
       duplicateBoard,
       moveBoard,
+      updateBoardAccess,
       toggleStarBoard,
       markBoardOpened,
       refresh,

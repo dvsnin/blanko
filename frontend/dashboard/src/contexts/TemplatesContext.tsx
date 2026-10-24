@@ -43,7 +43,6 @@ export function templateFromDTO(dto: TemplateDTO): Template {
     authorName: dto.authorName || undefined,
     isStarred: dto.isStarred,
     canEdit: dto.canEdit,
-    hasPreview: dto.hasPreview,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
   };

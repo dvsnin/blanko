@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
+	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/repository"
 )
 
@@ -76,6 +77,15 @@ func TestMediaUpload(t *testing.T) {
 		status, body := e.upload("owner@example.com", doc.KindBoard, b.ID, "a.png", "image/png", []byte("hello, definitely not a png"))
 		if status != 400 || body["error"] != "unsupported_media" {
 			t.Fatalf("status %d body %v", status, body)
+		}
+	})
+
+	t.Run("view-only member", func(t *testing.T) {
+		member := e.account("member@example.com")
+		e.addMember(team, member)
+		b := e.boardWith(team, owner, "Только смотреть", model.BoardAccessView, false)
+		if status, _ := e.upload("member@example.com", doc.KindBoard, b.ID, "a.png", "image/png", pngBody); status != 403 {
+			t.Fatalf("status %d, want 403", status)
 		}
 	})
 

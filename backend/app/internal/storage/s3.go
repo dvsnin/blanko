@@ -83,17 +83,6 @@ func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, ObjectInfo, er
 	return out.Body, info, nil
 }
 
-func (s *S3) Exists(ctx context.Context, key string) (bool, error) {
-	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
-	if err == nil {
-		return true, nil
-	}
-	if isNotFound(err) {
-		return false, nil
-	}
-	return false, err
-}
-
 func (s *S3) List(ctx context.Context, prefix string) ([]string, error) {
 	keys := []string{}
 	p := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{Bucket: aws.String(s.bucket), Prefix: aws.String(prefix)})

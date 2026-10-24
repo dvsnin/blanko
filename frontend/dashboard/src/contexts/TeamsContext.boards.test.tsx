@@ -7,19 +7,21 @@ import { teamDTOs, firstBoard, boardDTO } from "./TeamsContext.boards.fixture";
 vi.mock("../api/client", () => ({
   api: {
     teams: { list: vi.fn() },
-    boards: { listByTeam: vi.fn(), duplicate: vi.fn(), move: vi.fn() },
+    boards: { listByTeam: vi.fn(), duplicate: vi.fn(), move: vi.fn(), update: vi.fn() },
   },
 }));
 
 function Probe() {
-  const { teams, duplicateBoard, moveBoard } = useTeams();
+  const { teams, duplicateBoard, moveBoard, updateBoardAccess } = useTeams();
   return (
     <div>
       {teams.map((t) => (
         <span key={t.id} data-testid={`team-${t.id}`}>{t.boards.map((b) => b.title).join("|")}</span>
       ))}
+      <span data-testid="access">{teams.flatMap((t) => t.boards).map((b) => `${b.id}:${b.teamAccess}:${b.linkAccessEnabled}`).join(",")}</span>
       <button onClick={() => void duplicateBoard("b1")}>dup</button>
       <button onClick={() => void moveBoard("b1", "t2")}>move</button>
+      <button onClick={() => void updateBoardAccess("b1", { teamAccess: "view", linkAccessEnabled: true })}>access</button>
     </div>
   );
 }
@@ -41,6 +43,17 @@ describe("TeamsContext: дублирование и перенос доски", 
 
     expect(api.boards.duplicate).toHaveBeenCalledWith("b1");
     expect(screen.getByTestId("team-t1").textContent).toBe("Первая (копия)|Первая");
+  });
+
+  it("updateBoardAccess обновляет доступ доски из ответа сервера", async () => {
+    vi.mocked(api.boards.update).mockResolvedValue({ ...boardDTO("b1", "t1", "Первая"), teamAccess: "view", linkAccessEnabled: true });
+    render(<TeamsProvider><Probe /></TeamsProvider>);
+    await waitFor(() => expect(screen.getByTestId("access").textContent).toBe("b1:edit:false"));
+
+    await act(async () => { screen.getByText("access").click(); });
+
+    expect(api.boards.update).toHaveBeenCalledWith("b1", { teamAccess: "view", linkAccessEnabled: true });
+    expect(screen.getByTestId("access").textContent).toBe("b1:view:true");
   });
 
   it("moveBoard убирает доску из исходной группы и добавляет в целевую", async () => {

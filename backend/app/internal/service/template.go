@@ -135,13 +135,6 @@ func (s *TemplateService) List(ctx context.Context, id Identity) ([]model.Templa
 	for i := range views {
 		views[i].CanEdit = canEditTemplate(views[i].Template, id)
 	}
-	ids := make([]uuid.UUID, len(views))
-	for i := range views {
-		ids[i] = views[i].Template.ID
-	}
-	for i, has := range s.docs.HasPreviews(ctx, doc.KindTemplate, ids) {
-		views[i].HasPreview = has
-	}
 	sortTemplatesRu(views)
 	return views, nil
 }
