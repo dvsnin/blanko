@@ -1,9 +1,5 @@
 import { useEffect } from "react";
 
-/**
- * Calls `callback` when the Escape key is pressed.
- * Only active when `enabled` is true (default).
- */
 export function useEscapeKey(callback: (() => void) | undefined, enabled = true) {
   useEffect(() => {
     if (!enabled || !callback) return;

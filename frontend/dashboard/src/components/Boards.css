@@ -1,17 +1,9 @@
-/* Rebuilt Boards.css - star/menu styles cleaned so only one star glyph appears.
-   - star is always a DOM glyph (★ or ☆) inside a button
-   - filled star visually looks "static" but remains a button to allow unstar on click
-   - menu button visuals normalized
-*/
-
-/* Page */
 .boards-page {
     background: var(--bg);
     font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
     color: var(--ink);
 }
 
-/* toolbar */
 .boards-toolbar {
     display: flex;
     align-items: center;
@@ -78,14 +70,12 @@
     font: inherit;
 }
 
-/* view toggle */
 .boards-view-toggle {
     display: flex;
     gap: 8px;
     align-items: center;
 }
 
-/* Grid */
 .boards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -96,7 +86,6 @@
 .boards-more { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 0 8px; }
 .boards-more__hint { font-size: 13px; font-weight: 600; color: var(--muted); }
 
-/* Card */
 .board-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -178,10 +167,7 @@
 .board-card__corner .star-wrap,
 .board-card__corner .menu-wrap { border-radius: 10px; background: rgba(255, 255, 255, .9); }
 
-
-
-
-/* STAR button (used both for filled and outline states)
+/* Кнопка звезды (заполненная и контурная)
    - `.board-star-btn` base styles
    - `.board-star-filled` makes it look filled but remains a button so it can be clicked to unstar
 */
@@ -200,20 +186,20 @@
     transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
-/* Hover only for non-filled variant */
+/* Наведение только у незаполненной */
 .board-star-btn:not(.board-star-filled):hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06);
     background: #f7f8fb;
 }
 
-/* Filled visual style - still a button but no hover lift; visually "static" filled star */
+/* Заполненная звезда без подъёма при наведении */
 .board-star-btn.board-star-filled {
-    background: var(--surface); /* white square */
+    background: var(--surface);
     border: 1px solid rgba(15, 23, 42, 0.06);
     color: var(--ink);
     box-shadow: 0 6px 16px rgba(6, 22, 34, 0.06);
-    /* don't apply lift on hover for filled */
+    /* без подъёма */
 }
 
 .board-star-btn.board-star-filled:hover {
@@ -222,7 +208,7 @@
     background: var(--surface);
 }
 
-/* For list row star button */
+/* Звезда в строке списка */
 .boards-row-star-btn {
     width: 36px;
     height: 36px;
@@ -250,7 +236,6 @@
     background: #f7f8fb;
 }
 
-/* Menu button visuals */
 .board-menu-btn,
 .boards-row-menu-btn {
     width: 36px;
@@ -281,7 +266,6 @@
     outline-offset: 2px;
 }
 
-/* Menus */
 .board-card-menu {
     position: relative;
     transform-origin: top right;
@@ -294,7 +278,6 @@
     z-index: 9999;
 }
 
-/* Toast, modals */
 .boards-toast {
     position: fixed;
     bottom: 28px;
@@ -328,7 +311,7 @@
     box-sizing: border-box;
 }
 
-/* Responsive */
+/* Узкие экраны */
 @media (max-width: 980px) {
     .boards-grid {
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -343,7 +326,7 @@
     }
 }
 
-/* Create button disabled visual - apply to the header create button specifically */
+/* Неактивная кнопка создания в шапке */
 .primary-btn.create-btn.disabled,
 .primary-btn.create-btn[disabled] {
     opacity: 0.56;
@@ -352,9 +335,6 @@
     cursor: not-allowed;
 }
 
-/* Add minimal styles for empty hint when user has no teams */
-
-/* Centered minimal hint */
 .boards-empty-hint {
     display: flex;
     align-items: center;
@@ -365,7 +345,7 @@
 }
 
 .boards-empty-hint__text {
-    color: var(--muted); /* muted gray */
+    color: var(--muted);
     font-size: 15px;
     line-height: 1.6;
     text-align: center;
@@ -374,13 +354,8 @@
     font-weight: 500;
 }
 
-/* Slightly reduce prominence of toolbar when present and there are no boards */
+/* Панель инструментов приглушена, пока досок нет */
 .boards-toolbar { margin-bottom: 18px; }
-
-/* Add minimal styles for team-empty hint (no boards in selected team) */
-
-/* Centered minimal hint for "no teams" already exists (.boards-empty-hint).
-   Add a slightly smaller, calmer hint when a team exists but has no boards. */
 
 .boards-team-empty-hint {
     display: flex;
@@ -392,7 +367,7 @@
 }
 
 .boards-team-empty-hint__text {
-    color: var(--muted); /* muted gray */
+    color: var(--muted);
     font-size: 14px;
     line-height: 1.6;
     text-align: center;
@@ -403,7 +378,6 @@
 
 .board-title:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 4px; }
 
-/* cross-group matches */
 .boards-other { margin-top: 28px; }
 .boards-other__title { margin: 0 0 12px; font-size: 16px; font-weight: 800; color: var(--ink); }
 .boards-other__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

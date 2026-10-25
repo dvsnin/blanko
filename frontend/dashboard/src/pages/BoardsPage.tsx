@@ -114,9 +114,7 @@ export default function BoardsPage() {
   }, [segment, sortBy, q, setBoardQuery]);
 
   const canCreateBoard = Boolean(activeTeamId);
-  // Во время первого фетча опираемся на флаги из window.dashData, чтобы
-  // не мигать empty-state у пользователей, у которых на самом деле данные есть.
-  // После загрузки - реальное состояние из TeamsContext.
+  // До первой загрузки флаги из dashData, чтобы не мигать пустым состоянием.
   const dashFlags = window.dashData;
   const userHasTeams = loading
     ? dashFlags?.hasTeams !== false

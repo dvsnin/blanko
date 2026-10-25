@@ -11,7 +11,6 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 )
 
-// TeamRepo - репозиторий команд.
 type TeamRepo struct {
 	db DBTX
 }
@@ -20,8 +19,7 @@ func NewTeamRepo(db DBTX) *TeamRepo {
 	return &TeamRepo{db: db}
 }
 
-// TeamFields - набор полей для частичного апдейта команды.
-// Непустые/ненулевые значения будут применены.
+// TeamFields: nil-поля не меняются.
 type TeamFields struct {
 	Name              string
 	MemberBoardAccess model.BoardAccess
@@ -31,7 +29,6 @@ type TeamFields struct {
 	Teachers *string
 }
 
-// Create вставляет команду.
 func (r *TeamRepo) Create(ctx context.Context, t *model.Team) error {
 	if t.ID == uuid.Nil {
 		t.ID = uuid.New()
@@ -52,7 +49,6 @@ func (r *TeamRepo) Create(ctx context.Context, t *model.Team) error {
 	return nil
 }
 
-// GetByID возвращает команду по ID (с проверкой soft-delete).
 func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Team, error) {
 	b := psql.Select("id", "organization_id", "name", "member_board_access", "age_group", "teachers", "created_at", "updated_at").
 		From("team").
@@ -73,7 +69,6 @@ func (r *TeamRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Team, erro
 	return &t, nil
 }
 
-// Update - переиспользуемое частичное обновление. Применяются только непустые поля.
 func (r *TeamRepo) Update(ctx context.Context, id uuid.UUID, f TeamFields) error {
 	b := psql.Update("team").Where("id = ? AND deleted_at IS NULL", id)
 	touched := false
@@ -115,7 +110,6 @@ func (r *TeamRepo) Update(ctx context.Context, id uuid.UUID, f TeamFields) error
 	return nil
 }
 
-// SoftDelete помечает команду удалённой.
 func (r *TeamRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now().UTC()
 	b := psql.Update("team").
@@ -170,7 +164,6 @@ func (r *TeamRepo) ListForAccount(ctx context.Context, accountID uuid.UUID, orgA
 	return result, rows.Err()
 }
 
-// GetRoleForAccount возвращает роль пользователя в команде (или ErrNotFound).
 func (r *TeamRepo) GetRoleForAccount(ctx context.Context, teamID, accountID uuid.UUID) (model.TeamRole, error) {
 	b := psql.Select("role").From("team_member").
 		Where("team_id = ? AND account_id = ?", teamID, accountID).Limit(1)
@@ -189,7 +182,6 @@ func (r *TeamRepo) GetRoleForAccount(ctx context.Context, teamID, accountID uuid
 	return role, nil
 }
 
-// AddMember добавляет участника в команду.
 func (r *TeamRepo) AddMember(ctx context.Context, teamID, accountID uuid.UUID, role model.TeamRole) error {
 	now := time.Now().UTC()
 	b := psql.Insert("team_member").
@@ -200,14 +192,12 @@ func (r *TeamRepo) AddMember(ctx context.Context, teamID, accountID uuid.UUID, r
 	return err
 }
 
-// RemoveMember исключает участника из команды.
 func (r *TeamRepo) RemoveMember(ctx context.Context, teamID, accountID uuid.UUID) error {
 	b := psql.Delete("team_member").Where("team_id = ? AND account_id = ?", teamID, accountID)
 	_, err := execBuilder(ctx, r.db, b)
 	return err
 }
 
-// SetStarred переключает «избранное» для команды.
 func (r *TeamRepo) SetStarred(ctx context.Context, teamID, accountID uuid.UUID, starred bool) error {
 	if starred {
 		b := psql.Insert("team_starred").

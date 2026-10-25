@@ -13,9 +13,7 @@ export default function ProfileButton({ initials, onClick, ariaLabel = "Проф
             className="profile-avatar-btn topbar-avatar"
             aria-label={ariaLabel}
             onMouseDown={(e) => {
-                // Prevent document-level mousedown handlers (e.g. ProfileMenu click-outside)
-                // from running before the button's click handler. That avoids the case where
-                // mousedown closes the menu and onClick toggles it back open.
+                // Иначе mousedown закрыл бы меню по клику вне, а onClick тут же открыл заново.
                 e.stopPropagation();
             }}
             onClick={onClick}

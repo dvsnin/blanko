@@ -9,11 +9,6 @@ import { useHashRoute } from "./hooks/useHashRoute";
 import { useUser } from "./contexts/UserContext";
 import { pageTitle } from "./utils/pageTitle";
 
-/*
-  App.tsx - shell: Topbar + the page for the current hash route.
-  Teams/boards state lives in TeamsContext, user state in UserContext (main.tsx).
-*/
-
 export default function App() {
   const route = useHashRoute();
   const { workspaceName } = useUser();

@@ -10,7 +10,6 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// TeamDTO - представление команды во внешнем API.
 type TeamDTO struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -55,8 +54,6 @@ func teamViewToDTO(v model.TeamView) TeamDTO {
 	}
 }
 
-// --- requests ---
-
 type listTeamsRequest struct {
 	WithAccount
 }
@@ -82,8 +79,6 @@ type teamIDRequest struct {
 	WithAccount
 	ID string `json:"id"`
 }
-
-// --- handlers ---
 
 // ListTeams POST /api/v1/team/list
 func (a *API) ListTeams(w http.ResponseWriter, r *http.Request) {
@@ -208,8 +203,6 @@ func (a *API) setTeamStar(w http.ResponseWriter, r *http.Request, starred bool) 
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// --- участники ---
 
 type TeamMemberDTO struct {
 	AccountID string `json:"accountId"`

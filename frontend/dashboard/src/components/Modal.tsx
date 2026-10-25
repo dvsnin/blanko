@@ -13,13 +13,6 @@ interface ModalProps {
   ariaLabel?: string;
 }
 
-/**
- * Reusable modal component with:
- * - Backdrop click to close
- * - Escape key to close
- * - Consistent header with close button
- * - Propagation stop on inner container
- */
 export function Modal({ isOpen, onClose, title, children, className, ariaLabel }: ModalProps) {
   const innerRef = useRef<HTMLDivElement>(null);
 

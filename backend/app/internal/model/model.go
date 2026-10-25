@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Account - учётная запись пользователя.
 type Account struct {
 	ID        uuid.UUID
 	Email     string
@@ -19,7 +18,6 @@ type Account struct {
 // Prefs - настройки кабинета: плоский объект со скалярами, ключи задаёт фронтенд.
 type Prefs map[string]any
 
-// TeamRole - роль участника команды.
 type TeamRole string
 
 const (
@@ -28,7 +26,6 @@ const (
 	TeamRoleMember TeamRole = "member"
 )
 
-// BoardAccess - уровень доступа к доске.
 type BoardAccess string
 
 const (
@@ -69,7 +66,7 @@ type AccountWithRole struct {
 	Role    OrganizationRole
 }
 
-// Team - команда. Если OrganizationID == nil - личная команда без организации.
+// Team - группа; OrganizationID пуст только до bootstrap организации.
 type Team struct {
 	ID                uuid.UUID
 	OrganizationID    *uuid.UUID
@@ -81,7 +78,6 @@ type Team struct {
 	UpdatedAt         time.Time
 }
 
-// TeamView - агрегированная модель команды для UI.
 type TeamView struct {
 	Team      Team
 	Role      TeamRole
@@ -100,7 +96,6 @@ type TeamMemberView struct {
 	JoinedAt  time.Time
 }
 
-// Board - доска.
 type Board struct {
 	ID        uuid.UUID
 	PublicID  string
@@ -113,7 +108,7 @@ type Board struct {
 	TeamAccessInherited bool
 	LinkAccessEnabled   bool
 	TemplateID          *uuid.UUID
-	// Режим показа: токен публичной ссылки и код для телевизора (nil - выключен), ведущий и его имя.
+	// Показ: токен публичной ссылки (nil - выключен), ведущий и его имя.
 	PresentToken       *string
 	PresenterAccountID *uuid.UUID
 	PresenterName      string
@@ -124,7 +119,6 @@ type Board struct {
 	LastOpenedAt     *time.Time
 }
 
-// BoardView - доска с дополнительной информацией для UI.
 type BoardView struct {
 	Board     Board
 	OwnerName string

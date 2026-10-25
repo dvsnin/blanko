@@ -1,8 +1,4 @@
-/* BoardMenu.css - updated arrow rules to respect portal data-placement
-   Keep previous menu styles but add arrow placement for left/right/top/bottom.
-*/
-
-/* Base menu (kept from previous file) */
+/* Базовое меню */
 .portal-wrapper .board-card-menu,
 .board-card-menu {
     position: relative;
@@ -22,7 +18,7 @@
     pointer-events: auto;
 }
 
-/* Reset UA button styles & menu items (kept) */
+/* Пункты меню */
 .portal-wrapper .board-card-menu .board-card-menu-item,
 .board-card-menu .board-card-menu-item {
     -webkit-appearance: none !important;
@@ -44,7 +40,6 @@
     box-sizing: border-box !important;
 }
 
-/* icons area */
 .portal-wrapper .board-card-menu .board-card-menu-icon,
 .board-card-menu .board-card-menu-icon {
     width: 18px;
@@ -56,14 +51,12 @@
     color: var(--muted);
 }
 
-/* label */
 .portal-wrapper .board-card-menu .board-card-menu-label,
 .board-card-menu .board-card-menu-label {
     flex: 1 1 auto;
     line-height: 1;
 }
 
-/* Hover & focus */
 .portal-wrapper .board-card-menu .board-card-menu-item:hover,
 .board-card-menu .board-card-menu-item:hover,
 .portal-wrapper .board-card-menu .board-card-menu-item:focus,
@@ -74,14 +67,12 @@
     transform: translateY(-1px);
 }
 
-/* keyboard focus */
 .portal-wrapper .board-card-menu .board-card-menu-item:focus-visible,
 .board-card-menu .board-card-menu-item:focus-visible {
     box-shadow: 0 0 0 4px rgba(31,138,133, 0.10);
     border-radius: 8px;
 }
 
-/* separator */
 .portal-wrapper .board-card-menu .board-card-menu-separator,
 .board-card-menu .board-card-menu-separator {
     height: 1px;
@@ -90,7 +81,6 @@
     border-radius: 1px;
 }
 
-/* danger */
 .portal-wrapper .board-card-menu .board-card-menu-item--danger,
 .board-card-menu .board-card-menu-item--danger {
     color: var(--danger);
@@ -104,13 +94,13 @@
    ARROW (pointer) - positioned based on data-placement on the portal wrapper
    ----------------------------------------- */
 
-/* Default reset: no arrow */
+/* Без размещения стрелки нет */
 .portal-wrapper .board-card-menu::before,
 .board-card-menu::before {
     content: none;
 }
 
-/* Left placement: menu is left of anchor, arrow on the right edge centered vertically */
+/* Меню слева от кнопки, стрелка на правом крае */
 .portal-wrapper[data-placement="left"] .board-card-menu::before {
     content: "";
     position: absolute;
@@ -126,7 +116,7 @@
     z-index: -1;
 }
 
-/* Right placement: menu is right of anchor, arrow on the left edge centered vertically */
+/* Меню справа, стрелка на левом крае */
 .portal-wrapper[data-placement="right"] .board-card-menu::before {
     content: "";
     position: absolute;
@@ -142,7 +132,7 @@
     z-index: -1;
 }
 
-/* Top placement: menu above anchor - arrow at bottom edge centered */
+/* Меню сверху, стрелка снизу */
 .portal-wrapper[data-placement="top"] .board-card-menu::before {
     content: "";
     position: absolute;
@@ -158,7 +148,7 @@
     z-index: -1;
 }
 
-/* Bottom placement: menu below anchor - arrow at top edge centered */
+/* Меню снизу, стрелка сверху */
 .portal-wrapper[data-placement="bottom"] .board-card-menu::before {
     content: "";
     position: absolute;
@@ -174,7 +164,7 @@
     z-index: -1;
 }
 
-/* small-screen adjustments */
+/* Узкие экраны */
 @media (max-width: 480px) {
     .portal-wrapper .board-card-menu,
     .board-card-menu {

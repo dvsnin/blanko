@@ -10,20 +10,17 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// ctxKey - приватный тип для ключей контекста.
 type ctxKey int
 
 const (
 	ctxKeyIdentity ctxKey = iota + 1
 )
 
-// API - корневая структура API, владеющая сервисами.
 type API struct {
 	services      *service.Services
 	mediaMaxBytes int64
 }
 
-// NewAPI создаёт API с переданными сервисами и лимитом загружаемого файла.
 func NewAPI(s *service.Services, mediaMaxBytes int64) *API {
 	return &API{services: s, mediaMaxBytes: mediaMaxBytes}
 }
@@ -52,13 +49,10 @@ func (a *API) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// identityFrom извлекает identity из контекста.
 func identityFrom(ctx context.Context) (service.Identity, bool) {
 	id, ok := ctx.Value(ctxKeyIdentity).(service.Identity)
 	return id, ok
 }
-
-// ---------- HTTP helpers ----------
 
 type errorBody struct {
 	Error   string `json:"error"`
@@ -129,26 +123,19 @@ func decodeJSON(r *http.Request, dst any) error {
 	return dec.Decode(dst)
 }
 
-// WithAccount - общая часть всех POST-DTO: клиент обязан присылать accountId
-// текущего пользователя; сервер сверяет его с сессией (oauth2-proxy headers)
-// и режет запросы с чужим id.
+// WithAccount - accountId в теле каждого POST; сервер сверяет его с сессией oauth2-proxy.
 type WithAccount struct {
 	AccountID string `json:"accountId"`
 }
 
-// GetAccountID реализует интерфейс accountIDProvider.
 func (w WithAccount) GetAccountID() string { return w.AccountID }
 
 type accountIDProvider interface {
 	GetAccountID() string
 }
 
-// decodeAndAuth - стандартный вход в любой POST-хендлер:
-//  1. вытаскивает Identity из контекста (кладёт AuthMiddleware);
-//  2. парсит JSON-тело в req;
-//  3. сверяет req.AccountID с id.Account.ID - при несовпадении 403;
-//
-// В случае ошибки пишет HTTP-ответ и возвращает ok=false.
+// decodeAndAuth парсит тело POST и сверяет accountId с identity из контекста (403 при чужом id);
+// при ошибке ответ уже записан.
 func (a *API) decodeAndAuth(w http.ResponseWriter, r *http.Request, req accountIDProvider) (service.Identity, bool) {
 	id, ok := identityFrom(r.Context())
 	if !ok {

@@ -14,10 +14,7 @@ export interface UserContextValue {
 export const UserContext = createContext<UserContextValue | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  // Единственный источник user-данных - window.dashData (рендерится сервером в
-  // dashboard.tmpl, accountId/email/name берутся из БД). Отдельного round-trip'а
-  // на первом рендере нет; /account/get вызывается только там, где нужны свежие
-  // данные (например, при открытии ProfilePage).
+  // Данные пользователя приходят в window.dashData; /account/get только там, где нужны свежие.
   const initialDash = typeof window !== "undefined" ? window.dashData : undefined;
   const [user, setUser] = useState<User>({
     id: initialDash?.accountId,

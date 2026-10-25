@@ -13,7 +13,6 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
-// BoardDTO - представление доски в API.
 type BoardDTO struct {
 	ID                  string `json:"id"`
 	PublicID            string `json:"publicId"`
@@ -24,7 +23,7 @@ type BoardDTO struct {
 	TeamAccess          string `json:"teamAccess"` // действующий: своя настройка или уровень группы
 	TeamAccessInherited bool   `json:"teamAccessInherited"`
 	LinkAccessEnabled   bool   `json:"linkAccessEnabled"`
-	// Режим показа: включён ли, токен и код (только тем, кто управляет доской), срок, ведущий.
+	// Показ: токен только тем, кто управляет доской.
 	PresentEnabled   bool      `json:"presentEnabled"`
 	PresentToken     string    `json:"presentToken"`
 	PresentExpiresAt string    `json:"presentExpiresAt"`
@@ -82,8 +81,6 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 	}
 }
 
-// --- requests ---
-
 type listBoardsRequest struct {
 	WithAccount
 	TeamID        string `json:"teamId"`        // пусто - все команды пользователя
@@ -120,8 +117,6 @@ type boardIDRequest struct {
 	WithAccount
 	ID string `json:"id"`
 }
-
-// --- board handlers ---
 
 // ListBoards POST /api/v1/board/list - страница досок команды teamId или всех команд пользователя:
 // {items, nextCursor, total}.
@@ -166,7 +161,7 @@ type presentEnableRequest struct {
 	Hours int    `json:"hours"` // 0 - пока не выключат, иначе 1, 12 или 24
 }
 
-// EnablePresent POST /api/v1/board/present/enable - включить показ: ссылка, код, срок, ведущий.
+// EnablePresent POST /api/v1/board/present/enable - включить показ на hours часов.
 func (a *API) EnablePresent(w http.ResponseWriter, r *http.Request) {
 	var req presentEnableRequest
 	id, ok := a.decodeAndAuth(w, r, &req)
@@ -358,11 +353,7 @@ func (a *API) MoveBoard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, boardViewToDTO(*view))
 }
 
-// --- Register ---
-
-// Register регистрирует все API-маршруты под указанным subrouter.
-// Схема: все action-роуты POST-only, accountId передаётся в body и валидируется
-// в decodeAndAuth против сессии oauth2-proxy.
+// Register - все маршруты API: только POST, accountId в теле.
 func (a *API) Register(r *mux.Router) {
 	r.Use(a.AuthMiddleware)
 
@@ -370,7 +361,6 @@ func (a *API) Register(r *mux.Router) {
 		r.HandleFunc(path, h).Methods(http.MethodPost)
 	}
 
-	// Account (текущий пользователь)
 	post("/account/get", a.GetAccount)
 	post("/account/update", a.UpdateAccount)
 	post("/account/search", a.SearchAccounts)
@@ -378,7 +368,6 @@ func (a *API) Register(r *mux.Router) {
 	post("/account/list", a.ListAccounts)
 	post("/account/role", a.SetAccountRole)
 
-	// Teams
 	post("/team/list", a.ListTeams)
 	post("/team/create", a.CreateTeam)
 	post("/team/update", a.UpdateTeam)
@@ -391,7 +380,6 @@ func (a *API) Register(r *mux.Router) {
 	post("/team/member/role", a.SetTeamMemberRole)
 	post("/team/member/remove", a.RemoveTeamMember)
 
-	// Boards
 	post("/board/list", a.ListBoards)
 	post("/board/create", a.CreateBoard)
 	post("/board/update", a.UpdateBoard)
@@ -404,7 +392,6 @@ func (a *API) Register(r *mux.Router) {
 	post("/board/duplicate", a.DuplicateBoard)
 	post("/board/move", a.MoveBoard)
 
-	// Templates
 	post("/template/list", a.ListTemplates)
 	post("/template/create", a.CreateTemplate)
 	post("/template/update", a.UpdateTemplate)

@@ -13,24 +13,20 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 )
 
-// AccountRepo - репозиторий работы с таблицей account.
 type AccountRepo struct {
 	db DBTX
 }
 
-// NewAccountRepo создаёт репозиторий.
 func NewAccountRepo(db DBTX) *AccountRepo {
 	return &AccountRepo{db: db}
 }
 
-// AccountFields - набор полей для частичного апдейта учётной записи.
-// Непустые значения будут применены.
+// AccountFields: непустые поля применяются.
 type AccountFields struct {
 	Email string
 	Name  string
 }
 
-// Create вставляет новую учётную запись.
 func (r *AccountRepo) Create(ctx context.Context, a *model.Account) error {
 	if a.ID == uuid.Nil {
 		a.ID = uuid.New()
@@ -48,7 +44,6 @@ func (r *AccountRepo) Create(ctx context.Context, a *model.Account) error {
 	return nil
 }
 
-// GetByEmail возвращает учётную запись по email.
 func (r *AccountRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Account, error) {
 	return r.getBy(ctx, "id = ? AND deleted_at IS NULL", id)
 }
@@ -157,7 +152,6 @@ func prefsJSON(p model.Prefs) []byte {
 	return b
 }
 
-// Update - переиспользуемое частичное обновление: применяются только непустые поля.
 func (r *AccountRepo) Update(ctx context.Context, id uuid.UUID, f AccountFields) error {
 	b := psql.Update("account").Where("id = ?", id)
 	touched := false

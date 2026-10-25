@@ -16,20 +16,8 @@ import { formatLastOpened, formatRelative } from "../utils/relativeTime";
 import { api, ApiError, type BoardDTO, type BoardSegment, type BoardSort, type TeamDTO } from "../api/client";
 import { readPref, readPrefIn, savePrefs } from "../utils/prefs";
 
-/**
- * TeamsContext - single source of truth for teams/boards, synchronised with
- * the backend over the REST API at /app/api/v1.
- *
- * Strategy:
- *  - On mount: /team/list даёт группы с boardCount и recentBoards (для «Групп» и
- *    переключателя), /board/list отдаёт доски активной группы страницами под
- *    текущий запрос (сегмент, сортировка, поиск). dashData намеренно не содержит
- *    предзагруженных teams/boards - чтобы не дублировать контракт и не
- *    рассинхронизироваться с API.
- *  - All mutations hit the API; on success we update local state optimistically
- *    (or with the server response when it's more authoritative, e.g. create).
- *  - Errors are surfaced via the `error` field and logged.
- */
+// Группы и доски кабинета: /team/list даёт группы со счётчиками и последними досками, /board/list
+// отдаёт доски активной группы страницами под текущий запрос; правки применяются оптимистично.
 
 export interface BoardQuery {
   segment: BoardSegment;
@@ -326,7 +314,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     [coloredTeams, activeTeamId],
   );
 
-  // ---------- локальные правки: страница списка и последние доски групп ----------
+  // Локальные правки страницы списка и последних досок групп.
 
   const patchBoard = useCallback((boardId: string, fn: (b: Board) => Board) => {
     setBoardList((prev) => ({ ...prev, items: prev.items.map((b) => (b.id === boardId ? fn(b) : b)) }));
@@ -450,7 +438,6 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       const team = teams.find((t) => t.id === teamId);
       if (!team) return;
       const nextStarred = !team.isStarred;
-      // optimistic
       setTeams((prev) =>
         prev.map((t) => (t.id === teamId ? { ...t, isStarred: nextStarred } : t)),
       );
@@ -459,7 +446,6 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
         else await api.teams.unstar(teamId);
       } catch (e) {
         console.error("toggleStarTeam failed:", e);
-        // revert
         setTeams((prev) =>
           prev.map((t) => (t.id === teamId ? { ...t, isStarred: !nextStarred } : t)),
         );

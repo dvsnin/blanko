@@ -8,21 +8,14 @@ import (
 	"time"
 )
 
-// Config - настройки приложения, читаемые из окружения.
 type Config struct {
-	// HTTPAddr - адрес HTTP-сервера (например ":8080").
-	HTTPAddr string
-	// PostgresDSN - строка подключения к PostgreSQL.
-	PostgresDSN string
-	// MigrationsDir - путь к директории с миграциями (goose).
+	HTTPAddr      string
+	PostgresDSN   string
 	MigrationsDir string
-	// RunMigrations - запускать ли миграции при старте.
 	RunMigrations bool
 	// PresetReseed - перегенерировать документы готовых шаблонов при старте (после обновления каталога или tldraw).
 	PresetReseed bool
-	// TldrawLicenseKey - лицензионный ключ tldraw. Пустая строка допустима:
-	// локально (HTTP на loopback) SDK считает окружение разработкой и ключ
-	// не требует. Ключ публичный по дизайну - проверяется на клиенте.
+	// TldrawLicenseKey пуст на localhost и http-хостах: tldraw считает их разработкой.
 	TldrawLicenseKey string
 	// KeycloakPublicURL - адрес Keycloak, по которому к нему ходит браузер (RP-initiated logout).
 	KeycloakPublicURL string
@@ -49,7 +42,6 @@ type Config struct {
 	PurgeInterval time.Duration
 }
 
-// Load собирает конфиг из переменных окружения с разумными значениями по умолчанию.
 func Load() (*Config, error) {
 	cfg := &Config{
 		HTTPAddr:      getEnv("HTTP_ADDR", ":8080"),

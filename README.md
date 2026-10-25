@@ -43,7 +43,7 @@ make up
 Команда соберёт фронтенд, поднимет контейнеры и применит миграции. Открыть **http://localhost/app/dashboard** и войти:
 
 ```
-логин:  test@example.com
+логин:  admin@blanko.ru
 пароль: qwerty1234
 ```
 

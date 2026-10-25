@@ -78,9 +78,7 @@ func TestPresetTemplates(t *testing.T) {
 		t.Fatalf("non-preset templates appeared: %d", n-count)
 	}
 
-	// Доска из готового шаблона получает всё его содержимое: те же записи, кроме документа и страницы
-	// копируются один в один (Copy переписывает только ссылки на медиа).
-	// Миграция со строками каталога генерируется (make presets-sql); если каталог правили, файл устарел.
+	// Файл миграции генерируется из каталога: правка каталога без make presets-sql ловится здесь.
 	t.Run("presets migration matches the catalog", func(t *testing.T) {
 		raw, err := os.ReadFile(filepath.Join(migrationsDir, "20261025180100_presets.sql"))
 		if err != nil {
@@ -91,8 +89,7 @@ func TestPresetTemplates(t *testing.T) {
 		}
 	})
 
-	// Пересев по флагу PRESET_RESEED: документы пресетов перегенерируются целиком (обновление коробки,
-	// правка каталога); без флага отредактированный документ не трогается.
+	// PRESET_RESEED перегенерирует документы целиком; без флага отредактированный не трогается.
 	t.Run("forced reseed regenerates preset documents", func(t *testing.T) {
 		first := items(body)[0].(map[string]any)
 		key := doc.DocumentKey(doc.KindTemplate, uuid.MustParse(first["id"].(string)))
@@ -121,6 +118,7 @@ func TestPresetTemplates(t *testing.T) {
 		}
 	})
 
+	// Доска из шаблона получает все записи один в один, Copy переписывает только ссылки на медиа.
 	t.Run("board from preset keeps every shape", func(t *testing.T) {
 		teacher := e.account("teacher@example.com")
 		team := e.team(teacher)

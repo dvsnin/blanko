@@ -1,6 +1,5 @@
 DOCKER_COMPOSE = docker compose -f deploy/docker-compose.yml
 
-# list of frontend apps to build (adjust package names or paths if needed)
 FRONTEND_FILTERS = @blanko/dashboard @blanko/canvas
 
 # Конфигурация стенда. deploy/.env не хранится в Git - создаётся из примера.
@@ -22,9 +21,7 @@ up: prebuild_check env
 down: env
 	$(DOCKER_COMPOSE) down
 
-# Создать deploy/.env из примера, если его ещё нет.
-# Значения в примере безопасны и рассчитаны на локальный запуск -
-# для публичного развёртывания их нужно заменить.
+# deploy/.env из примера, если его ещё нет; для публичного развёртывания значения заменить.
 env:
 	@if [ ! -f $(ENV_FILE) ]; then \
 		echo "==> $(ENV_FILE) не найден - создаю из $(ENV_EXAMPLE)"; \
@@ -51,9 +48,8 @@ build-frontend:
 	done
 	@echo "Frontend build finished."
 
-# Интеграционные тесты бэкенда: нужен Postgres стенда и база app_test
-# (один раз: docker exec deploy-postgres_backend-1 psql -U <user> -d <db> -c 'create database app_test').
-# DSN собирается из deploy/.env; можно передать свой: make test-backend TEST_POSTGRES_DSN=...
+# Тесты бэкенда: Postgres стенда и база app_test (создать один раз через psql). DSN из deploy/.env
+# или свой: make test-backend TEST_POSTGRES_DSN=...
 envval = $(shell grep -E '^$(1)=' $(ENV_FILE) | head -1 | cut -d= -f2-)
 TEST_POSTGRES_DSN ?= postgres://$(call envval,APP_POSTGRES_USER):$(call envval,APP_POSTGRES_PASSWORD)@localhost:$(call envval,APP_POSTGRES_PORT)/app_test?sslmode=disable
 test-backend: env

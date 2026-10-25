@@ -7,10 +7,8 @@ import (
 	"strings"
 )
 
-// DisplayNameFrom - отображаемое имя для первого входа: claim name из ID-токена, который
-// oauth2-proxy кладёт в Authorization (подпись не проверяем, прокси доверенный), иначе имя и
-// фамилия из токена, иначе логин из заголовка, если это не e-mail (логин равен e-mail, когда
-// в Keycloak включён registrationEmailAsUsername). Пустая строка: сервис возьмёт часть до @.
+// DisplayNameFrom - имя для первого входа: name или имя с фамилией из ID-токена (подпись не
+// проверяем, прокси доверенный), иначе логин, если это не e-mail; пусто - сервис возьмёт часть до @.
 func DisplayNameFrom(r *http.Request) string {
 	if c := idTokenClaims(r); c != nil {
 		if name := strings.TrimSpace(c["name"]); name != "" {

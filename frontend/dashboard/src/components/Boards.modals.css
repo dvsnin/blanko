@@ -1,11 +1,3 @@
-/* Boards.modals.css - final consolidated stylesheet for modals (complete)
-   Notes:
-   - Scopes confirm modal layout so it doesn't affect board/team modals.
-   - Ensures footer alignment for board rename/delete modals.
-   - Restores visual states (empty input red) and button animations.
-   - Keeps team-settings modal styles isolated.
-*/
-
 /* ===== Global backdrop & modal card ===== */
 .boards-modal-backdrop {
     position: fixed;
@@ -134,7 +126,6 @@ select.boards-modal-input:focus { border-color: var(--teal); }
     box-shadow: 0 8px 22px rgba(31,138,133,0.08), 0 0 0 4px rgba(31,138,133,0.06);
 }
 
-/* Empty / invalid input visual */
 .boards-modal-input--empty {
     border-color: rgba(191,30,46,0.22) !important;
     box-shadow: 0 8px 24px rgba(191,30,46,0.06) !important;
@@ -198,7 +189,6 @@ select.boards-modal-input:focus { border-color: var(--teal); }
 .danger-btn:hover { background: rgba(191,30,46,0.08); border-color: rgba(191,30,46,0.16); transform: translateY(-2px); box-shadow: 0 10px 26px rgba(191,30,46,0.06); }
 .danger-btn:active { transform: translateY(0); box-shadow: 0 6px 12px rgba(191,30,46,0.04); }
 
-/* Outlined content danger */
 .btn-outlined-danger {
     background: transparent;
     border: 1px solid rgba(191,30,46,0.16);
@@ -219,7 +209,6 @@ select.boards-modal-input:focus { border-color: var(--teal); }
     padding: 12px 0;
     box-sizing: border-box;
 }
-/* Boards modals (no sidebar) - align footer with body padding */
 .boards-modal:not(.team-settings-modal) .boards-modal-footer {
     padding-left: 24px;
 }
@@ -236,7 +225,6 @@ select.boards-modal-input:focus { border-color: var(--teal); }
 
 .boards-modal--confirm .boards-modal-body { padding: 20px 28px; line-height: 1.5; }
 
-/* Align confirm footer with content padding */
 .boards-modal--confirm .boards-modal-footer,
 .boards-modal--compact .boards-modal-footer {
     padding-left: 28px;
@@ -247,7 +235,6 @@ select.boards-modal-input:focus { border-color: var(--teal); }
 }
 .confirm-footer { padding-top: 6px; }
 
-/* Portal child wrapper */
 .confirm-portal-host-child { position: relative; width: 100%; height: 100%; }
 
 /* ===== Team settings (scoped) ===== */

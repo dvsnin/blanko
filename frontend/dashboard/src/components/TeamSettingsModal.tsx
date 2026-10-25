@@ -8,12 +8,6 @@ import type { BoardAccess, Team, TeamRole } from "../types";
 import TeamMembersTab from "./TeamMembersTab";
 import TeacherPicker from "./TeacherPicker";
 
-/*
-  TeamSettingsModal - decision based only on team.role.
-  role must be one of "owner" | "admin" | "member".
-  If role is missing or invalid, we treat the team as broken and hide destructive actions.
-*/
-
 export const NEW_TEAM = { create: true } as const;
 
 interface TeamSettingsModalProps {

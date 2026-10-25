@@ -1,7 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
--- Готовые шаблоны занятий. Файл сгенерирован из каталога internal/preset: make presets-sql.
--- Документы с содержимым строит сидер на старте бэкенда; правки сада не затираются.
+-- Сгенерировано из каталога internal/preset: make presets-sql.
 INSERT INTO template (id, public_id, preset_key, name, description, topic, ages, duration_min, author_account_id, created_at, updated_at)
 VALUES
     ('14bae225-7dcd-5aaa-9aa7-4a7aaab6de4c', 'ta5d30aba11e71eb6', 'count-to-5', 'Счёт до 5 с яблоками', 'Дети перетаскивают яблоки в корзину и считают вслух.', 'math', ARRAY['3-4','4-5']::text[], 20, NULL, now(), now()),

@@ -36,14 +36,11 @@ func presetIDs(key string) (uuid.UUID, string) {
 	return uuid.NewSHA1(presetNamespace, []byte(key)), "t" + hex.EncodeToString(sum[:])[:16]
 }
 
-// MigrationSQL - содержимое миграции со строками каталога: id и public_id детерминированы из
-// ключа, повторное применение ничего не меняет (ON CONFLICT DO NOTHING). Генерируется
-// `make presets-sql`; тест TestPresetTemplates сверяет файл с каталогом.
+// MigrationSQL - миграция со строками каталога (make presets-sql); id и public_id детерминированы из ключа.
 func MigrationSQL() string {
 	var b strings.Builder
 	b.WriteString("-- +goose Up\n-- +goose StatementBegin\n")
-	b.WriteString("-- Готовые шаблоны занятий. Файл сгенерирован из каталога internal/preset: make presets-sql.\n")
-	b.WriteString("-- Документы с содержимым строит сидер на старте бэкенда; правки сада не затираются.\n")
+	b.WriteString("-- Сгенерировано из каталога internal/preset: make presets-sql.\n")
 	b.WriteString("INSERT INTO template (id, public_id, preset_key, name, description, topic, ages, duration_min, author_account_id, created_at, updated_at)\nVALUES\n")
 	presets := Catalog()
 	for i, p := range presets {
@@ -68,10 +65,8 @@ func sqlString(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
 }
 
-// Run пишет документы готовых шаблонов: строки template кладёт миграция, сидер только строит
-// содержимое там, где его нет или где нет ни одной фигуры (пустой снапшот после открытия тоже
-// считается пустым). С force документы всех живых пресетов перегенерируются (обновление
-// коробки, правка каталога): формат документов tldraw не мигрируется, а строится заново.
+// Run строит документы готовых шаблонов там, где их нет или нет ни одной фигуры; с force
+// перегенерирует все (документы tldraw не мигрируются, а строятся заново).
 func Run(ctx context.Context, pool *pgxpool.Pool, store storage.ObjectStore, force bool) error {
 	repo := repository.NewTemplateRepo(pool)
 	docs := 0

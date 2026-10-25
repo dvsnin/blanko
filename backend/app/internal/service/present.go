@@ -20,9 +20,7 @@ var ErrPresentOff = errors.New("present mode is off")
 // Сроки показа в часах; 0 - пока не выключат вручную.
 var presentHours = map[int]bool{0: true, 1: true, 12: true, 24: true}
 
-// EnablePresent включает показ: выдаёт токен ссылки и код для телевизора, ведущим становится
-// включивший. Повторное включение оставляет токен и код, но переустанавливает срок.
-// Право: управлять доской (canEditBoard).
+// EnablePresent: токен ссылки и ведущий; повторное включение только переустанавливает срок. Право canEditBoard.
 func (s *BoardService) EnablePresent(ctx context.Context, id Identity, boardID uuid.UUID, hours int) (*model.BoardView, error) {
 	if !presentHours[hours] {
 		return nil, fmt.Errorf("%w: present duration must be 0, 1, 12 or 24 hours", ErrValidation)
@@ -57,7 +55,7 @@ func (s *BoardService) EnablePresent(ctx context.Context, id Identity, boardID u
 	return s.boardViewFor(ctx, id, boardID)
 }
 
-// DisablePresent выключает показ: ссылка и код перестают работать, ведущий сбрасывается.
+// DisablePresent выключает показ: ссылка перестаёт работать, ведущий сбрасывается.
 func (s *BoardService) DisablePresent(ctx context.Context, id Identity, boardID uuid.UUID) (*model.BoardView, error) {
 	repo := repository.NewBoardRepo(s.pool)
 	board, err := repo.GetByID(ctx, boardID)

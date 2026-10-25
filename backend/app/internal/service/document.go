@@ -56,9 +56,8 @@ func (s *DocumentService) Resolve(ctx context.Context, id Identity, kind doc.Kin
 	return false, ErrNotFound
 }
 
-// Copy переносит содержимое документа под новый префикс: сначала сброс живой комнаты
-// источника, затем серверное копирование объектов и переписывание ссылок на медиа
-// в document.json. Ошибка хранилища - ErrStorageUnavailable, частичная копия удаляется.
+// Copy: сброс живой комнаты источника, серверное копирование объектов, переписывание ссылок на медиа;
+// при ошибке хранилища частичная копия удаляется.
 func (s *DocumentService) Copy(ctx context.Context, srcKind doc.Kind, srcID uuid.UUID, dstKind doc.Kind, dstID uuid.UUID) error {
 	if err := s.Hub.Flush(ctx, srcKind, srcID); err != nil {
 		return fmt.Errorf("%w: flush source: %v", ErrStorageUnavailable, err)
@@ -107,9 +106,7 @@ func (s *DocumentService) copyPrefix(ctx context.Context, srcKind doc.Kind, srcI
 	return s.Store.Put(ctx, doc.DocumentKey(dstKind, dstID), bytes.NewReader(body), int64(len(body)), "application/json")
 }
 
-// PurgeDeleted вычищает из хранилища документы, удалённые раньше чем retention назад,
-// и помечает их purged_at. Возвращает число вычищенных. Ошибка одного документа не
-// останавливает остальные: он останется на следующий проход.
+// PurgeDeleted вычищает документы, удалённые раньше retention, и помечает purged_at; сбой одного не останавливает остальные.
 func (s *DocumentService) PurgeDeleted(ctx context.Context, retention time.Duration) (int, error) {
 	before := time.Now().Add(-retention)
 	purged := 0

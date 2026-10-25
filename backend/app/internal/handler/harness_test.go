@@ -99,8 +99,6 @@ func newEnvWith(t *testing.T, flushInterval time.Duration) *env {
 	return &env{t: t, ctx: ctx, pool: pool, store: store, hub: hub, services: services, srv: srv}
 }
 
-// --- фикстуры ---
-
 func (e *env) account(email string) model.Account {
 	e.t.Helper()
 	id, err := e.services.Auth.Resolve(e.ctx, email, "")
@@ -177,8 +175,6 @@ func (e *env) template(author *model.Account, name string) model.Template {
 	return *t
 }
 
-// --- HTTP ---
-
 // post шлёт action-запрос API от имени email: accountId подставляется сам.
 func (e *env) post(email, path string, body map[string]any) (int, map[string]any) {
 	e.t.Helper()
@@ -237,8 +233,6 @@ func eventually(t *testing.T, timeout time.Duration, cond func() bool) {
 	}
 	t.Fatalf("condition not met within %s", timeout)
 }
-
-// --- WebSocket ---
 
 func (e *env) dial(email string, kind doc.Kind, id uuid.UUID) (*websocket.Conn, *http.Response, error) {
 	e.t.Helper()

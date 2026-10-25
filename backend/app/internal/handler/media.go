@@ -75,9 +75,8 @@ func (a *API) UploadMedia(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"src": doc.MediaSrc(kind, docID, name)})
 }
 
-// GetMedia GET /app/media/{kind}s/{id}/media/{name}: путь после /app/media/ равен ключу в хранилище.
-// Документ в БД не проверяется: ссылка самодостаточна и живёт в других документах после вставки
-// через буфер обмена, а объекты при мягком удалении остаются. Права на чтение - любой вошедший.
+// GetMedia GET /app/media/{kind}s/{id}/media/{name}: ключ хранилища в пути; документ не проверяется,
+// ссылка живёт и в других документах после вставки через буфер обмена. Читать может любой вошедший.
 func (a *API) GetMedia(w http.ResponseWriter, r *http.Request) {
 	name := mux.Vars(r)["name"]
 	kind, kindOK := doc.ParseKind(mux.Vars(r)["kind"])

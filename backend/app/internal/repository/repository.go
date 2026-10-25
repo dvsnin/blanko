@@ -1,5 +1,4 @@
-// Package repository содержит реализацию слоя доступа к данным.
-// Все SQL-запросы собираются через squirrel (PostgreSQL placeholders).
+// Package repository - доступ к данным; SQL собирается через squirrel.
 package repository
 
 import (
@@ -21,16 +20,13 @@ type DBTX interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// ErrNotFound - запись не найдена.
 var ErrNotFound = errors.New("not found")
 
 // psql - билдер squirrel, предварительно настроенный на $1-плейсхолдеры PostgreSQL.
 var psql = sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
 
-// Pool - pgxpool, хранимый на уровне репозиториев.
 type Pool = pgxpool.Pool
 
-// execBuilder выполняет builder-INSERT/UPDATE/DELETE через DBTX.
 func execBuilder(ctx context.Context, db DBTX, b sq.Sqlizer) (pgconn.CommandTag, error) {
 	query, args, err := b.ToSql()
 	if err != nil {
@@ -39,7 +35,6 @@ func execBuilder(ctx context.Context, db DBTX, b sq.Sqlizer) (pgconn.CommandTag,
 	return db.Exec(ctx, query, args...)
 }
 
-// queryBuilder выполняет builder-SELECT через DBTX и возвращает pgx.Rows.
 func queryBuilder(ctx context.Context, db DBTX, b sq.Sqlizer) (pgx.Rows, error) {
 	query, args, err := b.ToSql()
 	if err != nil {
@@ -48,7 +43,6 @@ func queryBuilder(ctx context.Context, db DBTX, b sq.Sqlizer) (pgx.Rows, error) 
 	return db.Query(ctx, query, args...)
 }
 
-// queryRowBuilder выполняет builder-SELECT с одним результатом.
 func queryRowBuilder(ctx context.Context, db DBTX, b sq.Sqlizer) (pgx.Row, error) {
 	query, args, err := b.ToSql()
 	if err != nil {

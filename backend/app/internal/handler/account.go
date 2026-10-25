@@ -7,11 +7,6 @@ import (
 	"net/http"
 )
 
-// Ресурс account: текущий пользователь. Действия выполняются для владельца
-// сессии - accountId в body должен совпадать с accountId, который decodeAndAuth
-// получает из oauth2-proxy headers (см. handler/api.go).
-
-// AccountDTO - минимальное публичное представление аккаунта.
 type AccountDTO struct {
 	ID      string         `json:"id"`
 	Name    string         `json:"name"`
@@ -103,9 +98,7 @@ type accountUpdateRequest struct {
 	Name *string `json:"name,omitempty"`
 }
 
-// GetAccount POST /api/v1/account/get - актуальные данные текущего аккаунта из БД
-// (ProfileModal вызывает при открытии, чтобы не полагаться на возможно устаревший
-// снимок из window.dashData).
+// GetAccount POST /api/v1/account/get - свежие данные аккаунта, когда снимок в dashData мог устареть.
 func (a *API) GetAccount(w http.ResponseWriter, r *http.Request) {
 	var req accountGetRequest
 	id, ok := a.decodeAndAuth(w, r, &req)

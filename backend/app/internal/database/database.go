@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Connect создаёт пул подключений pgx к PostgreSQL.
 func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
@@ -35,9 +34,8 @@ func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// Migrate применяет SQL-миграции из директории dir. Формат файлов совместим
-// с goose: секция Up между "-- +goose Up" и "-- +goose Down" выполняется целиком.
-// Применённые миграции фиксируются в таблице schema_migrations (по имени файла).
+// Migrate применяет секции Up файлов *.sql (goose-аннотации) по порядку имён; применённые
+// фиксируются в schema_migrations по имени файла.
 func Migrate(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 	if _, err := pool.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -46,13 +44,6 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 		)
 	`); err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
-	}
-
-	// Совместимость с предыдущим goose: если существует goose_db_version,
-	// подтягиваем уже применённые версии в schema_migrations, сопоставляя
-	// numeric-префикс имени файла с version_id из goose.
-	if err := importGooseHistory(ctx, pool, dir); err != nil {
-		return fmt.Errorf("import goose history: %w", err)
 	}
 
 	entries, err := os.ReadDir(dir)
@@ -86,7 +77,6 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 		}
 		up := extractGooseUp(string(raw))
 		if strings.TrimSpace(up) == "" {
-			// Пустая миграция - просто отметим как применённую.
 			if _, err := pool.Exec(ctx,
 				`INSERT INTO schema_migrations(version) VALUES($1)`, name,
 			); err != nil {
@@ -112,7 +102,6 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, dir string) error {
 	return nil
 }
 
-// extractGooseUp вытаскивает секцию Up из goose-файла, удаляя управляющие аннотации.
 func extractGooseUp(content string) string {
 	lines := strings.Split(content, "\n")
 	var (
@@ -144,76 +133,4 @@ func extractGooseUp(content string) string {
 		}
 	}
 	return strings.Join(out, "\n")
-}
-
-// importGooseHistory переносит применённые миграции из старой таблицы
-// goose_db_version в schema_migrations. Если goose_db_version отсутствует -
-// ничего не делает. Сопоставление идёт по numeric-префиксу имени файла.
-func importGooseHistory(ctx context.Context, pool *pgxpool.Pool, dir string) error {
-	var exists bool
-	if err := pool.QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM information_schema.tables
-			WHERE table_schema = current_schema() AND table_name = 'goose_db_version'
-		)
-	`).Scan(&exists); err != nil {
-		return fmt.Errorf("probe goose_db_version: %w", err)
-	}
-	if !exists {
-		return nil
-	}
-
-	rows, err := pool.Query(ctx, `
-		SELECT version_id FROM goose_db_version
-		WHERE is_applied = true AND version_id > 0
-	`)
-	if err != nil {
-		return fmt.Errorf("select goose versions: %w", err)
-	}
-	defer rows.Close()
-
-	applied := make(map[int64]bool)
-	for rows.Next() {
-		var v int64
-		if err := rows.Scan(&v); err != nil {
-			return fmt.Errorf("scan goose version: %w", err)
-		}
-		applied[v] = true
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if len(applied) == 0 {
-		return nil
-	}
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("read dir %q: %w", dir, err)
-	}
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".sql") {
-			continue
-		}
-		name := e.Name()
-		// Формат goose: <version>_<name>.sql
-		prefix := name
-		if idx := strings.Index(name, "_"); idx > 0 {
-			prefix = name[:idx]
-		}
-		var v int64
-		if _, err := fmt.Sscanf(prefix, "%d", &v); err != nil {
-			continue
-		}
-		if !applied[v] {
-			continue
-		}
-		if _, err := pool.Exec(ctx,
-			`INSERT INTO schema_migrations(version) VALUES($1) ON CONFLICT DO NOTHING`,
-			name,
-		); err != nil {
-			return fmt.Errorf("seed schema_migrations %s: %w", name, err)
-		}
-	}
-	return nil
 }

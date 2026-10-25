@@ -1,7 +1,5 @@
-// Холст Blanko на tldraw. Собирается Vite (frontend/canvas) в backend/app/static/canvas/assets:
-// tldraw, React, стили и ресурсы редактора лежат в статике бэкенда, интернет канвасу не нужен.
-// Содержимое документа живёт на сервере: вебсокет /app/ws/{kind}/{id}, диффы записей туда и обратно,
-// IndexedDB не используется. Протокол: docs/superpowers/specs/2026-10-24-board-storage-ws-design.md.
+// Холст на tldraw: документ живёт на сервере, вебсокет /app/ws/{kind}/{id} гоняет диффы записей,
+// IndexedDB не используется.
 import React from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -14,9 +12,7 @@ import "tldraw/tldraw.css";
 // Шрифты, иконки и переводы tldraw из бандла, а не с cdn.tldraw.com.
 const assetUrls = getAssetUrlsByImport();
 
-// tldraw 5.5.2 без ключа работает на любом http-хосте и на чистом localhost (production-сборка
-// считает такие адреса разработкой); https и *.localhost потребовали бы TLDRAW_LICENSE_KEY.
-// Watermark tldraw скрывать нельзя.
+// Без ключа tldraw работает на localhost и http-хостах; watermark скрывать нельзя.
 const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
 // APP_DOC инжектит сервер: kind, id (uuid), publicId, canEdit.
@@ -42,7 +38,7 @@ document.getElementById("shareBtn").addEventListener("click", async () => {
     }
 });
 
-// --- медиа: файлы лежат в хранилище под префиксом документа, src самодостаточный ---
+// Медиа: файлы в хранилище под префиксом документа, src самодостаточный.
 const assets = {
     async upload(asset, file) {
         const fd = new FormData();
@@ -62,7 +58,6 @@ const assets = {
 
 const store = createTLStore({ assets, shapeUtils: defaultShapeUtils, bindingUtils: defaultBindingUtils });
 
-// --- состояние соединения ---
 const statusEl = document.getElementById("saveState");
 const overlay = {
     root: document.getElementById("overlay"),
@@ -191,7 +186,7 @@ function emptyDocument() {
     return { schema: editor.store.schema.serialize(), store: {} };
 }
 
-// --- presence: свой курсор и камера остальным, чужие курсоры к себе в store ---
+// Presence: свой курсор и камера остальным, чужие курсоры к себе в store.
 // userId свой на вкладку: два окна одного человека - два курсора. Префикс user: требует валидатор tldraw 5.
 const presenceUserId = "user:" + Math.random().toString(36).slice(2, 10);
 const presenceRecordId = InstancePresenceRecordType.createId(presenceUserId);
@@ -272,9 +267,7 @@ function clearRemotePresence() {
     try { editor.store.mergeRemoteChanges(() => editor.store.remove(ids)); } catch {}
 }
 
-// Участники в шапке вместо панели tldraw: кнопка со своим кружком и числом подключений, по клику
-// список (одно подключение - одна строка: ноутбук и панель одного педагога это два участника).
-// Клик по строке - режим «следовать», ещё клик - перестать. Кто на другой странице - помечен.
+// Участники в шапке вместо панели tldraw: одно подключение - одна строка, клик по строке - следовать.
 let peopleOpen = false;
 let peopleScheduled = false;
 function schedulePeople() {
@@ -387,9 +380,7 @@ function renderPeople() {
     root.appendChild(pop);
 }
 
-// ---------- режим показа: слежение за ведущим ----------
-// Зритель следует за соединением ведущего с самой свежей активностью; у ведущего может быть
-// несколько устройств, переключаемся не чаще раза в 4 с. Ведущего нет - вся доска целиком и плашка.
+// Показ: зритель следует за самым активным соединением ведущего, переключаясь не чаще раза в 4 с.
 let presenterId = APP_DOC.presenterId || "";
 let presenterName = PRESENT ? PRESENT.presenterName : "";
 let followTarget = null;
@@ -503,7 +494,7 @@ function setupFullscreenButton() {
 // Панель участников tldraw не нужна: список живёт в шапке.
 const uiComponents = { SharePanel: null };
 
-// --- отправка: всё, что накопилось за кадр, уходит одним push ---
+// Всё, что накопилось за кадр, уходит одним push.
 function onChange(entry) {
     const { added, updated, removed } = entry.changes;
     for (const rec of Object.values(added)) { pending.put.set(rec.id, rec); pending.remove.delete(rec.id); }

@@ -75,12 +75,12 @@
 
   "users": [
     {
-      "username": "test@example.com",
+      "username": "admin@blanko.ru",
       "enabled": true,
-      "email": "test@example.com",
+      "email": "admin@blanko.ru",
       "emailVerified": true,
-      "firstName": "Test",
-      "lastName": "User",
+      "firstName": "Администратор",
+      "lastName": "",
       "credentials": [
         {
           "type": "password",

@@ -5,9 +5,6 @@ interface ToastState {
   visible: boolean;
 }
 
-/**
- * Manages a toast notification with auto-dismiss.
- */
 export function useToast(duration = 1800) {
   const [state, setState] = useState<ToastState>({ message: "", visible: false });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

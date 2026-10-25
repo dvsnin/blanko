@@ -1,13 +1,8 @@
-/* StarButton - normalized overlay sizing & visuals to match MenuButton.
-   Ensures hover/focus produce identical lift/tint so sibling overlays don't "grow".
-*/
-
 .star-wrap,
 .star-action {
     box-sizing: border-box;
 }
 
-/* wrapper */
 .star-wrap {
     position: relative;
     display: inline-flex;
@@ -19,7 +14,6 @@
     cursor: default;
 }
 
-/* glyph visible by default */
 .star-glyph {
     font-size: 16px;
     line-height: 1;
@@ -28,12 +22,10 @@
     color: var(--muted);
 }
 
-/* filled glyph color */
 .star-wrap.is-starred .star-glyph {
     color: var(--ink);
 }
 
-/* overlay button (hidden by default), fills wrapper */
 .star-action {
     position: absolute;
     inset: 0;
@@ -57,7 +49,6 @@
     line-height: 1;
 }
 
-/* reveal overlay on hover/focus-within or when overlay itself focused */
 .star-wrap:hover .star-action,
 .star-wrap:focus-within .star-action,
 .star-action:focus {
@@ -65,7 +56,6 @@
     pointer-events: auto;
 }
 
-/* unified hover/focus visuals identical to menu-action */
 .star-action:hover,
 .star-action:focus,
 .star-wrap:hover .star-action,
@@ -80,7 +70,7 @@
     box-shadow: 0 12px 28px rgba(6, 22, 34, 0.06), 0 0 0 3px rgba(31,138,133,0.08);
 }
 
-/* prevent injected pseudo content */
+/* Чужой CSS не должен подмешивать содержимое */
 .star-wrap::before, .star-wrap::after, .star-action::before, .star-action::after {
     content: none !important;
 }

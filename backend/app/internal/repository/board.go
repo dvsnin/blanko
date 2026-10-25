@@ -13,7 +13,6 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 )
 
-// BoardRepo - репозиторий досок.
 type BoardRepo struct {
 	db DBTX
 }
@@ -22,7 +21,7 @@ func NewBoardRepo(db DBTX) *BoardRepo {
 	return &BoardRepo{db: db}
 }
 
-// BoardFields - набор полей для частичного апдейта доски.
+// BoardFields: nil-поля не меняются.
 type BoardFields struct {
 	Name string
 	// TeamAccess - своя настройка доски; TeamAccessInherit сбрасывает её в «как в группе».
@@ -33,7 +32,6 @@ type BoardFields struct {
 	TeamID *uuid.UUID
 }
 
-// Create вставляет новую доску.
 func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 	if b.ID == uuid.Nil {
 		b.ID = uuid.New()
@@ -104,12 +102,10 @@ func (r *BoardRepo) getBy(ctx context.Context, where string, arg any) (*model.Bo
 	return &m, nil
 }
 
-// GetByID возвращает доску по UUID.
 func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, error) {
 	return r.getBy(ctx, "b.id = ? AND b.deleted_at IS NULL", id)
 }
 
-// GetByPublicID возвращает доску по её короткому public_id (из URL доски).
 func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
 	return r.getBy(ctx, "b.public_id = ? AND b.deleted_at IS NULL", publicID)
 }
@@ -357,7 +353,6 @@ func (r *BoardRepo) CountBoards(ctx context.Context, f BoardListFilter) (int, er
 	return n, nil
 }
 
-// Update - переиспользуемое частичное обновление доски.
 func (r *BoardRepo) Update(ctx context.Context, id uuid.UUID, f BoardFields) error {
 	b := psql.Update("board").Where("id = ? AND deleted_at IS NULL", id)
 	touched := false
@@ -403,7 +398,6 @@ func (r *BoardRepo) TouchLastOpened(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-// SoftDelete помечает доску удалённой.
 func (r *BoardRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	now := time.Now().UTC()
 	b := psql.Update("board").
@@ -420,7 +414,6 @@ func (r *BoardRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// SetStarred проставляет/снимает избранное для доски у конкретного пользователя.
 func (r *BoardRepo) SetStarred(ctx context.Context, accountID, boardID uuid.UUID, starred bool) error {
 	if starred {
 		q := psql.Insert("board_starred").

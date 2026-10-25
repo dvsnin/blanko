@@ -38,7 +38,6 @@ var (
 	ErrInvalidRole       = fmt.Errorf("%w: invalid role", ErrValidation)
 )
 
-// Services - набор всех прикладных сервисов.
 type Services struct {
 	Pool     *pgxpool.Pool
 	Auth     *AuthService
@@ -48,7 +47,6 @@ type Services struct {
 	Document *DocumentService
 }
 
-// New создаёт все сервисы: общий pgxpool, хранилище содержимого и хаб комнат.
 func New(pool *pgxpool.Pool, store storage.ObjectStore, hub *doc.Hub) *Services {
 	s := &Services{Pool: pool}
 	s.Auth = &AuthService{pool: pool}
@@ -60,12 +58,9 @@ func New(pool *pgxpool.Pool, store storage.ObjectStore, hub *doc.Hub) *Services 
 	return s
 }
 
-// withTx запускает callback в транзакции.
 func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) error {
 	return pgx.BeginFunc(ctx, pool, fn)
 }
-
-// ---------- AuthService ----------
 
 // AuthService отвечает за разрешение текущего пользователя
 // (account создаётся JIT при первом запросе).
@@ -73,7 +68,6 @@ type AuthService struct {
 	pool *pgxpool.Pool
 }
 
-// Identity - разрешённая идентичность текущего пользователя.
 type Identity struct {
 	Account        model.Account
 	OrganizationID uuid.UUID
@@ -82,8 +76,7 @@ type Identity struct {
 	OrgName string
 }
 
-// Resolve обеспечивает наличие account для переданной пары (email, name).
-// Вызывается из middleware на каждом API-запросе.
+// Resolve создаёт аккаунт при первом входе; зовётся на каждом запросе.
 func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identity, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
@@ -150,9 +143,7 @@ func (s *AuthService) ListAccounts(ctx context.Context, id Identity) ([]model.Ac
 	return list, nil
 }
 
-// SetOrgRole назначает или снимает администратора сада. Делает это администратор; снять права
-// у последнего администратора нельзя (ErrLastAdmin). Владелец при снятии становится пользователем,
-// при повторном назначении - администратором.
+// SetOrgRole: администратор назначает или снимает администратора; последнего снять нельзя (ErrLastAdmin).
 func (s *AuthService) SetOrgRole(ctx context.Context, id Identity, targetID uuid.UUID, role string) (*model.AccountWithRole, error) {
 	if !id.OrgRole.IsAdmin() || id.OrganizationID == uuid.Nil {
 		return nil, ErrForbidden
@@ -300,20 +291,16 @@ func (s *AuthService) SearchAccounts(ctx context.Context, q string) ([]model.Acc
 	return list, nil
 }
 
-// ---------- TeamService ----------
-
 type TeamService struct {
 	pool *pgxpool.Pool
 }
 
-// TeamCreateInput - входные данные для создания команды.
 type TeamCreateInput struct {
 	Name     string
 	AgeGroup string
 	Teachers string
 }
 
-// TeamUpdateInput - входные данные для частичного апдейта.
 type TeamUpdateInput struct {
 	Name     string
 	AgeGroup *string
@@ -322,7 +309,6 @@ type TeamUpdateInput struct {
 	MemberBoardAccess *string
 }
 
-// List возвращает все команды, в которых состоит пользователь.
 // teamRecentBoards - сколько последних досок показывает карточка группы.
 const teamRecentBoards = 3
 
@@ -480,7 +466,6 @@ func (s *TeamService) SetStarred(ctx context.Context, id Identity, teamID uuid.U
 	return repo.SetStarred(ctx, teamID, id.Account.ID, starred)
 }
 
-// requireRole проверяет, что у пользователя одна из допустимых ролей.
 // Members - участники команды; видит любой участник.
 func (s *TeamService) Members(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.TeamMemberView, error) {
 	repo := repository.NewTeamRepo(s.pool)
@@ -641,8 +626,6 @@ func (s *TeamService) getView(ctx context.Context, teamID, accountID uuid.UUID, 
 		BoardCount: 0,
 	}, nil
 }
-
-// ---------- BoardService ----------
 
 type BoardService struct {
 	pool *pgxpool.Pool
@@ -853,9 +836,8 @@ func boardAccess(ctx context.Context, pool *pgxpool.Pool, board model.Board, id 
 	return accessByRole(board, id, role, true), nil
 }
 
-// accessByRole - единственное правило доступа к содержимому доски.
-// Админ организации, создатель и owner/admin команды: edit. Участник команды: team_access доски.
-// Не участник: view при включённом доступе по ссылке, иначе deny.
+// accessByRole - единственное правило доступа к содержимому: админ сада, создатель и owner/admin
+// группы редактируют, участник по team_access, остальные view при доступе по ссылке, иначе deny.
 func accessByRole(board model.Board, id Identity, role model.TeamRole, member bool) model.BoardAccess {
 	if id.OrgRole.IsAdmin() || board.AccountID == id.Account.ID {
 		return model.BoardAccessEdit
@@ -880,7 +862,6 @@ func (s *BoardService) Access(ctx context.Context, board model.Board, id Identit
 	return boardAccess(ctx, s.pool, board, id)
 }
 
-// Create создаёт доску в команде.
 func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID, in BoardCreateInput) (*model.BoardView, error) {
 	if err := s.requireTeamMember(ctx, teamID, id.Account.ID); err != nil {
 		return nil, err
@@ -959,7 +940,6 @@ func (s *BoardService) Update(ctx context.Context, id Identity, boardID uuid.UUI
 		}
 		return nil, err
 	}
-	// Перечитаем агрегированно
 	board, err = repo.GetByID(ctx, boardID)
 	if err != nil {
 		return nil, err

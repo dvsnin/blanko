@@ -1,14 +1,5 @@
-/**
- * HTTP client for the Blanko backend API.
- *
- * Routing convention: все API-action-эндпоинты - POST на /app/api/v1/<resource>/<action>,
- * исключения - страничные GET /app/dashboard и /app/board/:uid.
- *
- * accountId текущего пользователя прокидывается сервером в window.dashData.accountId
- * и автоматически добавляется в тело каждого запроса; бэкенд валидирует его против
- * сессии oauth2-proxy.
- */
-
+// Клиент API: все действия POST на /app/api/v1/<resource>/<action>, accountId из dashData
+// добавляется в тело каждого запроса и сверяется сервером с сессией.
 const API_BASE = "/app/api/v1";
 
 export class ApiError extends Error {

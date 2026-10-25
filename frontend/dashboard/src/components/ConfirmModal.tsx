@@ -3,14 +3,6 @@ import { createPortal } from "react-dom";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import "./Boards.modals.css";
 
-/*
-  ConfirmModal - portal-based confirm dialog.
-  - Single #confirm-portal-root appended to body (pointer-events: none by default).
-  - Portal child uses pointer-events:auto while mounted so it captures clicks.
-  - compact: smaller dialog variant
-  - danger: when true the confirm button uses red .danger-btn
-*/
-
 function ensurePortalRoot(): HTMLElement | null {
   if (typeof document === "undefined") return null;
   let root = document.getElementById("confirm-portal-root");

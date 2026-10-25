@@ -88,13 +88,10 @@ services:
       - --email-domain=*
       - --insecure-oidc-allow-unverified-email=true
 
-      # куда редиректить после логина
       - --redirect-url=http://localhost/oauth2/callback
 
-      # upstream = твой backend
       - --upstream=http://backend:8080/
 
-      # куки и режим за прокси
       - --cookie-secret=${OAUTH2_PROXY_COOKIE_SECRET}
       - --cookie-secure=false
       # cookie_refresh должен быть МЕНЬШЕ access_token lifespan в Keycloak (сейчас 15m),
@@ -113,12 +110,9 @@ services:
       - --skip-auth-route=^/app/present/
       - --skip-auth-route=^/app/static/
 
-      # прокидываем заголовки в backend
       - --pass-user-headers=true
-      # прокидываем id_token в Authorization: Bearer <id_token>,
-      # нужен backend'у для id_token_hint при RP-initiated logout (Keycloak пропустит confirm)
+      # id_token в Authorization: бэкенду для id_token_hint при выходе из Keycloak
       - --pass-authorization-header=true
-      #- --pass-access-token=true
 
     labels:
       - "traefik.enable=true"
