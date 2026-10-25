@@ -16,78 +16,74 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
-	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/repository"
 	"github.com/dvsnin/blanko/backend/app/internal/storage"
 )
 
-// Preset - шаблон каталога: метаданные строки template и сборка документа.
+// Preset - шаблон каталога: метаданные строки template (попадают в миграцию через MigrationSQL)
+// и сборка документа для хранилища.
 type Preset struct {
-	Key, Name, Description, Topic, Glyph string
-	Ages                                 []string
-	Duration                             int
-	Build                                func(d *Doc)
-}
-
-// legacyIDs - первые 18 шаблонов пришли миграцией с фиксированными id и ссылками; сидер их не меняет.
-var legacyIDs = map[string][2]string{
-	"count-to-5":         {"00000000-0000-4000-8000-000000000001", "t46d76276f2159723"},
-	"count-to-10":        {"00000000-0000-4000-8000-000000000002", "t5092339a91849f4c"},
-	"number-composition": {"00000000-0000-4000-8000-000000000003", "tf3d83df5a5870bf0"},
-	"shapes":             {"00000000-0000-4000-8000-000000000004", "t8a995d2704d5368b"},
-	"letter":             {"00000000-0000-4000-8000-000000000005", "tf5b75010ea8a54b9"},
-	"syllables":          {"00000000-0000-4000-8000-000000000006", "td36567f1b826504d"},
-	"reading":            {"00000000-0000-4000-8000-000000000007", "teceadc1d40cea061"},
-	"seasons":            {"00000000-0000-4000-8000-000000000008", "t85ed15c4d405df12"},
-	"animals":            {"00000000-0000-4000-8000-000000000009", "ta723e3dfb497b24c"},
-	"fairy-tale":         {"00000000-0000-4000-8000-000000000010", "t7d379ead8a20c9b3"},
-	"story":              {"00000000-0000-4000-8000-000000000011", "tbec670e5a55424d8"},
-	"find-pair":          {"00000000-0000-4000-8000-000000000012", "tfbb2fbd52bf982c1"},
-	"odd-one-out":        {"00000000-0000-4000-8000-000000000013", "t5d928e82edc4a041"},
-	"free-drawing":       {"00000000-0000-4000-8000-000000000014", "tbf9e9d3e15e49cb8"},
-	"color-by-number":    {"00000000-0000-4000-8000-000000000015", "t0d7858319511f469"},
-	"colors":             {"00000000-0000-4000-8000-000000000016", "t62848e3ce5804aa9"},
-	"morning-circle":     {"00000000-0000-4000-8000-000000000017", "t7bd3441c6c7f02a0"},
-	"weekdays":           {"00000000-0000-4000-8000-000000000018", "t92b9604ffb8fe105"},
+	Key, Name, Description, Topic string
+	Ages                          []string
+	Duration                      int
+	Build                         func(d *Doc)
 }
 
 var presetNamespace = uuid.MustParse("6f3a2c8e-7b1d-4e55-9a0c-2d9f1b7c4e10")
 
 func presetIDs(key string) (uuid.UUID, string) {
-	if l, ok := legacyIDs[key]; ok {
-		return uuid.MustParse(l[0]), l[1]
-	}
 	sum := sha256.Sum256([]byte("blanko-preset:" + key))
 	return uuid.NewSHA1(presetNamespace, []byte(key)), "t" + hex.EncodeToString(sum[:])[:16]
 }
 
-// Run сидирует каталог: строки template без перезаписи правок сада и документы там, где их нет
-// или где нет ни одной фигуры (пустой снапшот после открытия тоже считается пустым).
-func Run(ctx context.Context, pool *pgxpool.Pool, store storage.ObjectStore) error {
+// MigrationSQL - содержимое миграции со строками каталога: id и public_id детерминированы из
+// ключа, повторное применение ничего не меняет (ON CONFLICT DO NOTHING). Генерируется
+// `make presets-sql`; тест TestPresetTemplates сверяет файл с каталогом.
+func MigrationSQL() string {
+	var b strings.Builder
+	b.WriteString("-- +goose Up\n-- +goose StatementBegin\n")
+	b.WriteString("-- Готовые шаблоны занятий. Файл сгенерирован из каталога internal/preset: make presets-sql.\n")
+	b.WriteString("-- Документы с содержимым строит сидер на старте бэкенда; правки сада не затираются.\n")
+	b.WriteString("INSERT INTO template (id, public_id, preset_key, name, description, topic, ages, duration_min, author_account_id, created_at, updated_at)\nVALUES\n")
+	presets := Catalog()
+	for i, p := range presets {
+		id, publicID := presetIDs(p.Key)
+		ages := make([]string, len(p.Ages))
+		for j, a := range p.Ages {
+			ages[j] = sqlString(a)
+		}
+		fmt.Fprintf(&b, "    ('%s', '%s', %s, %s, %s, %s, ARRAY[%s]::text[], %d, NULL, now(), now())",
+			id, publicID, sqlString(p.Key), sqlString(p.Name), sqlString(p.Description), sqlString(p.Topic), strings.Join(ages, ","), p.Duration)
+		if i < len(presets)-1 {
+			b.WriteString(",")
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("ON CONFLICT (preset_key) DO NOTHING;\n-- +goose StatementEnd\n\n-- +goose Down\n-- +goose StatementBegin\n")
+	b.WriteString("DELETE FROM template WHERE preset_key IS NOT NULL;\n-- +goose StatementEnd\n")
+	return b.String()
+}
+
+func sqlString(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+}
+
+// Run пишет документы готовых шаблонов: строки template кладёт миграция, сидер только строит
+// содержимое там, где его нет или где нет ни одной фигуры (пустой снапшот после открытия тоже
+// считается пустым). С force документы всех живых пресетов перегенерируются (обновление
+// коробки, правка каталога): формат документов tldraw не мигрируется, а строится заново.
+func Run(ctx context.Context, pool *pgxpool.Pool, store storage.ObjectStore, force bool) error {
 	repo := repository.NewTemplateRepo(pool)
-	rows, docs := 0, 0
+	docs := 0
 	for _, p := range Catalog() {
 		if err := p.validate(); err != nil {
 			return err
 		}
-		id, publicID := presetIDs(p.Key)
 		key := p.Key
-		glyph := p.Glyph
-		t := &model.Template{
-			ID: id, PublicID: publicID, PresetKey: &key, Name: p.Name, Description: p.Description,
-			Topic: p.Topic, Ages: p.Ages, DurationMin: p.Duration,
-		}
-		if glyph != "" {
-			t.Glyph = &glyph
-		}
-		inserted, err := repo.CreatePreset(ctx, t)
-		if err != nil {
-			return fmt.Errorf("preset %s: %w", key, err)
-		}
-		if inserted {
-			rows++
-		}
 		existing, err := repo.GetByPresetKey(ctx, key)
+		if errors.Is(err, repository.ErrNotFound) {
+			return fmt.Errorf("preset %s: no template row, regenerate the migration (make presets-sql)", key)
+		}
 		if err != nil {
 			return fmt.Errorf("preset %s: %w", key, err)
 		}
@@ -98,9 +94,11 @@ func Run(ctx context.Context, pool *pgxpool.Pool, store storage.ObjectStore) err
 			}
 			continue
 		}
-		need, err := needsDocument(ctx, store, existing.ID)
-		if err != nil {
-			return fmt.Errorf("preset %s: %w", key, err)
+		need := force
+		if !need {
+			if need, err = needsDocument(ctx, store, existing.ID); err != nil {
+				return fmt.Errorf("preset %s: %w", key, err)
+			}
 		}
 		if !need {
 			continue
@@ -116,7 +114,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, store storage.ObjectStore) err
 		}
 		docs++
 	}
-	log.Printf("presets: %d templates in catalog, %d rows added, %d documents written", len(Catalog()), rows, docs)
+	log.Printf("presets: %d templates in catalog, %d documents written", len(Catalog()), docs)
 	return nil
 }
 
@@ -130,9 +128,6 @@ func (p Preset) validate() error {
 		return fmt.Errorf("preset %q: duration %d out of range", p.Key, p.Duration)
 	case p.Build == nil:
 		return fmt.Errorf("preset %q: no content builder", p.Key)
-	case len([]rune(p.Glyph)) > 4:
-		// Колонка glyph - varchar(4): составные эмодзи из нескольких кодпоинтов не влезают.
-		return fmt.Errorf("preset %q: glyph %q longer than 4 characters", p.Key, p.Glyph)
 	}
 	return nil
 }

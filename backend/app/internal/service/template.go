@@ -282,7 +282,6 @@ func (s *TemplateService) Duplicate(ctx context.Context, id Identity, templateID
 		Topic:           src.Topic,
 		Ages:            src.Ages,
 		DurationMin:     src.DurationMin,
-		Glyph:           src.Glyph,
 		AuthorAccountID: &author,
 	}
 	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {

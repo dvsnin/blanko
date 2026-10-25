@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TOPICS, AGES } from '../constants/templates';
-import { filterTemplates, topicCounts, topicStyle, ageLabel, coverForBoard, templateGlyph } from './templates';
+import { filterTemplates, topicCounts, topicStyle, ageLabel, coverForBoard } from './templates';
 import { FIXTURE } from './templates.fixture';
 
 
@@ -43,10 +43,6 @@ describe('lookups', () => {
     expect(topicStyle('literacy').label).toBe('Грамота');
     expect(ageLabel('4-5')).toBe('4-5 лет');
     expect(ageLabel(undefined)).toBeUndefined();
-  });
-  it('templateGlyph: заданный или из названия', () => {
-    expect(templateGlyph(FIXTURE[0])).toBe('5');
-    expect(templateGlyph(FIXTURE[1])).toBe('Б');
   });
 });
 

@@ -146,7 +146,6 @@ type Template struct {
 	Topic           string
 	Ages            []string
 	DurationMin     int
-	Glyph           *string
 	AuthorAccountID *uuid.UUID
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

@@ -7,7 +7,7 @@ FRONTEND_FILTERS = @blanko/dashboard @blanko/canvas
 ENV_FILE = deploy/.env
 ENV_EXAMPLE = deploy/.env.example
 
-.PHONY: up down build-frontend deps env test-backend
+.PHONY: up down build-frontend deps env test-backend presets-sql
 
 # Поднять все сервисы с пересборкой (по умолчанию собирает фронтенд перед билдом контейнеров)
 up: prebuild_check env
@@ -63,3 +63,6 @@ test-backend: env
 deps:
 	@command -v pnpm >/dev/null 2>&1 || (echo "pnpm not found. Install pnpm: npm i -g pnpm" && exit 1)
 	pnpm -w install
+# Миграция со строками готовых шаблонов генерируется из каталога internal/preset.
+presets-sql:
+	cd backend/app && go run ./cmd/presetsql > migration/20261025180100_presets.sql

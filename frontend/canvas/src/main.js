@@ -14,9 +14,9 @@ import "tldraw/tldraw.css";
 // Шрифты, иконки и переводы tldraw из бандла, а не с cdn.tldraw.com.
 const assetUrls = getAssetUrlsByImport();
 
-// tldraw 3.15.3 - последняя версия без лицензионного ключа; с 4.0 без ключа
-// холст гаснет (в том числе на *.localhost). Апгрейд только с TLDRAW_LICENSE_KEY.
-// Watermark "made with tldraw" скрывать нельзя.
+// tldraw 5.5.2 без ключа работает на любом http-хосте и на чистом localhost (production-сборка
+// считает такие адреса разработкой); https и *.localhost потребовали бы TLDRAW_LICENSE_KEY.
+// Watermark tldraw скрывать нельзя.
 const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
 // APP_DOC инжектит сервер: kind, id (uuid), publicId, canEdit.
@@ -192,8 +192,8 @@ function emptyDocument() {
 }
 
 // --- presence: свой курсор и камера остальным, чужие курсоры к себе в store ---
-// userId свой на вкладку: два окна одного человека - два курсора.
-const presenceUserId = "u-" + Math.random().toString(36).slice(2, 10);
+// userId свой на вкладку: два окна одного человека - два курсора. Префикс user: требует валидатор tldraw 5.
+const presenceUserId = "user:" + Math.random().toString(36).slice(2, 10);
 const presenceRecordId = InstancePresenceRecordType.createId(presenceUserId);
 // Цвет курсора и кружка - по id аккаунта: один педагог одного цвета с любого устройства, а не
 // случайный на каждую вкладку. Палитра tldraw из семи цветов, при большем числе людей совпадения неизбежны.

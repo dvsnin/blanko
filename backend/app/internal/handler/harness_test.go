@@ -74,8 +74,13 @@ func newEnvWith(t *testing.T, flushInterval time.Duration) *env {
 			t.Fatalf("migrate: %v", err)
 		}
 	})
-	_, err = pool.Exec(ctx, `TRUNCATE account, organization, organization_member, team, team_member, team_starred,
-		board, board_starred, template, template_starred CASCADE`)
+	// Строки готовых шаблонов приходят из миграции: их не стираем, а возвращаем в исходное состояние.
+	// Без CASCADE: иначе TRUNCATE account утянул бы и template.
+	_, err = pool.Exec(ctx, `TRUNCATE board_starred, board, template_starred, team_starred, team_member, team,
+		organization_member, organization;
+		DELETE FROM template WHERE preset_key IS NULL;
+		UPDATE template SET deleted_at = NULL, purged_at = NULL WHERE preset_key IS NOT NULL;
+		DELETE FROM account`)
 	if err != nil {
 		t.Fatalf("truncate: %v", err)
 	}

@@ -59,8 +59,9 @@ func main() {
 	log.Printf("storage: bucket %s ready", cfg.S3Bucket)
 
 	// Предустановленные шаблоны с содержимым: строки без перезаписи правок сада, документы
-	// там, где их нет. Сбой не валит старт - кабинет работает и без каталога.
-	if err := preset.Run(ctx, pool, store); err != nil {
+	// там, где их нет; PRESET_RESEED=1 перегенерирует документы всех пресетов (после обновления
+	// каталога или tldraw). Сбой не валит старт - кабинет работает и без каталога.
+	if err := preset.Run(ctx, pool, store, cfg.PresetReseed); err != nil {
 		log.Printf("presets: %v", err)
 	}
 

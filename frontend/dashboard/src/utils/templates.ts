@@ -1,5 +1,5 @@
 import { AGES, TOPICS, type AgeKey, type TopicKey, type TopicStyle } from "../constants/templates";
-import { coverFor, glyphFromTitle, type Cover } from "./cover";
+import { coverFor, type Cover } from "./cover";
 import type { Template } from "../types";
 
 export function topicStyle(key: TopicKey): TopicStyle {
@@ -8,10 +8,6 @@ export function topicStyle(key: TopicKey): TopicStyle {
 
 export function ageLabel(key?: AgeKey): string | undefined {
   return AGES.find((a) => a.key === key)?.label;
-}
-
-export function templateGlyph(t: Template): string {
-  return t.glyph || glyphFromTitle(t.name);
 }
 
 function matchesQuery(t: Template, q: string): boolean {

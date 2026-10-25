@@ -139,6 +139,8 @@ services:
       ORG_NAME: ${APP_ORG_NAME}
       ADMIN_EMAILS: ${APP_ADMIN_EMAILS}
       KEYCLOAK_PUBLIC_URL: http://localhost:8081
+      # Однократно: APP_PRESET_RESEED=1 make up SKIP_FRONTEND=1 перегенерирует документы готовых шаблонов.
+      PRESET_RESEED: ${APP_PRESET_RESEED:-}
       S3_ENDPOINT: http://rustfs:9000
       S3_ACCESS_KEY: ${APP_S3_ACCESS_KEY}
       S3_SECRET_KEY: ${APP_S3_SECRET_KEY}

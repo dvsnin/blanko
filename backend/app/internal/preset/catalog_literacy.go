@@ -1,7 +1,7 @@
 package preset
 
 func letterPreset(key, letter, lower, desc string, examples []Card) Preset {
-	return Preset{Key: key, Name: "Буква " + letter, Description: desc, Topic: "literacy", Ages: []string{"4-5", "5-6"}, Duration: 20, Glyph: letter, Build: func(d *Doc) {
+	return Preset{Key: key, Name: "Буква " + letter, Description: desc, Topic: "literacy", Ages: []string{"4-5", "5-6"}, Duration: 20, Build: func(d *Doc) {
 		f := lesson(d, "Буква "+letter, "Назови букву и обведи её пальцем. Найди картинки, в названии которых есть звук «"+lower+"», и перетащи их к букве.")
 		d.Geo(f, 40, contentY, 420, 420, Geo{Color: "light-red", Fill: "semi", Dash: "solid"})
 		big(d, f, 40, contentY+60, 420, letter+" "+lower, 4)
@@ -19,14 +19,14 @@ func literacyPresets() []Preset {
 		letterPreset("letter-u", "У", "у", "Буква У: утка, улитка, улыбка.", cards("🦆", "Утка", "🐌", "Улитка", "😊", "Улыбка", "🎣", "Удочка", "🌳", "Дерево", "🪆", "Матрёшка", "🦖", "Динозавр", "🪲", "Жук")),
 		letterPreset("letter-s", "С", "с", "Буква С: слон, солнце, сыр.", cards("🐘", "Слон", "☀️", "Солнце", "🧀", "Сыр", "🛷", "Санки", "🐸", "Лягушка", "🎈", "Шар", "🐶", "Собака", "🧦", "Носок")),
 		letterPreset("letter-l", "Л", "л", "Буква Л: лиса, лимон, лодка.", cards("🦊", "Лиса", "🍋", "Лимон", "🚣", "Лодка", "🦁", "Лев", "🍓", "Клубника", "🎒", "Рюкзак", "🍁", "Лист", "🐸", "Лягушка")),
-		{Key: "vowels-consonants", Name: "Гласные и согласные", Description: "Красный домик для гласных, синий для согласных.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 20, Glyph: "АБ", Build: func(d *Doc) {
+		{Key: "vowels-consonants", Name: "Гласные и согласные", Description: "Красный домик для гласных, синий для согласных.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 20, Build: func(d *Doc) {
 			f := lesson(d, "Гласные и согласные", "Гласные звуки поются, согласные нет. Разложи буквы по домикам: гласные в красный, согласные в синий.")
 			cardRow(d, f, 40, contentY, 120, 120, 16, words("А", "Б", "О", "М", "У", "С", "И", "К", "Ы", "Т"), "yellow")
 			z := zones(d, f, 40, 380, 700, 420, 60, "Гласные (красный домик)", "Согласные (синий домик)")
 			d.Geo(z[0], 20, 60, 660, 320, Geo{Color: "red", Fill: "semi", Dash: "dashed"})
 			d.Geo(z[1], 20, 60, 660, 320, Geo{Color: "blue", Fill: "semi", Dash: "dashed"})
 		}},
-		{Key: "first-sound", Name: "Первый звук в слове", Description: "Называем картинку и находим букву, с которой начинается слово.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 20, Glyph: "Зв", Build: func(d *Doc) {
+		{Key: "first-sound", Name: "Первый звук в слове", Description: "Называем картинку и находим букву, с которой начинается слово.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 20, Build: func(d *Doc) {
 			f := lesson(d, "Первый звук в слове", "Назови картинку. Какой звук слышишь первым? Положи рядом нужную букву.")
 			cardRow(d, f, 40, contentY, 170, 170, 20, cards("🐱", "Кот", "🐟", "Рыба", "🏠", "Дом", "🐻", "Мишка", "☀️", "Солнце", "🦆", "Утка", "🦊", "Лиса"), "")
 			for i := 0; i < 7; i++ {
@@ -34,7 +34,7 @@ func literacyPresets() []Preset {
 			}
 			cardRow(d, f, 40, 560, 120, 120, 30, words("Л", "Д", "К", "У", "Р", "С", "М"), "light-violet")
 		}},
-		{Key: "syllables", Name: "Слоги и первые слова", Description: "Собираем слоги в слова, слушаем и повторяем.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 25, Glyph: "Ма", Build: func(d *Doc) {
+		{Key: "syllables", Name: "Слоги и первые слова", Description: "Собираем слоги в слова, слушаем и повторяем.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 25, Build: func(d *Doc) {
 			f := lesson(d, "Слоги и первые слова", "Соедини слоги так, чтобы получилось слово с картинки. Прочитай слово по слогам, хлопая в ладоши.")
 			cardRow(d, f, 40, contentY, 170, 170, 40, cards("👩", "", "🐟", "", "🌙", "", "🐸", ""), "light-blue")
 			cardGrid(d, f, 900, contentY, 130, 110, 20, 4, words("МА", "МА", "РЫ", "БА", "ЛУ", "НА", "ЖА", "БА"), "yellow")
@@ -42,19 +42,19 @@ func literacyPresets() []Preset {
 				d.Geo(f, 40+float64(i)*210, contentY+190, 170, 100, Geo{Color: "grey", Dash: "dashed", Size: "l", Label: "__ __"})
 			}
 		}},
-		{Key: "reading", Name: "Читаем по слогам", Description: "Короткие тексты с делением на слоги и картинками.", Topic: "literacy", Ages: []string{"6-7"}, Duration: 30, Glyph: "Ш", Build: func(d *Doc) {
+		{Key: "reading", Name: "Читаем по слогам", Description: "Короткие тексты с делением на слоги и картинками.", Topic: "literacy", Ages: []string{"6-7"}, Duration: 30, Build: func(d *Doc) {
 			f := lesson(d, "Читаем по слогам", "Читай слова по слогам, веди пальцем по строке. Найди картинку к каждому слову.")
 			lines(d, f, 40, contentY, 700, "xl", "МА-МА", "ЛУ-НА", "РЫ-БА", "КО-ТИК", "ШАР", "МА-ШИ-НА")
 			cardGrid(d, f, 900, contentY, 170, 170, 24, 3, emojis("🚗", "🐟", "👩", "🎈", "🌙", "🐱"), "")
 		}},
-		{Key: "find-letter", Name: "Найди букву", Description: "Ищем заданную букву среди других и обводим.", Topic: "literacy", Ages: []string{"4-5", "5-6"}, Duration: 10, Glyph: "🔍", Build: func(d *Doc) {
+		{Key: "find-letter", Name: "Найди букву", Description: "Ищем заданную букву среди других и обводим.", Topic: "literacy", Ages: []string{"4-5", "5-6"}, Duration: 10, Build: func(d *Doc) {
 			f := lesson(d, "Найди букву", "Найди и обведи все буквы А в первом ряду, все буквы О во втором и все буквы М в третьем.")
 			rows := [][]string{{"А", "Л", "А", "П", "Д", "А", "Н", "А", "В", "А"}, {"С", "О", "Е", "О", "О", "Ф", "О", "Ю", "О", "Х"}, {"М", "Н", "М", "И", "Ш", "М", "М", "Т", "Л", "М"}}
 			for r, row := range rows {
 				cardRow(d, f, 40, contentY+float64(r)*200, 130, 130, 15, words(row...), []string{"light-red", "yellow", "light-blue"}[r])
 			}
 		}},
-		{Key: "syllable-count", Name: "Сколько слогов", Description: "Хлопаем в ладоши и считаем слоги в словах.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 15, Glyph: "👏", Build: func(d *Doc) {
+		{Key: "syllable-count", Name: "Сколько слогов", Description: "Хлопаем в ладоши и считаем слоги в словах.", Topic: "literacy", Ages: []string{"5-6", "6-7"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Сколько слогов", "Произнеси слово и хлопни на каждый слог. Сколько хлопков, столько слогов: положи картинку к нужной цифре.")
 			cardRow(d, f, 40, contentY, 150, 150, 20, cards("🐱", "кот", "🚗", "машина", "🐟", "рыба", "🦋", "бабочка", "🏠", "дом", "🍌", "банан", "🐘", "слон"), "")
 			z := zones(d, f, 40, 420, 460, 380, 40, "1 слог", "2 слога", "3 слога")

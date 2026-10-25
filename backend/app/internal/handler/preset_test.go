@@ -3,6 +3,8 @@ package handler_test
 import (
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,7 +19,7 @@ import (
 func TestPresetTemplates(t *testing.T) {
 	e := newEnv(t)
 	for i := 0; i < 2; i++ {
-		if err := preset.Run(e.ctx, e.pool, e.store); err != nil {
+		if err := preset.Run(e.ctx, e.pool, e.store, false); err != nil {
 			t.Fatalf("run %d: %v", i, err)
 		}
 	}
@@ -78,6 +80,47 @@ func TestPresetTemplates(t *testing.T) {
 
 	// Доска из готового шаблона получает всё его содержимое: те же записи, кроме документа и страницы
 	// копируются один в один (Copy переписывает только ссылки на медиа).
+	// Миграция со строками каталога генерируется (make presets-sql); если каталог правили, файл устарел.
+	t.Run("presets migration matches the catalog", func(t *testing.T) {
+		raw, err := os.ReadFile(filepath.Join(migrationsDir, "20261025180100_presets.sql"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(raw) != preset.MigrationSQL() {
+			t.Fatal("migration/20261025180100_presets.sql differs from the catalog: run make presets-sql")
+		}
+	})
+
+	// Пересев по флагу PRESET_RESEED: документы пресетов перегенерируются целиком (обновление коробки,
+	// правка каталога); без флага отредактированный документ не трогается.
+	t.Run("forced reseed regenerates preset documents", func(t *testing.T) {
+		first := items(body)[0].(map[string]any)
+		key := doc.DocumentKey(doc.KindTemplate, uuid.MustParse(first["id"].(string)))
+		edited := doc.Document{Schema: json.RawMessage(`{"schemaVersion":2,"sequences":{}}`), Store: readStore(t, e, key)}
+		for k, rec := range edited.Store {
+			if strings.HasPrefix(k, "shape:") {
+				edited.Store["shape:extra"] = json.RawMessage(strings.Replace(string(rec), `"`+k+`"`, `"shape:extra"`, 1))
+				break
+			}
+		}
+		raw, _ := json.Marshal(edited)
+		if err := e.store.Put(e.ctx, key, strings.NewReader(string(raw)), int64(len(raw)), "application/json"); err != nil {
+			t.Fatal(err)
+		}
+		if err := preset.Run(e.ctx, e.pool, e.store, false); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := readStore(t, e, key)["shape:extra"]; !ok {
+			t.Fatal("plain run overwrote an edited preset")
+		}
+		if err := preset.Run(e.ctx, e.pool, e.store, true); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := readStore(t, e, key)["shape:extra"]; ok {
+			t.Fatal("forced reseed kept the edited document")
+		}
+	})
+
 	t.Run("board from preset keeps every shape", func(t *testing.T) {
 		teacher := e.account("teacher@example.com")
 		team := e.team(teacher)

@@ -22,7 +22,7 @@ func NewOrganizationRepo(db DBTX) *OrganizationRepo {
 // GetFirst: в коробке организация одна.
 func (r *OrganizationRepo) GetFirst(ctx context.Context) (*model.Organization, error) {
 	b := psql.Select("id", "name", "owner_account_id", "created_at", "updated_at").
-		From("organization").Where("deleted_at IS NULL").OrderBy("created_at ASC").Limit(1)
+		From("organization").OrderBy("created_at ASC").Limit(1)
 	row, err := queryRowBuilder(ctx, r.db, b)
 	if err != nil {
 		return nil, err

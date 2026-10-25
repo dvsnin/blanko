@@ -9,7 +9,7 @@ export const tpl = (over: Partial<Template> & { id: string; name: string }): Tem
 });
 
 export const FIXTURE: Template[] = [
-  tpl({ id: 't1', name: 'Счёт до 5 с яблоками', topic: 'math', ages: ['3-4'], glyph: '5', description: 'яблоки в корзину' }),
+  tpl({ id: 't1', name: 'Счёт до 5 с яблоками', topic: 'math', ages: ['3-4'], description: 'яблоки в корзину' }),
   tpl({ id: 't2', name: 'Буква и слова на неё', topic: 'literacy', ages: ['4-5'], source: 'own', authorId: 'u1', authorName: 'Анна Петрова', canEdit: true }),
   tpl({ id: 't3', name: 'Времена года', topic: 'world', ages: ['3-4', '4-5', '5-6', '6-7'], isStarred: true }),
   tpl({ id: 't4', name: 'Что лишнее', topic: 'logic', ages: ['6-7'], durationMin: 15 }),

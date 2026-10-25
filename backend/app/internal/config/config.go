@@ -18,6 +18,8 @@ type Config struct {
 	MigrationsDir string
 	// RunMigrations - запускать ли миграции при старте.
 	RunMigrations bool
+	// PresetReseed - перегенерировать документы готовых шаблонов при старте (после обновления каталога или tldraw).
+	PresetReseed bool
 	// TldrawLicenseKey - лицензионный ключ tldraw. Пустая строка допустима:
 	// локально (HTTP на loopback) SDK считает окружение разработкой и ключ
 	// не требует. Ключ публичный по дизайну - проверяется на клиенте.
@@ -54,6 +56,7 @@ func Load() (*Config, error) {
 		PostgresDSN:   getEnv("POSTGRES_DSN", ""),
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migration"),
 		RunMigrations: getEnvBool("RUN_MIGRATIONS", true),
+		PresetReseed:  getEnvBool("PRESET_RESEED", false),
 
 		TldrawLicenseKey:  getEnv("TLDRAW_LICENSE_KEY", ""),
 		KeycloakPublicURL: strings.TrimRight(getEnv("KEYCLOAK_PUBLIC_URL", "http://localhost:8081"), "/"),

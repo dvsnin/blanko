@@ -365,9 +365,12 @@ func (s *TeamService) Create(ctx context.Context, id Identity, in TeamCreateInpu
 	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
 		repo := repository.NewTeamRepo(tx)
 		team := &model.Team{
-			OrganizationID:    nil,
 			Name:              name,
 			MemberBoardAccess: model.BoardAccessEdit,
+		}
+		if id.OrganizationID != uuid.Nil {
+			org := id.OrganizationID
+			team.OrganizationID = &org
 		}
 		if in.AgeGroup != "" {
 			ag := in.AgeGroup

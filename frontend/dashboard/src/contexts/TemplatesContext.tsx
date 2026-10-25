@@ -37,7 +37,6 @@ export function templateFromDTO(dto: TemplateDTO): Template {
     topic: dto.topic as TopicKey,
     ages: (dto.ages ?? []) as AgeKey[],
     durationMin: dto.durationMin,
-    glyph: dto.glyph || undefined,
     source: dto.source,
     authorId: dto.authorId || undefined,
     authorName: dto.authorName || undefined,

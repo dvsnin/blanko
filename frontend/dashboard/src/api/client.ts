@@ -85,7 +85,6 @@ export interface TemplateDTO {
   topic: string;
   ages: string[];
   durationMin: number;
-  glyph: string;
   source: "preset" | "own";
   authorId: string;
   authorName: string;

@@ -28,11 +28,11 @@ type TemplateFields struct {
 	DurationMin *int
 }
 
-const templateCols = "id, public_id, preset_key, name, description, topic, ages, duration_min, glyph, author_account_id, created_at, updated_at"
+const templateCols = "id, public_id, preset_key, name, description, topic, ages, duration_min, author_account_id, created_at, updated_at"
 
 func scanTemplate(row pgx.Row, t *model.Template) error {
 	return row.Scan(&t.ID, &t.PublicID, &t.PresetKey, &t.Name, &t.Description, &t.Topic, &t.Ages,
-		&t.DurationMin, &t.Glyph, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt)
+		&t.DurationMin, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt)
 }
 
 func (r *TemplateRepo) Create(ctx context.Context, t *model.Template) error {
@@ -53,29 +53,10 @@ func (r *TemplateRepo) Create(ctx context.Context, t *model.Template) error {
 		t.Ages = []string{}
 	}
 	q := psql.Insert("template").
-		Columns("id", "public_id", "preset_key", "name", "description", "topic", "ages", "duration_min", "glyph", "author_account_id", "created_at", "updated_at").
-		Values(t.ID, t.PublicID, t.PresetKey, t.Name, t.Description, t.Topic, t.Ages, t.DurationMin, t.Glyph, t.AuthorAccountID, t.CreatedAt, t.UpdatedAt)
+		Columns("id", "public_id", "preset_key", "name", "description", "topic", "ages", "duration_min", "author_account_id", "created_at", "updated_at").
+		Values(t.ID, t.PublicID, t.PresetKey, t.Name, t.Description, t.Topic, t.Ages, t.DurationMin, t.AuthorAccountID, t.CreatedAt, t.UpdatedAt)
 	_, err := execBuilder(ctx, r.db, q)
 	return err
-}
-
-// CreatePreset вставляет предустановленный шаблон; существующий по preset_key не трогается,
-// чтобы правки сада переживали обновление. Возвращает, была ли вставка.
-func (r *TemplateRepo) CreatePreset(ctx context.Context, t *model.Template) (bool, error) {
-	now := time.Now().UTC()
-	t.CreatedAt, t.UpdatedAt = now, now
-	if t.Ages == nil {
-		t.Ages = []string{}
-	}
-	q := psql.Insert("template").
-		Columns("id", "public_id", "preset_key", "name", "description", "topic", "ages", "duration_min", "glyph", "author_account_id", "created_at", "updated_at").
-		Values(t.ID, t.PublicID, t.PresetKey, t.Name, t.Description, t.Topic, t.Ages, t.DurationMin, t.Glyph, nil, t.CreatedAt, t.UpdatedAt).
-		Suffix("ON CONFLICT (preset_key) DO NOTHING")
-	tag, err := execBuilder(ctx, r.db, q)
-	if err != nil {
-		return false, err
-	}
-	return tag.RowsAffected() > 0, nil
 }
 
 func (r *TemplateRepo) GetByPresetKey(ctx context.Context, key string) (*model.Template, error) {
@@ -125,7 +106,7 @@ func (r *TemplateRepo) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
 // List: CanEdit здесь не вычисляется, это делает сервис.
 func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.TemplateView, error) {
 	b := psql.Select(
-		"t.id", "t.public_id", "t.preset_key", "t.name", "t.description", "t.topic", "t.ages", "t.duration_min", "t.glyph",
+		"t.id", "t.public_id", "t.preset_key", "t.name", "t.description", "t.topic", "t.ages", "t.duration_min",
 		"t.author_account_id", "t.created_at", "t.updated_at",
 		"COALESCE(a.name, '') AS author_name",
 		"(ts.template_id IS NOT NULL) AS is_starred",
@@ -147,7 +128,7 @@ func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.Te
 		var v model.TemplateView
 		t := &v.Template
 		if err := rows.Scan(&t.ID, &t.PublicID, &t.PresetKey, &t.Name, &t.Description, &t.Topic, &t.Ages,
-			&t.DurationMin, &t.Glyph, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt,
+			&t.DurationMin, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt,
 			&v.AuthorName, &v.IsStarred); err != nil {
 			return nil, err
 		}

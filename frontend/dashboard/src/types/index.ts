@@ -77,7 +77,6 @@ export interface Template {
   ages: AgeKey[];
   durationMin: number;
   /** Пусто: считать из названия. */
-  glyph?: string;
   source: TemplateSource;
   authorId?: string;
   authorName?: string;

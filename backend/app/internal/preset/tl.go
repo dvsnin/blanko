@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// schemaJSON - схема снапшота tldraw 3.15.3, снята с реального документа стенда. Совпадает со
+// schemaJSON - схема снапшота tldraw 5.5.2, снята с реального документа стенда. Совпадает со
 // схемой канваса, поэтому loadSnapshot не гоняет миграции.
-const schemaJSON = `{"schemaVersion":2,"sequences":{"com.tldraw.store":4,"com.tldraw.asset":1,"com.tldraw.camera":1,"com.tldraw.document":2,"com.tldraw.instance":25,"com.tldraw.instance_page_state":5,"com.tldraw.page":1,"com.tldraw.instance_presence":6,"com.tldraw.pointer":1,"com.tldraw.shape":4,"com.tldraw.asset.bookmark":2,"com.tldraw.asset.image":5,"com.tldraw.asset.video":5,"com.tldraw.shape.group":0,"com.tldraw.shape.text":3,"com.tldraw.shape.bookmark":2,"com.tldraw.shape.draw":2,"com.tldraw.shape.geo":10,"com.tldraw.shape.note":9,"com.tldraw.shape.line":5,"com.tldraw.shape.frame":1,"com.tldraw.shape.arrow":6,"com.tldraw.shape.highlight":1,"com.tldraw.shape.embed":4,"com.tldraw.shape.image":5,"com.tldraw.shape.video":4,"com.tldraw.binding.arrow":1}}`
+const schemaJSON = `{"schemaVersion":2,"sequences":{"com.tldraw.store":5,"com.tldraw.asset":1,"com.tldraw.camera":1,"com.tldraw.document":2,"com.tldraw.instance":26,"com.tldraw.instance_page_state":5,"com.tldraw.page":1,"com.tldraw.instance_presence":6,"com.tldraw.pointer":1,"com.tldraw.shape":4,"com.tldraw.user":1,"com.tldraw.asset.image":6,"com.tldraw.asset.video":5,"com.tldraw.asset.bookmark":2,"com.tldraw.shape.group":0,"com.tldraw.shape.text":4,"com.tldraw.shape.bookmark":2,"com.tldraw.shape.draw":5,"com.tldraw.shape.geo":12,"com.tldraw.shape.note":13,"com.tldraw.shape.line":5,"com.tldraw.shape.frame":1,"com.tldraw.shape.arrow":8,"com.tldraw.shape.highlight":4,"com.tldraw.shape.embed":4,"com.tldraw.shape.image":5,"com.tldraw.shape.video":4,"com.tldraw.binding.arrow":1}}`
 
 // Shape - id записи-родителя для вложения фигур: страница, рамка или группа.
 type Shape string
@@ -97,7 +97,7 @@ func or(v, def string) string {
 
 func (d *Doc) Geo(parent Shape, x, y, w, h float64, g Geo) Shape {
 	return d.shape(parent, "geo", x, y, map[string]any{
-		"geo": or(g.Kind, "rectangle"), "dash": or(g.Dash, "draw"), "url": "", "w": w, "h": h, "growY": 0, "scale": 1,
+		"geo": or(g.Kind, "rectangle"), "dash": or(g.Dash, "draw"), "url": "", "w": w, "h": h, "growY": 0, "scale": 1, "flipX": false, "flipY": false,
 		"labelColor": or(g.LabelColor, "black"), "color": or(g.Color, "black"), "fill": or(g.Fill, "none"),
 		"size": or(g.Size, "m"), "font": or(g.Font, "sans"), "align": or(g.Align, "middle"), "verticalAlign": or(g.VAlign, "middle"),
 		"richText": richText(g.Label),
@@ -125,8 +125,8 @@ func (d *Doc) Text(parent Shape, x, y, w float64, text string, o Text) Shape {
 // Note - стикер 200x200.
 func (d *Doc) Note(parent Shape, x, y float64, text, color string) Shape {
 	return d.shape(parent, "note", x, y, map[string]any{
-		"color": or(color, "yellow"), "labelColor": "black", "size": "m", "font": "sans", "fontSizeAdjustment": 0,
-		"align": "middle", "verticalAlign": "middle", "growY": 0, "url": "", "richText": richText(text), "scale": 1,
+		"color": or(color, "yellow"), "labelColor": "black", "size": "m", "font": "sans", "fontSizeAdjustment": 1,
+		"align": "middle", "verticalAlign": "middle", "growY": 0, "url": "", "richText": richText(text), "scale": 1, "textLastEditedBy": nil,
 	})
 }
 

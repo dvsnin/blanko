@@ -18,7 +18,6 @@ type TemplateDTO struct {
 	Topic       string    `json:"topic"`
 	Ages        []string  `json:"ages"`
 	DurationMin int       `json:"durationMin"`
-	Glyph       string    `json:"glyph"`
 	Source      string    `json:"source"`
 	AuthorID    string    `json:"authorId"`
 	AuthorName  string    `json:"authorName"`
@@ -47,9 +46,6 @@ func templateViewToDTO(v model.TemplateView) TemplateDTO {
 	}
 	if dto.Ages == nil {
 		dto.Ages = []string{}
-	}
-	if t.Glyph != nil {
-		dto.Glyph = *t.Glyph
 	}
 	if t.AuthorAccountID != nil {
 		dto.Source = "own"

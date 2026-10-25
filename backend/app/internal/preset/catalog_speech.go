@@ -1,8 +1,8 @@
 package preset
 
 // storyPreset - сцены сказки вразброс и пронумерованные слоты: расставить по порядку и пересказать.
-func storyPreset(key, name, desc, glyph string, ages []string, scenes []Card) Preset {
-	return Preset{Key: key, Name: name, Description: desc, Topic: "speech", Ages: ages, Duration: 25, Glyph: glyph, Build: func(d *Doc) {
+func storyPreset(key, name, desc string, ages []string, scenes []Card) Preset {
+	return Preset{Key: key, Name: name, Description: desc, Topic: "speech", Ages: ages, Duration: 25, Build: func(d *Doc) {
 		f := lesson(d, name, "Сцены сказки перепутались. Расставь их по порядку в пронумерованные окошки и расскажи сказку своими словами.")
 		n := len(scenes)
 		w := (frameW - 80 - 20*float64(n-1)) / float64(n)
@@ -13,13 +13,13 @@ func storyPreset(key, name, desc, glyph string, ages []string, scenes []Card) Pr
 
 func speechPresets() []Preset {
 	return []Preset{
-		storyPreset("fairy-tale", "Сказка по картинкам", "Расставляем сцены сказки по порядку и пересказываем.", "Ре", []string{"3-4", "4-5"},
+		storyPreset("fairy-tale", "Сказка по картинкам", "Расставляем сцены сказки по порядку и пересказываем.", []string{"3-4", "4-5"},
 			cards("👵", "Бабка", "🐭", "Мышка", "👴", "Дед сажает репку", "🐱", "Кошка", "👧", "Внучка", "🐕", "Жучка")),
-		storyPreset("kolobok", "Колобок", "Кого встретил Колобок: порядок героев и пересказ.", "🥯", []string{"3-4", "4-5"},
+		storyPreset("kolobok", "Колобок", "Кого встретил Колобок: порядок героев и пересказ.", []string{"3-4", "4-5"},
 			cards("🦊", "Лиса", "👵", "Бабка печёт", "🐻", "Медведь", "🐰", "Заяц", "🥯", "Колобок убежал", "🐺", "Волк")),
-		storyPreset("teremok", "Теремок", "Кто за кем пришёл в теремок.", "🏠", []string{"3-4", "4-5"},
+		storyPreset("teremok", "Теремок", "Кто за кем пришёл в теремок.", []string{"3-4", "4-5"},
 			cards("🐻", "Медведь", "🐭", "Мышка", "🦊", "Лисичка", "🐸", "Лягушка", "🐺", "Волк", "🐰", "Зайчик")),
-		{Key: "story", Name: "Расскажи историю", Description: "Герои, место и событие: дети придумывают сюжет сами.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 30, Glyph: "Ис", Build: func(d *Doc) {
+		{Key: "story", Name: "Расскажи историю", Description: "Герои, место и событие: дети придумывают сюжет сами.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 30, Build: func(d *Doc) {
 			f := lesson(d, "Расскажи историю", "Выбери героя, место и событие, перетащи их в окошки и придумай историю. Начни со слов «Однажды...».")
 			d.Text(f, 40, contentY, 400, "Герой", Text{Size: "l"})
 			cardRow(d, f, 40, contentY+50, 150, 150, 16, emojis("🧒", "🐱", "🤖", "🧙", "🐉", "👸"), "light-blue")
@@ -31,33 +31,33 @@ func speechPresets() []Preset {
 			zones(d, f, 1080, contentY+230, 400, 200, 0, "В одном месте...")
 			zones(d, f, 1080, contentY+460, 400, 200, 0, "И вдруг...")
 		}},
-		{Key: "opposites", Name: "Скажи наоборот", Description: "Антонимы с картинками: большой и маленький, горячий и холодный.", Topic: "speech", Ages: []string{"4-5", "5-6"}, Duration: 15, Glyph: "↔", Build: func(d *Doc) {
+		{Key: "opposites", Name: "Скажи наоборот", Description: "Антонимы с картинками: большой и маленький, горячий и холодный.", Topic: "speech", Ages: []string{"4-5", "5-6"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Скажи наоборот", "Я скажу слово, а ты скажи наоборот. Найди пару каждой картинке и соедини линией.")
 			cardGrid(d, f, 40, contentY, 200, 160, 20, 2, cards("🔥", "горячий", "🐘", "большой", "🌞", "день", "😊", "весёлый"), "light-red")
 			cardGrid(d, f, 1060, contentY, 200, 160, 20, 2, cards("🐭", "маленький", "🌙", "ночь", "😢", "грустный", "🧊", "холодный"), "light-blue")
 		}},
-		{Key: "one-many", Name: "Один и много", Description: "Один стул, много стульев: учимся менять слово.", Topic: "speech", Ages: []string{"3-4", "4-5"}, Duration: 15, Glyph: "1+", Build: func(d *Doc) {
+		{Key: "one-many", Name: "Один и много", Description: "Один стул, много стульев: учимся менять слово.", Topic: "speech", Ages: []string{"3-4", "4-5"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Один и много", "Назови, что на картинке: один или много? Скажи правильно: одно яблоко, много яблок.")
 			cardRow(d, f, 40, contentY, 220, 200, 30, cards("🍎", "яблоко", "🍎🍎🍎", "яблоки", "🚗", "машина", "🚗🚗🚗", "машины", "🐱", "кошка", "🐱🐱🐱", "кошки"), "")
 			zones(d, f, 40, 520, 700, 280, 40, "Один", "Много")
 		}},
-		{Key: "describe-picture", Name: "Опиши картинку", Description: "Кто, что делает, где и когда: составляем предложение.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 20, Glyph: "💬", Build: func(d *Doc) {
+		{Key: "describe-picture", Name: "Опиши картинку", Description: "Кто, что делает, где и когда: составляем предложение.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 20, Build: func(d *Doc) {
 			f := lesson(d, "Опиши картинку", "Расскажи о каждой картинке целым предложением. Помогут вопросы: кто? что делает? где?")
 			cardRow(d, f, 40, contentY, 330, 240, 40, emojis("👧🎨", "🐶🦴", "👦⚽", "👩‍🍳🍲"), "light-green")
 			lines(d, f, 40, 480, 700, "l", "Кто?  ______", "Что делает?  ______", "Где?  ______")
 			cardRow(d, f, 800, 480, 150, 110, 20, words("рисует", "играет", "варит", "грызёт"), "yellow")
 		}},
-		{Key: "who-does-what", Name: "Кто что делает", Description: "Подбираем действие к животному: прыгает, летает, плавает.", Topic: "speech", Ages: []string{"3-4", "4-5"}, Duration: 15, Glyph: "🐸", Build: func(d *Doc) {
+		{Key: "who-does-what", Name: "Кто что делает", Description: "Подбираем действие к животному: прыгает, летает, плавает.", Topic: "speech", Ages: []string{"3-4", "4-5"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Кто что делает", "Кто прыгает, кто летает, а кто плавает? Соедини животное с его действием и покажи, как оно двигается.")
 			cardRow(d, f, 40, contentY, 170, 170, 30, emojis("🐸", "🐦", "🐟", "🐍", "🐎", "🦋"), "")
 			cardRow(d, f, 40, 520, 200, 120, 30, words("прыгает", "летает", "плавает", "ползает", "скачет", "порхает"), "yellow")
 		}},
-		{Key: "rhymes", Name: "Подбери рифму", Description: "Картинки, названия которых звучат похоже.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 15, Glyph: "🎵", Build: func(d *Doc) {
+		{Key: "rhymes", Name: "Подбери рифму", Description: "Картинки, названия которых звучат похоже.", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Подбери рифму", "Найди картинки, названия которых рифмуются: мишка и шишка, кошка и ложка. Придумай свою рифму.")
 			cardGrid(d, f, 40, contentY, 170, 170, 24, 8, cards("🐻", "мишка", "🐱", "кошка", "🐭", "мышка", "🌸", "ромашка", "🌰", "шишка", "🥄", "ложка", "🐞", "букашка", "🪣", "ведёрко"), "")
 			zones(d, f, 40, 580, 340, 230, 26, "Пара 1", "Пара 2", "Пара 3", "Пара 4")
 		}},
-		{Key: "whose-tail", Name: "Чей хвост", Description: "Лисий, заячий, волчий: учимся говорить «чей».", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 15, Glyph: "🦊", Build: func(d *Doc) {
+		{Key: "whose-tail", Name: "Чей хвост", Description: "Лисий, заячий, волчий: учимся говорить «чей».", Topic: "speech", Ages: []string{"5-6", "6-7"}, Duration: 15, Build: func(d *Doc) {
 			f := lesson(d, "Чей хвост", "Скажи, чей это хвост: лисий, заячий, волчий, беличий. Соедини зверя с его словом.")
 			cardRow(d, f, 40, contentY, 200, 200, 30, emojis("🦊", "🐰", "🐺", "🐿️", "🐘", "🐒"), "")
 			cardRow(d, f, 40, 520, 200, 110, 30, words("беличий", "лисий", "слоновий", "заячий", "обезьяний", "волчий"), "yellow")
