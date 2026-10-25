@@ -134,13 +134,16 @@ func (s *Server) dashboardHandler(w http.ResponseWriter, r *http.Request) {
 
 	indexHTML := string(indexBytes)
 	indexHTML = strings.ReplaceAll(indexHTML, "/app/assets/", "/app/static/dashboard/assets/")
+	payload := s.buildDashData(r)
+	// Заголовок вкладки до запуска фронта: раздел «Доски» и название сада, дальше его ведёт App.
+	indexHTML = strings.Replace(indexHTML, "<title>Blanko</title>", "<title>"+html.EscapeString(pageTitle("Доски", payload.OrgName))+"</title>", 1)
 
 	// Минимальный срез состояния для первичного рендера: accountId (нужен
 	// API-клиенту для каждого POST-запроса), профиль (name/email) и булевы
 	// флаги hasTeams/hasBoards - чтобы скрыть empty-state пока TeamsContext
 	// фетчит /team/list. Полные списки сюда НЕ кладём, их тянет TeamsContext -
 	// чтобы не дублировать контракт с API.
-	dashJSON := s.buildDashDataJSON(r)
+	dashJSON := mustJSON(payload)
 	scriptTag := "<script>window.dashData = " + dashJSON + ";</script>\n"
 
 	// Инжектим перед </body> - это единственная трансформация, поэтому
@@ -181,17 +184,21 @@ type dashPayload struct {
 // Любая ошибка деградирует изящно: отдаём то, что успели собрать - фронт либо
 // уйдёт на перелогин (нет accountId), либо ретраит через TeamsContext.refresh().
 func (s *Server) buildDashDataJSON(r *http.Request) string {
+	return mustJSON(s.buildDashData(r))
+}
+
+func (s *Server) buildDashData(r *http.Request) dashPayload {
 	profile := extractUser(r)
 
 	payload := dashPayload{}
 	if profile.Email == "" {
-		return mustJSON(payload)
+		return payload
 	}
 
 	id, err := s.services.Auth.Resolve(r.Context(), profile.Email, profile.Name)
 	if err != nil {
 		log.Printf("dashboard: identity resolve failed: %v", err)
-		return mustJSON(payload)
+		return payload
 	}
 	payload.AccountID = id.Account.ID.String()
 	payload.Name = id.Account.Name
@@ -218,7 +225,7 @@ func (s *Server) buildDashDataJSON(r *http.Request) string {
 		log.Printf("dashboard: team list failed: %v", err)
 	}
 
-	return mustJSON(payload)
+	return payload
 }
 
 // mustJSON сериализует в pretty-printed JSON (каждое поле на новой строке) -
@@ -347,6 +354,11 @@ func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title stri
 	}
 	indexHTML := string(indexBytes)
 	indexHTML = strings.ReplaceAll(indexHTML, "%%BOARD_TITLE%%", html.EscapeString(title))
+	kindWord := "Доска"
+	if d.Kind == "template" {
+		kindWord = "Шаблон"
+	}
+	indexHTML = strings.ReplaceAll(indexHTML, "%%PAGE_TITLE%%", html.EscapeString(pageTitle(title, kindWord)))
 
 	docJSON, _ := json.Marshal(d)
 	dashJSON := s.buildDashDataJSON(r)
@@ -359,4 +371,12 @@ func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title stri
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Write([]byte(indexHTML))
+}
+
+// pageTitle - заголовок вкладки «Главное · Уточнение»: раздел и сад в кабинете, название и вид документа на канвасе.
+func pageTitle(main, detail string) string {
+	if strings.TrimSpace(detail) == "" {
+		return main
+	}
+	return main + " · " + detail
 }

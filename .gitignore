@@ -113,6 +113,8 @@ backend/app/public/
 !backend/app/public/.gitkeep
 # canvas/ - рукописный tldraw-исходник, не build artifact:
 !backend/app/static/canvas/
+# Иконки вкладки и домашнего экрана: лежат в репозитории, не собираются.
+!backend/app/static/icons/
 
 ########################
 # Go (backend)
