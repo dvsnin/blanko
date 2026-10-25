@@ -59,6 +59,29 @@ func (r *TemplateRepo) Create(ctx context.Context, t *model.Template) error {
 	return err
 }
 
+// CreatePreset вставляет предустановленный шаблон; существующий по preset_key не трогается,
+// чтобы правки сада переживали обновление. Возвращает, была ли вставка.
+func (r *TemplateRepo) CreatePreset(ctx context.Context, t *model.Template) (bool, error) {
+	now := time.Now().UTC()
+	t.CreatedAt, t.UpdatedAt = now, now
+	if t.Ages == nil {
+		t.Ages = []string{}
+	}
+	q := psql.Insert("template").
+		Columns("id", "public_id", "preset_key", "name", "description", "topic", "ages", "duration_min", "glyph", "author_account_id", "created_at", "updated_at").
+		Values(t.ID, t.PublicID, t.PresetKey, t.Name, t.Description, t.Topic, t.Ages, t.DurationMin, t.Glyph, nil, t.CreatedAt, t.UpdatedAt).
+		Suffix("ON CONFLICT (preset_key) DO NOTHING")
+	tag, err := execBuilder(ctx, r.db, q)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+func (r *TemplateRepo) GetByPresetKey(ctx context.Context, key string) (*model.Template, error) {
+	return r.getBy(ctx, "preset_key = ?", key)
+}
+
 func (r *TemplateRepo) getBy(ctx context.Context, where string, arg any) (*model.Template, error) {
 	b := psql.Select(templateCols).From("template").Where(where, arg).Limit(1)
 	row, err := queryRowBuilder(ctx, r.db, b)

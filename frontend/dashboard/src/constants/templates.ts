@@ -6,7 +6,7 @@ export const AGES: ReadonlyArray<{ key: AgeKey; label: string }> = [
   { key: "6-7", label: "6-7 лет" },
 ];
 
-export type TopicKey = "math" | "literacy" | "world" | "speech" | "logic" | "drawing" | "sensory" | "routine";
+export type TopicKey = "math" | "literacy" | "world" | "speech" | "logic" | "drawing" | "sensory" | "routine" | "music" | "health" | "safety" | "social";
 export interface TopicStyle { key: TopicKey; label: string; bg: string; color: string; dot: string }
 export const TOPICS: ReadonlyArray<TopicStyle> = [
   { key: "math", label: "Математика", bg: "#FFF3D6", color: "#8A5A00", dot: "#F2B134" },
@@ -17,6 +17,10 @@ export const TOPICS: ReadonlyArray<TopicStyle> = [
   { key: "drawing", label: "Рисование", bg: "#F3E8FF", color: "#6D3BB5", dot: "#9B5DE5" },
   { key: "sensory", label: "Сенсорика", bg: "#FFE9F2", color: "#9C2A5B", dot: "#E86AA0" },
   { key: "routine", label: "Режим дня", bg: "#ECE9E0", color: "#4A4F58", dot: "#9AA1AC" },
+  { key: "music", label: "Музыка", bg: "#FFF0E0", color: "#8F4A0C", dot: "#F0923B" },
+  { key: "health", label: "Здоровье", bg: "#E3F7EE", color: "#1F6F4E", dot: "#3CB37A" },
+  { key: "safety", label: "Безопасность", bg: "#FDE4E1", color: "#A32A1E", dot: "#E2574A" },
+  { key: "social", label: "Эмоции и общение", bg: "#EEF0FF", color: "#3F3F9C", dot: "#7A7DE0" },
 ];
 
 export const LOGO_SVG = "<svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"7.5\" cy=\"7.5\" r=\"4\" fill=\"#F2B134\"></circle><path d=\"M12.5 3.5h8v8h-8z\" fill=\"#1F8A85\"></path><path d=\"M4 20.5l5.5-9 5.5 9z\" fill=\"#D5512E\"></path></svg>";

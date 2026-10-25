@@ -511,6 +511,9 @@
         applyReadonly();
         // Только после снятия readonly: в режиме чтения tldraw молча игнорирует updatePage.
         if (firstInit && canEdit) localizeDefaultPage();
+        // Первое открытие на этом устройстве: показать всё содержимое целиком (шаблоны занятий
+        // сделаны под панель 1920 px, на ноутбуке без подгонки видна только часть).
+        if (firstInit && !readSession() && editor.getCurrentPageShapeIds().size > 0) editor.zoomToFit({ animation: { duration: 0 } });
         scheduleSend();
         // Сервер после реконнекта нас не помнит - представляемся заново.
         lastPresenceJson = "";

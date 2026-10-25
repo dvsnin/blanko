@@ -14,6 +14,7 @@ import (
 	"github.com/dvsnin/blanko/backend/app/internal/config"
 	"github.com/dvsnin/blanko/backend/app/internal/database"
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
+	"github.com/dvsnin/blanko/backend/app/internal/preset"
 	"github.com/dvsnin/blanko/backend/app/internal/server"
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 	"github.com/dvsnin/blanko/backend/app/internal/storage"
@@ -56,6 +57,12 @@ func main() {
 		log.Fatalf("storage: %v", err)
 	}
 	log.Printf("storage: bucket %s ready", cfg.S3Bucket)
+
+	// Предустановленные шаблоны с содержимым: строки без перезаписи правок сада, документы
+	// там, где их нет. Сбой не валит старт - кабинет работает и без каталога.
+	if err := preset.Run(ctx, pool, store); err != nil {
+		log.Printf("presets: %v", err)
+	}
 
 	hub := doc.NewHub(store, cfg.DocFlushInterval)
 	go hub.Run(ctx)

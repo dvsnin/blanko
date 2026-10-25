@@ -6,7 +6,7 @@ import { FIXTURE } from './templates.fixture';
 
 describe('константы', () => {
   it('8 тем, 4 возраста', () => {
-    expect(TOPICS).toHaveLength(8);
+    expect(TOPICS).toHaveLength(12);
     expect(AGES.map((a) => a.label)).toEqual(['3-4 года', '4-5 лет', '5-6 лет', '6-7 лет']);
   });
 });

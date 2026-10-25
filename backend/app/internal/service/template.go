@@ -23,9 +23,11 @@ var (
 	ErrInvalidDuration = fmt.Errorf("%w: invalid duration", ErrValidation)
 )
 
+// validTopics - темы занятий; список дублируется в constants/templates.ts на фронте.
 var validTopics = map[string]bool{
 	"math": true, "literacy": true, "world": true, "speech": true,
 	"logic": true, "drawing": true, "sensory": true, "routine": true,
+	"music": true, "health": true, "safety": true, "social": true,
 }
 
 var validAges = map[string]bool{"3-4": true, "4-5": true, "5-6": true, "6-7": true}
