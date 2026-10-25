@@ -14,7 +14,7 @@ describe('новые поля', () => {
     expect(boardFromDTO({ ...dto, templateId: '' }).templateId).toBeUndefined();
     expect(boardFromDTO({ ...dto, templateId: 'letter' }).templateId).toBe('letter');
   });
-  const t = { id: 't', name: 'Группа', role: 'owner' as const, isStarred: false, boardCount: 0, createdAt: '', updatedAt: '' };
+  const t = { id: 't', name: 'Группа', role: 'owner' as const, isStarred: false, recentBoards: [], boardCount: 0, createdAt: '', updatedAt: '' };
   it('teachers: пусто -> undefined', () => {
     expect(teamFromDTO({ ...t, ageGroup: '', teachers: '' }).teachers).toBeUndefined();
     expect(teamFromDTO({ ...t, ageGroup: '', teachers: 'Анна, Мария' }).teachers).toBe('Анна, Мария');

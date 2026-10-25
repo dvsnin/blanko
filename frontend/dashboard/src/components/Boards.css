@@ -92,6 +92,10 @@
     gap: 16px;
 }
 
+/* «Показать ещё» под сеткой и списком */
+.boards-more { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 0 8px; }
+.boards-more__hint { font-size: 13px; font-weight: 600; color: var(--muted); }
+
 /* Card */
 .board-card {
     background: var(--surface);

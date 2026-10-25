@@ -15,12 +15,12 @@ const boardFromT1: Board = {
   id: 'b1', publicId: 'pb1', title: 'Счёт до 5 с яблоками', owner: 'x', lastOpened: '',
   templateId: 't1', createdAt: '2026-10-10T00:00:00Z',
 };
-const team = { id: 'g1', name: 'Ромашки', role: 'owner', boards: [boardFromT1], isStarred: false, ageGroup: '3-4' } as Team;
+const team = { id: 'g1', name: 'Ромашки', role: 'owner', recentBoards: [boardFromT1], boardCount: 1, isStarred: false, ageGroup: '3-4' } as Team;
 
 function setup(opts: { team?: Team | null; templates?: typeof FIXTURE; loading?: boolean; error?: string | null; initialAge?: '3-4' | '4-5' | '5-6' | '6-7' } = {}) {
   const t = opts.team === undefined ? team : opts.team;
   const teams = {
-    teams: t ? [t] : [], activeTeamId: t?.id ?? null, activeTeam: t, activeBoards: t?.boards ?? [],
+    teams: t ? [t] : [], activeTeamId: t?.id ?? null, activeTeam: t, activeBoards: t?.recentBoards ?? [],
     loading: false, error: null, createBoard: vi.fn().mockResolvedValue(null), markBoardOpened: vi.fn(),
   } as unknown as TeamsContextValue;
   const tpls: TemplatesContextValue = {

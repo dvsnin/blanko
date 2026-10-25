@@ -1,6 +1,8 @@
 package handler_test
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -120,6 +122,111 @@ func TestListBoards(t *testing.T) {
 				if v, ok := got[name]; !ok || v != canEdit {
 					t.Fatalf("%s: %q canEdit = %v (seen %v), want %v", tc.email, name, v, ok, canEdit)
 				}
+			}
+		}
+	})
+
+	// Страницы: keyset-курсор, total по тому же фильтру, сортировки, сегменты, поиск.
+	t.Run("pagination", func(t *testing.T) {
+		pg := e.team(owner)
+		e.addMember(pg, member)
+		names := []string{"Яблоко", "ёлка", "Арбуз", "Банан"}
+		for i, name := range names {
+			b := e.board(pg, owner, name)
+			// Разные метки времени: «Арбуз» открывали последним, «Яблоко» первым.
+			if _, err := e.pool.Exec(e.ctx, `UPDATE board SET updated_at = now() - ($2 || ' hours')::interval, last_opened_at = now() - ($3 || ' hours')::interval WHERE id = $1`,
+				b.ID, fmt.Sprint(i), fmt.Sprint(len(names)-i)); err != nil {
+				t.Fatal(err)
+			}
+		}
+		mine := e.board(pg, member, "Моя доска")
+		e.boardWith(pg, owner, "Скрытая от участника", model.BoardAccessDeny, false)
+		if status, body := e.post("member@example.com", "/board/star", map[string]any{"id": mine.ID.String()}); status != 204 {
+			t.Fatalf("star: %d %v", status, body)
+		}
+		teamID := pg.ID.String()
+		namesOf := func(body map[string]any) []string {
+			out := []string{}
+			for _, it := range items(body) {
+				out = append(out, it.(map[string]any)["name"].(string))
+			}
+			return out
+		}
+		list := func(email string, req map[string]any) (int, map[string]any) {
+			req["teamId"] = teamID
+			return e.post(email, "/board/list", req)
+		}
+
+		// По названию по-русски, страницами по 2: ё читается как е.
+		status, p1 := list("member@example.com", map[string]any{"sort": "name", "limit": 2})
+		if status != 200 {
+			t.Fatalf("page 1: %d %v", status, p1)
+		}
+		if got := namesOf(p1); !reflect.DeepEqual(got, []string{"Арбуз", "Банан"}) {
+			t.Fatalf("page 1 = %v", got)
+		}
+		if p1["total"] != float64(5) || p1["nextCursor"] == "" {
+			t.Fatalf("page 1 total/cursor = %v / %v", p1["total"], p1["nextCursor"])
+		}
+		_, p2 := list("member@example.com", map[string]any{"sort": "name", "limit": 2, "cursor": p1["nextCursor"]})
+		if got := namesOf(p2); !reflect.DeepEqual(got, []string{"ёлка", "Моя доска"}) {
+			t.Fatalf("page 2 = %v", got)
+		}
+		_, p3 := list("member@example.com", map[string]any{"sort": "name", "limit": 2, "cursor": p2["nextCursor"]})
+		if got := namesOf(p3); !reflect.DeepEqual(got, []string{"Яблоко"}) || p3["nextCursor"] != "" {
+			t.Fatalf("page 3 = %v, cursor %q", got, p3["nextCursor"])
+		}
+
+		// Недавние: по последнему открытию; владелец видит и скрытую (она создана последней, без открытия).
+		_, recent := list("owner@example.com", map[string]any{"sort": "recent", "limit": 10})
+		if got := namesOf(recent); !reflect.DeepEqual(got, []string{"Скрытая от участника", "Моя доска", "Банан", "Арбуз", "ёлка", "Яблоко"}) {
+			t.Fatalf("recent = %v", got)
+		}
+		_, updated := list("owner@example.com", map[string]any{"sort": "updated", "limit": 10, "segment": "all"})
+		if got := namesOf(updated); !reflect.DeepEqual(got, []string{"Скрытая от участника", "Моя доска", "Яблоко", "ёлка", "Арбуз", "Банан"}) {
+			t.Fatalf("updated = %v", got)
+		}
+
+		// Сегменты и поиск, total по тому же фильтру.
+		_, mineBody := list("member@example.com", map[string]any{"segment": "mine"})
+		if got := namesOf(mineBody); !reflect.DeepEqual(got, []string{"Моя доска"}) || mineBody["total"] != float64(1) {
+			t.Fatalf("mine = %v total %v", got, mineBody["total"])
+		}
+		_, starred := list("member@example.com", map[string]any{"segment": "starred"})
+		if got := namesOf(starred); !reflect.DeepEqual(got, []string{"Моя доска"}) {
+			t.Fatalf("starred = %v", got)
+		}
+		_, found := list("member@example.com", map[string]any{"q": "БА"})
+		if got := namesOf(found); !reflect.DeepEqual(got, []string{"Банан"}) || found["total"] != float64(1) {
+			t.Fatalf("q = %v total %v", got, found["total"])
+		}
+		_, percent := list("member@example.com", map[string]any{"q": "%"})
+		if len(items(percent)) != 0 {
+			t.Fatalf("q=%% must be literal, got %v", namesOf(percent))
+		}
+
+		// Поиск по другим группам: без teamId, с исключением текущей.
+		_, others := e.post("owner@example.com", "/board/list", map[string]any{"q": "а", "excludeTeamId": teamID, "limit": 50})
+		for _, name := range namesOf(others) {
+			for _, own := range append(names, "Моя доска", "Скрытая от участника") {
+				if name == own {
+					t.Fatalf("excludeTeamId leaked %q", name)
+				}
+			}
+		}
+		if len(items(others)) == 0 {
+			t.Fatal("expected matches from other teams")
+		}
+
+		// Ошибки запроса.
+		for name, req := range map[string]map[string]any{
+			"bad cursor":     {"cursor": "???"},
+			"foreign cursor": {"sort": "recent", "cursor": p1["nextCursor"]},
+			"bad sort":       {"sort": "random"},
+			"bad segment":    {"segment": "theirs"},
+		} {
+			if status, body := list("member@example.com", req); status != 400 {
+				t.Fatalf("%s: status = %d (%v)", name, status, body)
 			}
 		}
 	})

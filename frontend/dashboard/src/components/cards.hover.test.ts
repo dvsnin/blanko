@@ -3,6 +3,7 @@ import boards from "./Boards.css?raw";
 import list from "./Boards.list.css?raw";
 import tpl from "./TemplateCard.css?raw";
 import groups from "../pages/GroupsPage.css?raw";
+import star from "./StarButton.css?raw";
 
 /** Возвращает тела всех блоков `@media (hover: hover) { ... }` и остаток файла вне их. */
 function splitHoverMedia(css: string): { inside: string; outside: string } {
@@ -59,5 +60,19 @@ describe("карточки: правила «только при наведен�
 describe("карточка с открытым меню выше соседей", () => {
   it("TemplateCard.css: .tpl-card--menu-open поднимает z-index", () => {
     expect(tpl).toMatch(/\.tpl-card--menu-open[^{]*\{[^}]*z-index:\s*[1-9]/);
+  });
+});
+
+// Метка избранного до наведения повторяет кнопку звезды: тот же размер и скругление, иначе звезда
+// «меняется» при наведении на карточку. Проверяется здесь, а не рядом с компонентом: ?raw пуст,
+// если тот же css уже импортирован компонентом в этом тесте.
+describe("StarButton.css: метка избранного выглядит как кнопка", () => {
+  it(".card-star-mark: 36px, radius 10px, цвет глифа ink, без тени", () => {
+    const rule = star.match(/\.card-star-mark\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toMatch(/width:\s*36px/);
+    expect(rule).toMatch(/height:\s*36px/);
+    expect(rule).toMatch(/border-radius:\s*10px/);
+    expect(rule).toMatch(/color:\s*var\(--ink\)/);
+    expect(rule).not.toMatch(/box-shadow/);
   });
 });

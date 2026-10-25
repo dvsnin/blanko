@@ -133,14 +133,14 @@ func (r *TeamRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 }
 
 // ListForAccount возвращает все команды, где пользователь является участником,
-// вместе с ролью пользователя, признаком избранного и количеством досок.
-func (r *TeamRepo) ListForAccount(ctx context.Context, accountID uuid.UUID) ([]model.TeamView, error) {
+// вместе с ролью пользователя, признаком избранного и числом видимых ему досок (visibleBoardSQL).
+func (r *TeamRepo) ListForAccount(ctx context.Context, accountID uuid.UUID, orgAdmin bool) ([]model.TeamView, error) {
 	b := psql.Select(
 		"t.id", "t.organization_id", "t.name", "t.member_board_access", "t.age_group", "t.teachers", "t.created_at", "t.updated_at",
 		"tm.role",
 		"(ts.account_id IS NOT NULL) AS is_starred",
-		"COALESCE((SELECT COUNT(*) FROM board WHERE team_id = t.id AND deleted_at IS NULL), 0) AS board_count",
 	).
+		Column("COALESCE((SELECT COUNT(*) FROM board b WHERE b.team_id = t.id AND b.deleted_at IS NULL AND "+visibleBoardCond+"), 0) AS board_count", orgAdmin, accountID).
 		From("team t").
 		Join("team_member tm ON tm.team_id = t.id AND tm.account_id = ?", accountID).
 		LeftJoin("team_starred ts ON ts.team_id = t.id AND ts.account_id = ?", accountID).

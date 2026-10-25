@@ -32,11 +32,13 @@ export interface Team {
   id: string;
   name: string;
   role: TeamRole;
-  boards: Board[];
+  /** Последние открытые доски группы (до 3) для карточки группы; полный список приходит страницами. */
+  recentBoards: Board[];
+  /** Число досок группы, видимых пользователю; приходит с сервера. */
+  boardCount: number;
   isStarred: boolean;
   ownerId?: string;
   create?: boolean;
-  boardCount?: number;
   colorKey?: string;
   ageGroup?: AgeKey;
   /** Воспитатели группы, свободный текст. */

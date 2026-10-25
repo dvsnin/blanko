@@ -6,7 +6,7 @@ import { TeamsContext, type TeamsContextValue } from '../contexts/TeamsContext';
 import type { Team } from '../types';
 
 const mk = (id: string, name: string, role: Team['role']): Team => ({
-  id, name, role, boards: [], isStarred: false,
+  id, name, role, recentBoards: [], boardCount: 0, isStarred: false,
 });
 
 function setup(teams: Team[] = [mk('a', 'Альфа', 'owner'), mk('b', 'Бета', 'admin'), mk('c', 'Гамма', 'member')], orgRole: 'owner' | 'admin' | 'member' | undefined = 'member') {

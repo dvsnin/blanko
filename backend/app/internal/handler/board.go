@@ -60,7 +60,13 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 
 type listBoardsRequest struct {
 	WithAccount
-	TeamID string `json:"teamId"` // пусто - все команды пользователя
+	TeamID        string `json:"teamId"`        // пусто - все команды пользователя
+	ExcludeTeamID string `json:"excludeTeamId"` // поиск по другим группам: вычесть текущую
+	Q             string `json:"q"`
+	Segment       string `json:"segment"` // all | mine | starred
+	Sort          string `json:"sort"`    // recent | updated | name
+	Cursor        string `json:"cursor"`  // nextCursor предыдущей страницы
+	Limit         int    `json:"limit"`   // по умолчанию 24, максимум 100
 }
 
 type createBoardRequest struct {
@@ -91,34 +97,41 @@ type boardIDRequest struct {
 
 // --- board handlers ---
 
-// ListBoards POST /api/v1/board/list - доски команды teamId; без teamId доски всех команд пользователя.
+// ListBoards POST /api/v1/board/list - страница досок команды teamId или всех команд пользователя:
+// {items, nextCursor, total}.
 func (a *API) ListBoards(w http.ResponseWriter, r *http.Request) {
 	var req listBoardsRequest
 	id, ok := a.decodeAndAuth(w, r, &req)
 	if !ok {
 		return
 	}
-	var boards []model.BoardView
-	var err error
-	if req.TeamID == "" {
-		boards, err = a.services.Board.ListAll(r.Context(), id)
-	} else {
-		teamID, perr := uuid.Parse(req.TeamID)
-		if perr != nil {
+	in := service.BoardListInput{Q: req.Q, Segment: req.Segment, Sort: req.Sort, Cursor: req.Cursor, Limit: req.Limit}
+	if req.TeamID != "" {
+		teamID, err := uuid.Parse(req.TeamID)
+		if err != nil {
 			writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
 			return
 		}
-		boards, err = a.services.Board.ListByTeam(r.Context(), id, teamID)
+		in.TeamID = &teamID
 	}
+	if req.ExcludeTeamID != "" {
+		excl, err := uuid.Parse(req.ExcludeTeamID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_id", "invalid excludeTeamId")
+			return
+		}
+		in.ExcludeTeamID = &excl
+	}
+	page, err := a.services.Board.List(r.Context(), id, in)
 	if err != nil {
 		writeServiceError(w, err)
 		return
 	}
-	out := make([]BoardDTO, 0, len(boards))
-	for _, b := range boards {
+	out := make([]BoardDTO, 0, len(page.Items))
+	for _, b := range page.Items {
 		out = append(out, boardViewToDTO(b))
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": out})
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "nextCursor": page.NextCursor, "total": page.Total})
 }
 
 // CreateBoard POST /api/v1/board/create

@@ -3,7 +3,7 @@ import { render, cleanup, screen, act, waitFor } from "@testing-library/react";
 import { TeamsProvider, useTeams } from "./TeamsContext";
 import { api } from "../api/client";
 import { flushPrefs } from "../utils/prefs";
-import { teamDTOs, firstBoard } from "./TeamsContext.boards.fixture";
+import { teamDTOs, firstBoard, page } from "./TeamsContext.boards.fixture";
 
 vi.mock("../api/client", () => ({
   api: {
@@ -27,7 +27,7 @@ function Probe() {
 describe("TeamsContext: активная группа из настроек аккаунта", () => {
   beforeEach(() => {
     vi.mocked(api.teams.list).mockResolvedValue(teamDTOs);
-    vi.mocked(api.boards.list).mockResolvedValue([firstBoard]);
+    vi.mocked(api.boards.list).mockResolvedValue(page([firstBoard]));
     vi.mocked(api.account.updatePrefs).mockResolvedValue({});
   });
   afterEach(() => { cleanup(); vi.clearAllMocks(); delete window.dashData; });

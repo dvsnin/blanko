@@ -23,7 +23,7 @@ import { navigate } from "../hooks/useHashRoute";
 import { assignColors, colorOf } from "../utils/colors";
 import { formatRelative } from "../utils/relativeTime";
 import { coverForBoard } from "../utils/templates";
-import { matchesQuery, searchOtherTeams, type Segment } from "../utils/searchBoards";
+import type { BoardSegment } from "../api/client";
 import { openBoard, openInNewTab, boardUrl } from "../utils/openBoard";
 import type { BoardAccess, Team } from "../types";
 import type { AgeKey } from "../constants/templates";
@@ -35,6 +35,10 @@ export default function BoardsPage() {
     setActiveTeamId,
     activeTeam,
     activeBoards,
+    boardList,
+    setBoardQuery,
+    loadMoreBoards,
+    otherMatches,
     createBoard,
     markBoardOpened,
     createTeam,
@@ -75,7 +79,8 @@ export default function BoardsPage() {
     updated: "По дате изменения",
     name: "По названию",
   };
-  const [segment, setSegment] = useState<Segment>("all");
+  const [segment, setSegmentState] = useState<BoardSegment>(() => readPrefIn("boards.segment", ["all", "mine", "starred"], "all"));
+  const setSegment = (v: BoardSegment) => { setSegmentState(v); savePrefs({ "boards.segment": v }); };
   const [sortBy, setSortByState] = useState<SortBy>(() => readPrefIn("boards.sort", ["recent", "updated", "name"], "recent"));
   const setSortBy = (v: SortBy) => { setSortByState(v); savePrefs({ "boards.sort": v }); };
   // true, если взаимодействие с селектом сортировки началось с мыши/тача
@@ -100,38 +105,12 @@ export default function BoardsPage() {
   const [saveAsTemplate, setSaveAsTemplate] = useState<{ id: string; title: string; templateId?: string } | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
 
-  // Цвета назначаются по всей группе ДО фильтров, чтобы доска не меняла цвет при поиске/сегменте.
-  const boards = useMemo(() => {
-    let list = assignColors(activeBoards);
-
-    // сегмент "Все / Мои / Избранные"
-    if (segment === "starred") {
-      list = list.filter((b) => b.isStarred);
-    } else if (segment === "mine") {
-      list = user.id ? list.filter((b) => b.ownerId === user.id) : [];
-    }
-
-    // поиск по названию
-    if (q.trim()) {
-      list = list.filter((b) => matchesQuery(b.title, q));
-    }
-
-    // сортировка
-    const sorted = [...list];
-    if (sortBy === "name") {
-      sorted.sort((a, b) => a.title.localeCompare(b.title, "ru"));
-    } else {
-      // recent - по lastOpenedAt desc (фолбэк updatedAt); updated - по updatedAt desc
-      const ts = (iso?: string) => (iso ? Date.parse(iso) : 0);
-      const key = (x: (typeof sorted)[number]) =>
-        sortBy === "recent" ? ts(x.lastOpenedAt || x.updatedAt) : ts(x.updatedAt);
-      sorted.sort((a, b) => key(b) - key(a));
-    }
-
-    // Избранные не закрепляются наверху: порядок задаёт только сортировка,
-    // а избранное смотрят через сегмент «Избранные».
-    return sorted;
-  }, [activeBoards, segment, q, sortBy, user.id]);
+  // Сегмент, сортировка и поиск считаются на сервере: список приходит страницами уже в нужном
+  // порядке. Цвета назначаются по загруженному набору, чтобы соседние доски не совпадали.
+  const boards = useMemo(() => assignColors(activeBoards), [activeBoards]);
+  useEffect(() => {
+    setBoardQuery({ segment, sort: sortBy, q });
+  }, [segment, sortBy, q, setBoardQuery]);
 
   const canCreateBoard = Boolean(activeTeamId);
   // Во время первого фетча опираемся на флаги из window.dashData, чтобы
@@ -143,19 +122,7 @@ export default function BoardsPage() {
     : teams.length > 0;
   const selectedTeamHasBoards = loading
     ? dashFlags?.hasBoards !== false
-    : Boolean(activeTeam && activeBoards.length > 0);
-  const colouredByTeam = useMemo(
-    () => new Map(teams.map((t) => [t.id, assignColors(t.boards)])),
-    [teams],
-  );
-  const otherMatches = useMemo(
-    () =>
-      searchOtherTeams(teams, activeTeamId, q).map(({ board, team }) => ({
-        board: colouredByTeam.get(team.id)?.find((b) => b.id === board.id) ?? board,
-        team,
-      })),
-    [teams, activeTeamId, q, colouredByTeam],
-  );
+    : Boolean(activeTeam && activeTeam.boardCount > 0);
 
   // Звезда на карточке и в списке - общий StarToggle с нейтральными тостами
 
@@ -429,7 +396,7 @@ export default function BoardsPage() {
         {(!loading || activeTeam) && (
           <GroupHeader
             team={activeTeam ?? null}
-            boardsCount={activeTeam ? (loading ? (activeTeam.boardCount ?? 0) : activeTeam.boards.length) : 0}
+            boardsCount={activeTeam?.boardCount ?? 0}
             role={activeTeam?.role ?? "member"}
             onSettings={() => setTeamModal("edit")}
             onFromTemplate={() => navigate({ name: "templates", age: activeTeam?.ageGroup || undefined })}
@@ -448,7 +415,7 @@ export default function BoardsPage() {
             <div className="boards-toolbar">
               <div className="boards-toolbar__title">
                 <h2 className="boards-toolbar__heading">Доски группы</h2>
-                <span className="chip chip--muted">{boards.length}</span>
+                <span className="chip chip--muted">{boardList.total}</span>
               </div>
               <div className="boards-toolbar__spacer" />
               <label className={`input input--search boards-search${q ? " boards-search--filled" : ""}`}>
@@ -519,7 +486,7 @@ export default function BoardsPage() {
               <div className="boards-view-toggle"><ViewToggle view={view} setView={setView} /></div>
             </div>
 
-            {boards.length === 0 ? (
+            {boards.length === 0 ? (boardList.loading ? null : (
               <div className="boards-team-empty-hint" role="status" aria-live="polite">
                 <p className="boards-team-empty-hint__text">
                   {q.trim()
@@ -527,7 +494,7 @@ export default function BoardsPage() {
                     : "По выбранному фильтру досок нет. Создайте новую или снимите фильтр."}
                 </p>
               </div>
-            ) : view === "grid" ? (
+            )) : view === "grid" ? (
               <div className="boards-grid">
                 {boards.map((b) => {
                   const isStarred = b.isStarred ?? false;
@@ -644,6 +611,15 @@ export default function BoardsPage() {
                     </div>
                   </section>
                 ))}
+              </div>
+            )}
+
+            {boardList.hasMore && (
+              <div className="boards-more">
+                <span className="boards-more__hint">Показано {boards.length} из {boardList.total}</span>
+                <button type="button" className="btn btn--soft" disabled={boardList.loading} onClick={() => void loadMoreBoards()}>
+                  {boardList.loading ? "Загружаем…" : "Показать ещё"}
+                </button>
               </div>
             )}
 

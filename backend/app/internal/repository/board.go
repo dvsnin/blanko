@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -101,25 +102,175 @@ func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.
 	return &m, nil
 }
 
-// listSelect - общая выборка списков досок: владелец, избранное и роль зрителя в команде доски.
-// Роль нужна сервису, чтобы считать доступ и canEdit без запросов на каждую доску.
-func listSelect(viewerID uuid.UUID) sq.SelectBuilder {
-	return psql.Select(
+// BoardSort - сортировка списка досок; ключи keyset-курсора совпадают с ORDER BY.
+type BoardSort string
+
+const (
+	BoardSortRecent  BoardSort = "recent"  // COALESCE(last_opened_at, updated_at) DESC, id DESC
+	BoardSortUpdated BoardSort = "updated" // updated_at DESC, id DESC
+	BoardSortName    BoardSort = "name"    // replace(lower(name), 'ё', 'е') COLLATE "C" ASC, id ASC - то же, что ruSortKey
+)
+
+// BoardSegment - срез списка: все, мои (создатель - зритель), избранные зрителем.
+type BoardSegment string
+
+const (
+	BoardSegmentAll     BoardSegment = "all"
+	BoardSegmentMine    BoardSegment = "mine"
+	BoardSegmentStarred BoardSegment = "starred"
+)
+
+// BoardCursor - позиция keyset-курсора: ключ сортировки последней отданной строки и её id.
+// Ключ хранится строкой в том виде, в каком его отдала БД (RFC3339Nano для времени).
+type BoardCursor struct {
+	Key string
+	ID  uuid.UUID
+}
+
+// BoardListFilter - параметры списка досок. ViewerID обязателен: от него зависят роль, избранное
+// и видимость. TeamID nil - все команды зрителя, ExcludeTeamID вычитает одну (поиск по другим группам).
+type BoardListFilter struct {
+	ViewerID      uuid.UUID
+	OrgAdmin      bool
+	TeamID        *uuid.UUID
+	ExcludeTeamID *uuid.UUID
+	Q             string
+	Segment       BoardSegment
+	Sort          BoardSort
+	After         *BoardCursor
+	Limit         int
+}
+
+const nameKeySQL = "replace(lower(b.name), 'ё', 'е')"
+
+// visibleBoardSQL зеркалит accessByRole из сервиса для deny: доску не видит рядовой участник,
+// если он не создатель и не админ организации. Нужен в SQL, чтобы страницы и total считались
+// по одним и тем же строкам; сервис всё равно прогоняет результат через accessByRole.
+func visibleBoardSQL(b sq.SelectBuilder, viewerID uuid.UUID, orgAdmin bool) sq.SelectBuilder {
+	return b.Where(visibleBoardCond, orgAdmin, viewerID)
+}
+
+// visibleBoardCond ждёт доску как b и членство зрителя как tm; аргументы: orgAdmin, viewerID.
+const visibleBoardCond = "(? OR b.account_id = ? OR tm.role IN ('owner', 'admin') OR b.team_access <> 'deny')"
+
+// boardListFrom - общая часть списка и счётчика: доски живых команд зрителя с его ролью и избранным.
+func boardListFrom(b sq.SelectBuilder, f BoardListFilter) sq.SelectBuilder {
+	b = b.From("board b").
+		Join("team_member tm ON tm.team_id = b.team_id AND tm.account_id = ?", f.ViewerID).
+		Join("team t ON t.id = b.team_id AND t.deleted_at IS NULL").
+		LeftJoin("board_starred bs ON bs.board_id = b.id AND bs.account_id = ?", f.ViewerID).
+		Where("b.deleted_at IS NULL")
+	b = visibleBoardSQL(b, f.ViewerID, f.OrgAdmin)
+	if f.TeamID != nil {
+		b = b.Where("b.team_id = ?", *f.TeamID)
+	}
+	if f.ExcludeTeamID != nil {
+		b = b.Where("b.team_id <> ?", *f.ExcludeTeamID)
+	}
+	if q := strings.TrimSpace(f.Q); q != "" {
+		b = b.Where("b.name ILIKE ?", "%"+escapeLike(q)+"%")
+	}
+	switch f.Segment {
+	case BoardSegmentMine:
+		b = b.Where("b.account_id = ?", f.ViewerID)
+	case BoardSegmentStarred:
+		b = b.Where("bs.board_id IS NOT NULL")
+	}
+	return b
+}
+
+// ListBoards возвращает страницу досок и курсор на следующую (nil, если дальше пусто).
+// Страница запрашивается на одну строку больше лимита, чтобы не делать отдельный запрос «есть ли ещё».
+func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.BoardView, *BoardCursor, error) {
+	b := psql.Select(
+		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
+		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
+		"a.name",
+		"(bs.board_id IS NOT NULL) AS is_starred",
+		"tm.role",
+	)
+	b = boardListFrom(b, f).Join("account a ON a.id = b.account_id")
+	var keyCol string
+	switch f.Sort {
+	case BoardSortName:
+		keyCol = nameKeySQL + ` COLLATE "C"`
+		if f.After != nil {
+			b = b.Where("("+keyCol+`, b.id) > (?::text COLLATE "C", ?)`, f.After.Key, f.After.ID)
+		}
+		b = b.OrderBy(keyCol+" ASC", "b.id ASC")
+	case BoardSortUpdated:
+		keyCol = "b.updated_at"
+		if f.After != nil {
+			b = b.Where("(b.updated_at, b.id) < (?::timestamptz, ?)", f.After.Key, f.After.ID)
+		}
+		b = b.OrderBy("b.updated_at DESC", "b.id DESC")
+	default:
+		keyCol = "COALESCE(b.last_opened_at, b.updated_at)"
+		if f.After != nil {
+			b = b.Where("("+keyCol+", b.id) < (?::timestamptz, ?)", f.After.Key, f.After.ID)
+		}
+		b = b.OrderBy(keyCol+" DESC", "b.id DESC")
+	}
+	// Ключ курсора берём из БД той же строкой, чтобы сравнение на следующей странице было точным.
+	b = b.Column(keyCol + "::text AS cursor_key").Limit(uint64(f.Limit + 1))
+
+	rows, err := queryBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	var result []model.BoardView
+	var keys []string
+	for rows.Next() {
+		var bv model.BoardView
+		var key string
+		if err := rows.Scan(
+			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
+			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
+			&bv.OwnerName,
+			&bv.IsStarred,
+			&bv.ViewerRole,
+			&key,
+		); err != nil {
+			return nil, nil, err
+		}
+		result = append(result, bv)
+		keys = append(keys, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	var next *BoardCursor
+	if len(result) > f.Limit {
+		result = result[:f.Limit]
+		last := result[len(result)-1]
+		next = &BoardCursor{Key: keys[len(result)-1], ID: last.Board.ID}
+	}
+	return result, next, nil
+}
+
+// RecentByTeams - до perTeam последних открытых видимых досок в каждой команде зрителя, одним
+// запросом через LATERAL: карточкам групп в кабинете не нужен полный список.
+func (r *BoardRepo) RecentByTeams(ctx context.Context, viewerID uuid.UUID, orgAdmin bool, perTeam int) ([]model.BoardView, error) {
+	b := psql.Select(
 		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
 		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
 		"a.name",
 		"(bs.board_id IS NOT NULL) AS is_starred",
 		"tm.role",
 	).
-		From("board b").
-		Join("team_member tm ON tm.team_id = b.team_id AND tm.account_id = ?", viewerID).
+		From("team_member tm").
+		Join("team t ON t.id = tm.team_id AND t.deleted_at IS NULL").
+		JoinClause("JOIN LATERAL (SELECT b.* FROM board b WHERE b.team_id = tm.team_id AND b.deleted_at IS NULL AND "+visibleBoardCond+
+			" ORDER BY COALESCE(b.last_opened_at, b.updated_at) DESC, b.id DESC LIMIT ?) b ON true", orgAdmin, viewerID, perTeam).
 		Join("account a ON a.id = b.account_id").
 		LeftJoin("board_starred bs ON bs.board_id = b.id AND bs.account_id = ?", viewerID).
-		Where("b.deleted_at IS NULL").
-		OrderBy("b.updated_at DESC")
-}
-
-func scanBoardViews(rows pgx.Rows) ([]model.BoardView, error) {
+		Where("tm.account_id = ?", viewerID).
+		OrderBy("b.team_id", "COALESCE(b.last_opened_at, b.updated_at) DESC", "b.id DESC")
+	rows, err := queryBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	var result []model.BoardView
 	for rows.Next() {
@@ -138,24 +289,17 @@ func scanBoardViews(rows pgx.Rows) ([]model.BoardView, error) {
 	return result, rows.Err()
 }
 
-// ListByTeam возвращает доски команды для её участника (не участнику - пусто).
-func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID uuid.UUID) ([]model.BoardView, error) {
-	rows, err := queryBuilder(ctx, r.db, listSelect(viewerID).Where("b.team_id = ?", teamID))
+// CountBoards - число досок под тем же фильтром, что и ListBoards (курсор и лимит не учитываются).
+func (r *BoardRepo) CountBoards(ctx context.Context, f BoardListFilter) (int, error) {
+	row, err := queryRowBuilder(ctx, r.db, boardListFrom(psql.Select("COUNT(*)"), f))
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return scanBoardViews(rows)
-}
-
-// ListForAccount возвращает доски всех живых команд, где пользователь участник, одним запросом:
-// team_member по индексу account_id даёт команды, board по индексу team_id - их доски.
-func (r *BoardRepo) ListForAccount(ctx context.Context, viewerID uuid.UUID) ([]model.BoardView, error) {
-	rows, err := queryBuilder(ctx, r.db, listSelect(viewerID).
-		Join("team t ON t.id = b.team_id AND t.deleted_at IS NULL"))
-	if err != nil {
-		return nil, err
+	var n int
+	if err := row.Scan(&n); err != nil {
+		return 0, err
 	}
-	return scanBoardViews(rows)
+	return n, nil
 }
 
 // Update - переиспользуемое частичное обновление доски.

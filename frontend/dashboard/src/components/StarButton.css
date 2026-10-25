@@ -84,3 +84,16 @@
 .star-wrap::before, .star-wrap::after, .star-action::before, .star-action::after {
     content: none !important;
 }
+
+/* Метка «в избранном» на карточках (StarMark): та же звезда, что кнопка при наведении, стоит в углу
+   на месте «⋯»; при наведении её сменяют кнопки, и звезда сдвигается влево, освобождая место меню.
+   На тач-устройствах кнопки видны всегда, метка не нужна. */
+.card-star-mark {
+    position: absolute; top: 8px; right: 8px; z-index: 1;
+    width: 36px; height: 36px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.9); color: var(--ink);
+    pointer-events: none;
+}
+.card-star-mark .star-glyph { color: inherit; }
+@media (hover: none) { .card-star-mark { display: none; } }

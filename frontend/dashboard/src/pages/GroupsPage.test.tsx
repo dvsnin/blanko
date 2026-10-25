@@ -11,7 +11,7 @@ const board = (i: number): Board => ({
 const boards = (n: number) => Array.from({ length: n }, (_, i) => board(i + 1));
 
 const mk = (id: string, name: string, role: Team['role'], isStarred = false, n = 0): Team => ({
-  id, name, role, boards: boards(n), isStarred,
+  id, name, role, recentBoards: boards(Math.min(n, 3)), boardCount: n, isStarred,
 });
 
 function fake(teams: Team[], activeTeamId: string | null = null): TeamsContextValue {
@@ -21,7 +21,7 @@ function fake(teams: Team[], activeTeamId: string | null = null): TeamsContextVa
     setActiveTeamId: vi.fn(), createTeam: vi.fn(), updateTeam: vi.fn(), deleteTeam: vi.fn(),
     leaveTeam: vi.fn(), toggleStarTeam: vi.fn(), createBoard: vi.fn(), renameBoard: vi.fn(),
     deleteBoard: vi.fn(), toggleStarBoard: vi.fn(), markBoardOpened: vi.fn(), refresh: vi.fn(),
-  } as TeamsContextValue;
+  } as unknown as TeamsContextValue;
 }
 
 const teams = [

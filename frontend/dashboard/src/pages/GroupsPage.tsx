@@ -32,15 +32,8 @@ const ROLE_TEXT: Record<TeamRole, string> = {
   member: "вы участник",
 };
 
+// Последние доски и счётчик приходят с сервера в /team/list: полный список группы не грузится.
 const RECENT = 3;
-
-function recentBoards(boards: Board[]): Board[] {
-  const t = (b: Board) => {
-    const v = Date.parse(b.lastOpenedAt ?? b.updatedAt ?? "");
-    return Number.isNaN(v) ? 0 : v;
-  };
-  return [...boards].sort((a, b) => t(b) - t(a)).slice(0, RECENT);
-}
 
 interface GroupMenuProps {
   team: Team;
@@ -122,7 +115,7 @@ export default function GroupsPage() {
   const needle = q.trim().toLowerCase();
   const visible = needle ? sorted.filter((t) => t.name.toLowerCase().includes(needle)) : sorted;
 
-  const countOf = (t: Team) => (loading ? t.boardCount ?? 0 : t.boards.length);
+  const countOf = (t: Team) => t.boardCount;
   const totalBoards = teams.reduce((s, t) => s + countOf(t), 0);
 
   function openBoards(id: string) {
@@ -182,7 +175,7 @@ export default function GroupsPage() {
         <div className="groups__grid">
           {visible.map((team) => {
             const count = countOf(team);
-            const recent = recentBoards(team.boards);
+            const recent = team.recentBoards;
             const isActive = team.id === activeTeamId;
             const age = ageLabel(team.ageGroup) ?? "Возраст не указан";
             const teachers = team.teachers

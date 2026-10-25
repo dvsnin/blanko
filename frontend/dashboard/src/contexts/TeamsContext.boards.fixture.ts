@@ -1,9 +1,14 @@
-import type { BoardDTO, TeamDTO } from "../api/client";
+import type { BoardDTO, BoardPage, TeamDTO } from "../api/client";
 
 export const teamDTOs: TeamDTO[] = [
-  { id: "t1", name: "Солнышко", role: "owner", isStarred: false, boardCount: 1, ageGroup: "", teachers: "", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" },
-  { id: "t2", name: "Ромашка", role: "member", isStarred: false, boardCount: 0, ageGroup: "", teachers: "", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" },
+  { id: "t1", name: "Солнышко", role: "owner", isStarred: false, boardCount: 1, recentBoards: [], ageGroup: "", teachers: "", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" },
+  { id: "t2", name: "Ромашка", role: "member", isStarred: false, boardCount: 0, recentBoards: [], ageGroup: "", teachers: "", createdAt: "2026-10-01T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" },
 ];
+
+/** Страница списка досок, как её отдаёт /board/list. */
+export function page(items: BoardDTO[], total = items.length, nextCursor = ""): BoardPage {
+  return { items, total, nextCursor };
+}
 
 export function boardDTO(id: string, teamId: string, name: string): BoardDTO {
   return {
@@ -14,3 +19,4 @@ export function boardDTO(id: string, teamId: string, name: string): BoardDTO {
 }
 
 export const firstBoard = boardDTO("b1", "t1", "Первая");
+teamDTOs[0].recentBoards = [firstBoard];

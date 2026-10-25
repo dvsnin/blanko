@@ -12,15 +12,17 @@ import (
 
 // TeamDTO - представление команды во внешнем API.
 type TeamDTO struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Role       string    `json:"role"`
-	IsStarred  bool      `json:"isStarred"`
-	BoardCount int       `json:"boardCount"`
-	AgeGroup   string    `json:"ageGroup"`
-	Teachers   string    `json:"teachers"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Role       string `json:"role"`
+	IsStarred  bool   `json:"isStarred"`
+	BoardCount int    `json:"boardCount"`
+	// Последние открытые доски группы (до 3), только видимые пользователю.
+	RecentBoards []BoardDTO `json:"recentBoards"`
+	AgeGroup     string     `json:"ageGroup"`
+	Teachers     string     `json:"teachers"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
 func teamViewToDTO(v model.TeamView) TeamDTO {
@@ -32,16 +34,21 @@ func teamViewToDTO(v model.TeamView) TeamDTO {
 	if v.Team.Teachers != nil {
 		teachers = *v.Team.Teachers
 	}
+	recent := make([]BoardDTO, 0, len(v.RecentBoards))
+	for _, b := range v.RecentBoards {
+		recent = append(recent, boardViewToDTO(b))
+	}
 	return TeamDTO{
-		ID:         v.Team.ID.String(),
-		Name:       v.Team.Name,
-		Role:       string(v.Role),
-		IsStarred:  v.IsStarred,
-		BoardCount: v.BoardCount,
-		AgeGroup:   ageGroup,
-		Teachers:   teachers,
-		CreatedAt:  v.Team.CreatedAt,
-		UpdatedAt:  v.Team.UpdatedAt,
+		ID:           v.Team.ID.String(),
+		Name:         v.Team.Name,
+		Role:         string(v.Role),
+		IsStarred:    v.IsStarred,
+		BoardCount:   v.BoardCount,
+		RecentBoards: recent,
+		AgeGroup:     ageGroup,
+		Teachers:     teachers,
+		CreatedAt:    v.Team.CreatedAt,
+		UpdatedAt:    v.Team.UpdatedAt,
 	}
 }
 

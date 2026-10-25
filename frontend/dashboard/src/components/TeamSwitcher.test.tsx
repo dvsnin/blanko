@@ -5,7 +5,7 @@ import { TeamsContext, type TeamsContextValue } from '../contexts/TeamsContext';
 import type { Team } from '../types';
 
 const mk = (id: string, name: string, isStarred = false, extra: Partial<Team> = {}): Team => ({
-  id, name, role: 'owner', boards: [], isStarred, ...extra,
+  id, name, role: 'owner', recentBoards: [], boardCount: 0, isStarred, ...extra,
 });
 
 function fake(teams: Team[], over: Partial<TeamsContextValue> = {}): TeamsContextValue {
@@ -69,7 +69,7 @@ describe('TeamSwitcher', () => {
     expect(opts).toHaveLength(3);
     expect(opts[0].textContent).toContain('Альфа');
     expect(opts[1].textContent).toContain('Ягодки');
-    expect(opts[1].textContent).toContain('4-5 лет · 0 досок');
+    expect(opts[1].textContent).toContain('4-5 лет · 2 доски'); // счётчик с сервера
     expect(opts[2].textContent).toContain('Ромашки');
   });
 

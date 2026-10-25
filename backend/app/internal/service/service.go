@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -242,9 +243,28 @@ type TeamUpdateInput struct {
 }
 
 // List возвращает все команды, в которых состоит пользователь.
+// teamRecentBoards - сколько последних досок показывает карточка группы.
+const teamRecentBoards = 3
+
+// List - команды пользователя с числом видимых досок и последними открытыми (для карточек групп).
 func (s *TeamService) List(ctx context.Context, id Identity) ([]model.TeamView, error) {
-	repo := repository.NewTeamRepo(s.pool)
-	return repo.ListForAccount(ctx, id.Account.ID)
+	orgAdmin := id.OrgRole.IsAdmin()
+	teams, err := repository.NewTeamRepo(s.pool).ListForAccount(ctx, id.Account.ID, orgAdmin)
+	if err != nil {
+		return nil, err
+	}
+	recent, err := repository.NewBoardRepo(s.pool).RecentByTeams(ctx, id.Account.ID, orgAdmin, teamRecentBoards)
+	if err != nil {
+		return nil, err
+	}
+	byTeam := map[uuid.UUID][]model.BoardView{}
+	for _, b := range visibleBoards(recent, id) {
+		byTeam[b.Board.TeamID] = append(byTeam[b.Board.TeamID], b)
+	}
+	for i := range teams {
+		teams[i].RecentBoards = byTeam[teams[i].Team.ID]
+	}
+	return teams, nil
 }
 
 // Create создаёт команду и добавляет текущего пользователя владельцем.
@@ -576,28 +596,116 @@ func (s *BoardService) MarkOpened(ctx context.Context, publicID string) error {
 	return repo.TouchLastOpened(ctx, board.ID)
 }
 
-// ListByTeam возвращает доски команды. Пользователь должен быть участником команды.
-func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.BoardView, error) {
-	if _, err := repository.NewTeamRepo(s.pool).GetRoleForAccount(ctx, teamID, id.Account.ID); err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, ErrForbidden
-		}
-		return nil, err
-	}
-	views, err := repository.NewBoardRepo(s.pool).ListByTeam(ctx, teamID, id.Account.ID)
-	if err != nil {
-		return nil, err
-	}
-	return visibleBoards(views, id), nil
+// BoardListInput - запрос страницы досок. Пустые Segment/Sort - all/recent, Limit 0 - по умолчанию.
+type BoardListInput struct {
+	TeamID        *uuid.UUID
+	ExcludeTeamID *uuid.UUID
+	Q             string
+	Segment       string
+	Sort          string
+	Cursor        string
+	Limit         int
 }
 
-// ListAll возвращает доски всех команд пользователя одним запросом (кабинет грузит их разом).
-func (s *BoardService) ListAll(ctx context.Context, id Identity) ([]model.BoardView, error) {
-	views, err := repository.NewBoardRepo(s.pool).ListForAccount(ctx, id.Account.ID)
+// BoardListResult - страница: доски, курсор на следующую (пусто - конец) и total по фильтру.
+type BoardListResult struct {
+	Items      []model.BoardView
+	NextCursor string
+	Total      int
+}
+
+const (
+	boardPageDefault = 24
+	boardPageMax     = 100
+)
+
+// boardCursor - непрозрачный курсор для клиента: сортировка внутри, чтобы курсор одной сортировки
+// нельзя было подставить в другую.
+type boardCursor struct {
+	Sort string    `json:"s"`
+	Key  string    `json:"k"`
+	ID   uuid.UUID `json:"i"`
+}
+
+func encodeBoardCursor(sort repository.BoardSort, c *repository.BoardCursor) string {
+	if c == nil {
+		return ""
+	}
+	raw, _ := json.Marshal(boardCursor{Sort: string(sort), Key: c.Key, ID: c.ID})
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
+
+func decodeBoardCursor(s string, sort repository.BoardSort) (*repository.BoardCursor, error) {
+	if s == "" {
+		return nil, nil
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		return nil, fmt.Errorf("%w: bad cursor", ErrValidation)
+	}
+	var c boardCursor
+	if err := json.Unmarshal(raw, &c); err != nil || c.Sort != string(sort) || c.Key == "" || c.ID == uuid.Nil {
+		return nil, fmt.Errorf("%w: bad cursor", ErrValidation)
+	}
+	return &repository.BoardCursor{Key: c.Key, ID: c.ID}, nil
+}
+
+// List отдаёт страницу досок команды (TeamID) или всех команд пользователя. Для команды
+// пользователь должен быть участником, иначе ErrForbidden.
+func (s *BoardService) List(ctx context.Context, id Identity, in BoardListInput) (*BoardListResult, error) {
+	f := repository.BoardListFilter{
+		ViewerID:      id.Account.ID,
+		OrgAdmin:      id.OrgRole.IsAdmin(),
+		TeamID:        in.TeamID,
+		ExcludeTeamID: in.ExcludeTeamID,
+		Q:             strings.TrimSpace(in.Q),
+		Limit:         in.Limit,
+	}
+	switch in.Segment {
+	case "", string(repository.BoardSegmentAll):
+		f.Segment = repository.BoardSegmentAll
+	case string(repository.BoardSegmentMine), string(repository.BoardSegmentStarred):
+		f.Segment = repository.BoardSegment(in.Segment)
+	default:
+		return nil, fmt.Errorf("%w: unknown segment %q", ErrValidation, in.Segment)
+	}
+	switch in.Sort {
+	case "", string(repository.BoardSortRecent):
+		f.Sort = repository.BoardSortRecent
+	case string(repository.BoardSortUpdated), string(repository.BoardSortName):
+		f.Sort = repository.BoardSort(in.Sort)
+	default:
+		return nil, fmt.Errorf("%w: unknown sort %q", ErrValidation, in.Sort)
+	}
+	if f.Limit <= 0 {
+		f.Limit = boardPageDefault
+	}
+	if f.Limit > boardPageMax {
+		f.Limit = boardPageMax
+	}
+	after, err := decodeBoardCursor(in.Cursor, f.Sort)
 	if err != nil {
 		return nil, err
 	}
-	return visibleBoards(views, id), nil
+	f.After = after
+	if in.TeamID != nil {
+		if _, err := repository.NewTeamRepo(s.pool).GetRoleForAccount(ctx, *in.TeamID, id.Account.ID); err != nil {
+			if errors.Is(err, repository.ErrNotFound) {
+				return nil, ErrForbidden
+			}
+			return nil, err
+		}
+	}
+	repo := repository.NewBoardRepo(s.pool)
+	views, next, err := repo.ListBoards(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	total, err := repo.CountBoards(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+	return &BoardListResult{Items: visibleBoards(views, id), NextCursor: encodeBoardCursor(f.Sort, next), Total: total}, nil
 }
 
 // visibleBoards режет доски с deny для этого участника и проставляет CanEdit. Роль зрителя уже

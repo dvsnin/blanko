@@ -123,6 +123,8 @@ export interface TeamDTO {
   role: "owner" | "admin" | "member";
   isStarred: boolean;
   boardCount: number;
+  /** Последние открытые доски группы (до 3), только видимые пользователю. */
+  recentBoards: BoardDTO[];
   ageGroup: string;
   teachers: string;
   createdAt: string;
@@ -145,6 +147,29 @@ export interface BoardDTO {
   createdAt: string;
   updatedAt: string;
   lastOpenedAt: string;
+}
+
+export type BoardSort = "recent" | "updated" | "name";
+export type BoardSegment = "all" | "mine" | "starred";
+
+export interface BoardListParams {
+  teamId?: string;
+  /** Поиск по другим группам: вычесть текущую. */
+  excludeTeamId?: string;
+  q?: string;
+  segment?: BoardSegment;
+  sort?: BoardSort;
+  /** nextCursor предыдущей страницы. */
+  cursor?: string;
+  limit?: number;
+}
+
+export interface BoardPage {
+  items: BoardDTO[];
+  /** Пусто - страниц больше нет. */
+  nextCursor: string;
+  /** Всего досок под тем же фильтром. */
+  total: number;
 }
 
 interface List<T> {
@@ -190,8 +215,9 @@ export const api = {
   },
 
   boards: {
-    /** Доски всех групп пользователя одним запросом; teamId на сервере необязателен. */
-    list: () => post<List<BoardDTO>>("/board/list", {}).then((r) => r.items ?? []),
+    /** Страница досок: группы teamId или всех групп пользователя (без teamId). */
+    list: (params: BoardListParams) =>
+      post<BoardPage>("/board/list", { ...params }).then((r) => ({ items: r.items ?? [], nextCursor: r.nextCursor ?? "", total: r.total ?? 0 })),
     create: (teamId: string, name?: string, templateId?: string) =>
       post<BoardDTO>("/board/create", {
         teamId,

@@ -6,7 +6,7 @@ import type { Team } from '../types';
 afterEach(cleanup);
 
 const team = (over: Partial<Team> = {}): Team =>
-  ({ id: 't1', name: 'Ромашки', role: 'owner', boards: [], ...over }) as Team;
+  ({ id: 't1', name: 'Ромашки', role: 'owner', recentBoards: [], boardCount: 0, ...over }) as Team;
 
 const noop = () => {};
 const base = { boardsCount: 2, onSettings: noop, onFromTemplate: noop, onCreateBoard: noop, onCreateTeam: noop };

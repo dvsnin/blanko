@@ -77,10 +77,12 @@ type Team struct {
 
 // TeamView - агрегированная модель команды для UI.
 type TeamView struct {
-	Team       Team
-	Role       TeamRole
-	IsStarred  bool
-	BoardCount int
+	Team      Team
+	Role      TeamRole
+	IsStarred bool
+	// BoardCount и RecentBoards - только доски, видимые этому пользователю.
+	BoardCount   int
+	RecentBoards []BoardView
 }
 
 // TeamMemberView - участник команды со сведениями об аккаунте.

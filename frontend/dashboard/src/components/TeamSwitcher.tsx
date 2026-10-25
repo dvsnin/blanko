@@ -84,7 +84,7 @@ export default function TeamSwitcher() {
   }
 
   function boardCount(t: Team): number {
-    return loading ? (t.boardCount ?? 0) : t.boards.length;
+    return t.boardCount;
   }
 
   function subline(t: Team): string {
