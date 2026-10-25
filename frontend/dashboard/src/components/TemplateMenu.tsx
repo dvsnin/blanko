@@ -5,20 +5,20 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import type { Template } from "../types";
 
-/* «⋯» на карточке шаблона: «Редактировать» и «Удалить шаблон» только при canEdit. */
+/* «⋯» на карточке шаблона: «Настройки шаблона» и «Удалить шаблон» только при canEdit, как в меню группы. */
 
 export interface TemplateMenuProps {
   template: Template;
   /** Состояние держит карточка: закрывает меню при уходе курсора. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpen: () => void;
+  onOpenNewTab: () => void;
   onDuplicate: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function TemplateMenu({ template, open, onOpenChange, onOpen, onDuplicate, onEdit, onDelete }: TemplateMenuProps) {
+export default function TemplateMenu({ template, open, onOpenChange, onOpenNewTab, onDuplicate, onEdit, onDelete }: TemplateMenuProps) {
   const setOpen = onOpenChange;
   const wrapRef = useRef<HTMLDivElement>(null);
   const refs = useMemo(() => [wrapRef], []);
@@ -43,8 +43,8 @@ export default function TemplateMenu({ template, open, onOpenChange, onOpen, onD
       />
       {open && (
         <div className="tpl-menu__popover" role="menu">
-          <button type="button" role="menuitem" className="tpl-menu__item" onClick={() => run(onOpen)}>
-            Открыть на панели
+          <button type="button" role="menuitem" className="tpl-menu__item" onClick={() => run(onOpenNewTab)}>
+            Открыть в новой вкладке
           </button>
           <button type="button" role="menuitem" className="tpl-menu__item" onClick={() => run(onDuplicate)}>
             Дублировать
@@ -53,7 +53,7 @@ export default function TemplateMenu({ template, open, onOpenChange, onOpen, onD
             <>
               <span className="tpl-menu__sep" aria-hidden />
               <button type="button" role="menuitem" className="tpl-menu__item" onClick={() => run(onEdit)}>
-                Редактировать
+                Настройки шаблона
               </button>
               <button type="button" role="menuitem" className="tpl-menu__item tpl-menu__item--danger" onClick={() => run(onDelete)}>
                 Удалить шаблон

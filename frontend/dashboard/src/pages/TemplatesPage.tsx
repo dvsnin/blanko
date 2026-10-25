@@ -10,7 +10,7 @@ import { useTeams } from "../contexts/TeamsContext";
 import { useTemplates } from "../contexts/TemplatesContext";
 import { navigate } from "../hooks/useHashRoute";
 import { useToast } from "../hooks/useToast";
-import { openBoard, openTemplate } from "../utils/openBoard";
+import { openBoard, openInNewTab, openTemplate, templateUrl } from "../utils/openBoard";
 import { filterTemplates, topicCounts } from "../utils/templates";
 import type { Template } from "../types";
 
@@ -176,6 +176,7 @@ export default function TemplatesPage({ initialAge }: { initialAge?: AgeKey }) {
                     canCreate={!!activeTeam}
                     onCreate={() => create(t)}
                     onOpen={(e) => openTemplate(t, e)}
+                    onOpenNewTab={() => openInNewTab(templateUrl(t))}
                     onToggleStar={() => void toggleStarTemplate(t.id)}
                     notify={showToast}
                     onDuplicate={() => duplicate(t)}

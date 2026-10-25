@@ -79,17 +79,31 @@ describe('TemplatesPage', () => {
     expect(screen.getByRole('button', { name: /4-5 лет/ }).textContent).not.toContain('как у группы');
   });
 
-  it('меню «⋯»: «Редактировать» и «Удалить шаблон» только при canEdit', () => {
+  it('меню «⋯»: «Открыть в новой вкладке» открывает шаблон в новой вкладке', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => ({ focus() {} }) as Window);
+    try {
+      setup();
+      fireEvent.click(within(cardOf('Буква и слова на неё')).getByRole('button', { name: 'Действия с шаблоном' }));
+      expect(screen.queryByRole('menuitem', { name: 'Открыть на панели' })).toBeNull();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Открыть в новой вкладке' }));
+      expect(open).toHaveBeenCalledWith('/app/template/p-t2', '_blank');
+      expect(screen.queryByRole('menu')).toBeNull();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it('меню «⋯»: «Настройки шаблона» и «Удалить шаблон» только при canEdit', () => {
     setup();
     fireEvent.click(within(cardOf('Буква и слова на неё')).getByRole('button', { name: 'Действия с шаблоном' }));
-    expect(screen.getByRole('menuitem', { name: 'Редактировать' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Настройки шаблона' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Удалить шаблон' })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'Дублировать' })).toBeTruthy();
     expect(screen.queryByRole('menuitem', { name: /избранно/ })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: 'Скопировать к себе' })).toBeNull();
     fireEvent.keyDown(document, { key: 'Escape' });
     fireEvent.click(within(cardOf('Счёт до 5 с яблоками')).getByRole('button', { name: 'Действия с шаблоном' }));
-    expect(screen.queryByRole('menuitem', { name: 'Редактировать' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Настройки шаблона' })).toBeNull();
     expect(screen.queryByRole('menuitem', { name: 'Удалить шаблон' })).toBeNull();
   });
 

@@ -291,16 +291,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
     z-index: 9999 !important;
 }
 
-/* Метка «в избранном» на карточках: маленькая звезда без кнопочной рамки. Видна у избранной
-   карточки, пока нет наведения; при наведении её место занимают звезда и «⋯» как кнопки.
+/* Метка «в избранном» на карточках (StarMark): та же звезда, что кнопка при наведении, стоит в углу
+   на месте «⋯»; при наведении её сменяют кнопки, и звезда сдвигается влево, освобождая место меню.
    На тач-устройствах кнопки видны всегда, метка не нужна. */
 .card-star-mark {
-    position: absolute; top: 10px; right: 10px; z-index: 1;
-    width: 24px; height: 24px; border-radius: 50%;
+    position: absolute; top: 8px; right: 8px; z-index: 1;
+    width: 36px; height: 36px; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
-    background: rgba(255, 255, 255, 0.92); color: var(--accent);
-    box-shadow: 0 1px 3px rgba(34, 38, 46, 0.14);
+    background: rgba(255, 255, 255, 0.9); color: var(--ink);
     pointer-events: none;
 }
-.card-star-mark svg { width: 13px; height: 13px; }
+.card-star-mark .star-glyph { color: inherit; }
 @media (hover: none) { .card-star-mark { display: none; } }

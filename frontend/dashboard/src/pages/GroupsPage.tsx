@@ -3,7 +3,8 @@ import "../components/BoardCover.css";
 import "./GroupsPage.css";
 import ConfirmModal from "../components/ConfirmModal";
 import MenuButton from "../components/MenuButton";
-import StarToggle, { starMessage, STAR_LABEL } from "../components/StarToggle";
+import StarToggle from "../components/StarToggle";
+import StarMark from "../components/StarMark";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import { VALID_ROLES } from "../constants/roles";
 import { useTeams } from "../contexts/TeamsContext";
@@ -47,11 +48,10 @@ interface GroupMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSettings: () => void;
-  onToggleStar: () => void;
   onLeave: () => void;
 }
 
-function GroupMenu({ team, open, onOpenChange, onSettings, onToggleStar, onLeave }: GroupMenuProps) {
+function GroupMenu({ team, open, onOpenChange, onSettings, onLeave }: GroupMenuProps) {
   const setOpen = onOpenChange;
   const wrapRef = useRef<HTMLDivElement>(null);
   const refs = useMemo(() => [wrapRef], []);
@@ -85,9 +85,6 @@ function GroupMenu({ team, open, onOpenChange, onSettings, onToggleStar, onLeave
               Настройки группы
             </button>
           )}
-          <button type="button" role="menuitem" className="group-card__menu-item" onClick={() => run(onToggleStar)}>
-            {team.isStarred ? STAR_LABEL.remove : STAR_LABEL.add}
-          </button>
           {canLeave && (
             <button
               type="button"
@@ -115,13 +112,6 @@ export default function GroupsPage() {
   const [now] = useState(() => new Date());
   const { toastMessage, toastVisible, showToast } = useToast();
   const { byId: byTemplateId } = useTemplates();
-
-  // Пункт меню «В избранное»: тот же тост, что у звезды (StarToggle)
-  const starTeam = (team: Team) => {
-    const willStar = !team.isStarred;
-    void toggleStarTeam(team.id);
-    showToast(starMessage(willStar));
-  };
 
   const sorted = useMemo(() => {
     const byName = (a: Team, b: Team) => a.name.localeCompare(b.name, "ru");
@@ -205,7 +195,7 @@ export default function GroupsPage() {
                 className={`group-card${isActive ? " group-card--active" : ""}${team.isStarred ? " group-card--starred" : ""}${menuTeamId === team.id ? " group-card--menu-open" : ""}`}
                 onMouseLeave={() => { if (menuTeamId === team.id) setMenuTeamId(null); }}
               >
-                {team.isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
+                {team.isStarred && <StarMark />}
                 <button type="button" className="group-card__main" onClick={() => openBoards(team.id)}>
                   <span className="group-card__top">
                     <span className={`group-card__mark cover--${colorOf(team)}`} aria-hidden>
@@ -264,7 +254,6 @@ export default function GroupsPage() {
                     open={menuTeamId === team.id}
                     onOpenChange={(open) => setMenuTeamId(open ? team.id : null)}
                     onSettings={() => setEditing(team)}
-                    onToggleStar={() => starTeam(team)}
                     onLeave={() => setLeaving(team)}
                   />
                 </div>

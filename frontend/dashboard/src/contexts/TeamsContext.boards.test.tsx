@@ -7,7 +7,7 @@ import { teamDTOs, firstBoard, boardDTO } from "./TeamsContext.boards.fixture";
 vi.mock("../api/client", () => ({
   api: {
     teams: { list: vi.fn() },
-    boards: { listByTeam: vi.fn(), duplicate: vi.fn(), move: vi.fn(), update: vi.fn() },
+    boards: { list: vi.fn(), duplicate: vi.fn(), move: vi.fn(), update: vi.fn() },
   },
 }));
 
@@ -26,11 +26,30 @@ function Probe() {
   );
 }
 
+// Кабинету нужны доски всех групп (последние доски и счётчики на «Группах»): один запрос
+// /board/list без teamId вместо запроса на каждую группу.
+describe("TeamsContext: загрузка досок", () => {
+  beforeEach(() => {
+    window.dashData = { accountId: "u1", name: "Анна", email: "a@x.ru" };
+    vi.mocked(api.teams.list).mockResolvedValue(teamDTOs);
+  });
+  afterEach(() => { cleanup(); vi.clearAllMocks(); delete window.dashData; });
+
+  it("один запрос на все доски, раскладка по группам", async () => {
+    vi.mocked(api.boards.list).mockResolvedValue([firstBoard, boardDTO("b9", "t2", "Вторая")]);
+    render(<TeamsProvider><Probe /></TeamsProvider>);
+    await waitFor(() => expect(screen.getByTestId("team-t2").textContent).toBe("Вторая"));
+    expect(screen.getByTestId("team-t1").textContent).toBe("Первая");
+    expect(api.boards.list).toHaveBeenCalledTimes(1);
+    expect(api.boards.list).toHaveBeenCalledWith();
+  });
+});
+
 describe("TeamsContext: дублирование и перенос доски", () => {
   beforeEach(() => {
     window.dashData = { accountId: "u1", name: "Анна", email: "a@x.ru" };
     vi.mocked(api.teams.list).mockResolvedValue(teamDTOs);
-    vi.mocked(api.boards.listByTeam).mockImplementation(async (teamId: string) => (teamId === "t1" ? [firstBoard] : []));
+    vi.mocked(api.boards.list).mockResolvedValue([firstBoard]);
   });
   afterEach(() => { cleanup(); vi.clearAllMocks(); delete window.dashData; });
 

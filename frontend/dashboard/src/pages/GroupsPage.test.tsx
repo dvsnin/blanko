@@ -78,6 +78,8 @@ describe('GroupsPage', () => {
     setup(fake(teams));
     fireEvent.click(within(cardOf('Ягодки')).getByRole('button', { name: 'Действия с группой' }));
     expect(within(cardOf('Ягодки')).getByRole('menuitem', { name: 'Настройки группы' })).toBeTruthy();
+    // Избранное только звездой, как у досок и шаблонов
+    expect(within(cardOf('Ягодки')).queryByRole('menuitem', { name: /избранно/ })).toBeNull();
     expect(within(cardOf('Ягодки')).queryByRole('menuitem', { name: 'Покинуть группу' })).toBeNull();
     cleanup();
     setup(fake(teams));

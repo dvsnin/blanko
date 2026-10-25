@@ -73,7 +73,7 @@
     padding-left: 18px;
     background: linear-gradient(90deg, rgba(255,255,255,0), var(--surface) 18px);
 }
-.board-row .card-star-mark { top: 50%; right: 14px; transform: translateY(-50%); box-shadow: none; background: transparent; }
+.board-row .card-star-mark { top: 50%; right: 8px; transform: translateY(-50%); background: transparent; }
 @media (hover: hover) {
     .board-row__actions { opacity: 0; transition: opacity 120ms ease; }
     .board-row:hover .board-row__actions,

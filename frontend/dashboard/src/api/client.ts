@@ -190,8 +190,8 @@ export const api = {
   },
 
   boards: {
-    listByTeam: (teamId: string) =>
-      post<List<BoardDTO>>("/board/list", { teamId }).then((r) => r.items ?? []),
+    /** Доски всех групп пользователя одним запросом; teamId на сервере необязателен. */
+    list: () => post<List<BoardDTO>>("/board/list", {}).then((r) => r.items ?? []),
     create: (teamId: string, name?: string, templateId?: string) =>
       post<BoardDTO>("/board/create", {
         teamId,

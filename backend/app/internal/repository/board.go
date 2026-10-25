@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
@@ -100,26 +101,26 @@ func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.
 	return &m, nil
 }
 
-// ListByTeam возвращает доски команды со сведениями о владельце и флагом isStarred для текущего пользователя.
-func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID uuid.UUID) ([]model.BoardView, error) {
-	b := psql.Select(
+// listSelect - общая выборка списков досок: владелец, избранное и роль зрителя в команде доски.
+// Роль нужна сервису, чтобы считать доступ и canEdit без запросов на каждую доску.
+func listSelect(viewerID uuid.UUID) sq.SelectBuilder {
+	return psql.Select(
 		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
 		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
 		"a.name",
 		"(bs.board_id IS NOT NULL) AS is_starred",
+		"tm.role",
 	).
 		From("board b").
+		Join("team_member tm ON tm.team_id = b.team_id AND tm.account_id = ?", viewerID).
 		Join("account a ON a.id = b.account_id").
 		LeftJoin("board_starred bs ON bs.board_id = b.id AND bs.account_id = ?", viewerID).
-		Where("b.team_id = ? AND b.deleted_at IS NULL", teamID).
+		Where("b.deleted_at IS NULL").
 		OrderBy("b.updated_at DESC")
+}
 
-	rows, err := queryBuilder(ctx, r.db, b)
-	if err != nil {
-		return nil, err
-	}
+func scanBoardViews(rows pgx.Rows) ([]model.BoardView, error) {
 	defer rows.Close()
-
 	var result []model.BoardView
 	for rows.Next() {
 		var bv model.BoardView
@@ -128,12 +129,33 @@ func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID u
 			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
+			&bv.ViewerRole,
 		); err != nil {
 			return nil, err
 		}
 		result = append(result, bv)
 	}
 	return result, rows.Err()
+}
+
+// ListByTeam возвращает доски команды для её участника (не участнику - пусто).
+func (r *BoardRepo) ListByTeam(ctx context.Context, teamID uuid.UUID, viewerID uuid.UUID) ([]model.BoardView, error) {
+	rows, err := queryBuilder(ctx, r.db, listSelect(viewerID).Where("b.team_id = ?", teamID))
+	if err != nil {
+		return nil, err
+	}
+	return scanBoardViews(rows)
+}
+
+// ListForAccount возвращает доски всех живых команд, где пользователь участник, одним запросом:
+// team_member по индексу account_id даёт команды, board по индексу team_id - их доски.
+func (r *BoardRepo) ListForAccount(ctx context.Context, viewerID uuid.UUID) ([]model.BoardView, error) {
+	rows, err := queryBuilder(ctx, r.db, listSelect(viewerID).
+		Join("team t ON t.id = b.team_id AND t.deleted_at IS NULL"))
+	if err != nil {
+		return nil, err
+	}
+	return scanBoardViews(rows)
 }
 
 // Update - переиспользуемое частичное обновление доски.

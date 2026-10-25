@@ -6,6 +6,7 @@ import { VALID_ROLES } from "../constants/roles";
 import { AGES, type AgeKey } from "../constants/templates";
 import type { Team, TeamRole } from "../types";
 import TeamMembersTab from "./TeamMembersTab";
+import TeacherPicker from "./TeacherPicker";
 
 /*
   TeamSettingsModal - decision based only on team.role.
@@ -124,20 +125,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     </select>
   );
 
-  const teachersField = (
-    <>
-      <input
-        className="boards-modal-input"
-        value={teachers}
-        onChange={(e) => setTeachers(e.target.value)}
-        placeholder="Анна Петрова, Мария Иванова"
-        aria-label="Воспитатели"
-        maxLength={300}
-        disabled={isMember}
-      />
-      <p className="ts-section-text" style={{ marginTop: 4 }}>Через запятую, если несколько</p>
-    </>
-  );
+  const teachersField = <TeacherPicker value={teachers} onChange={setTeachers} disabled={isMember} />;
 
   if (isCreate) {
     return (

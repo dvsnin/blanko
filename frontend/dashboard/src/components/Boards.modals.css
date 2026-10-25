@@ -332,3 +332,9 @@ select.boards-modal-input:focus { border-color: var(--teal); }
 .ts-members__candidate input { width: 18px; height: 18px; accent-color: var(--teal); flex: 0 0 auto; }
 .ts-members__avatar--small { width: 30px; height: 30px; border-radius: 8px; font-size: 13px; }
 .ts-members__invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.teachers__chips { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.teachers__chip { gap: 6px; padding-right: 6px; }
+.teachers__remove { border: 0; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; cursor: pointer; border-radius: 6px; }
+.teachers__remove:hover { color: var(--ink); background: rgba(34, 38, 46, 0.08); }
+.teachers .boards-modal-input { margin-top: 0; }
+.teachers__option { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; }

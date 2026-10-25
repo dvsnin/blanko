@@ -75,6 +75,54 @@ func TestListBoards(t *testing.T) {
 		}
 	})
 
+	// Без teamId - доски всех групп пользователя одним ответом, правила доступа те же.
+	// Подтест выше уже создал вторую группу owner+member с досками «Скрытая», «Только смотреть», «Моя скрытая».
+	t.Run("all teams without teamId", func(t *testing.T) {
+		shared := e.team(owner)
+		e.addMember(shared, member)
+		e.boardWith(shared, owner, "Общая скрытая", model.BoardAccessDeny, false)
+		e.boardWith(shared, owner, "Общая смотреть", model.BoardAccessView, false)
+		e.boardWith(shared, member, "Общая моя", model.BoardAccessEdit, false)
+		foreign := e.team(e.account("other@example.com"))
+		e.board(foreign, e.account("other@example.com"), "Чужая")
+
+		cases := []struct {
+			email    string
+			wantSeen map[string]bool // имя -> canEdit
+		}{
+			{"owner@example.com", map[string]bool{
+				"Первая": true, "Скрытая": true, "Только смотреть": true, "Моя скрытая": true,
+				"Общая скрытая": true, "Общая смотреть": true, "Общая моя": true,
+			}},
+			{"member@example.com", map[string]bool{
+				"Первая": false, "Только смотреть": false, "Моя скрытая": true,
+				"Общая смотреть": false, "Общая моя": true,
+			}},
+			{"other@example.com", map[string]bool{"Чужая": true}},
+		}
+		for _, tc := range cases {
+			status, body := e.post(tc.email, "/board/list", map[string]any{})
+			if status != 200 {
+				t.Fatalf("%s: status = %d (%v)", tc.email, status, body)
+			}
+			got := map[string]bool{}
+			for _, it := range items(body) {
+				x := it.(map[string]any)
+				got[x["name"].(string)] = x["canEdit"].(bool)
+				if x["teamId"] == "" {
+					t.Fatalf("%s: board %q without teamId", tc.email, x["name"])
+				}
+			}
+			if len(got) != len(tc.wantSeen) {
+				t.Fatalf("%s: boards = %v, want %v", tc.email, got, tc.wantSeen)
+			}
+			for name, canEdit := range tc.wantSeen {
+				if v, ok := got[name]; !ok || v != canEdit {
+					t.Fatalf("%s: %q canEdit = %v (seen %v), want %v", tc.email, name, v, ok, canEdit)
+				}
+			}
+		}
+	})
 }
 
 // seedDoc кладёт в хранилище документ с одной картинкой под префикс документа.

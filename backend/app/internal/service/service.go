@@ -578,8 +578,7 @@ func (s *BoardService) MarkOpened(ctx context.Context, publicID string) error {
 
 // ListByTeam возвращает доски команды. Пользователь должен быть участником команды.
 func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.UUID) ([]model.BoardView, error) {
-	role, err := repository.NewTeamRepo(s.pool).GetRoleForAccount(ctx, teamID, id.Account.ID)
-	if err != nil {
+	if _, err := repository.NewTeamRepo(s.pool).GetRoleForAccount(ctx, teamID, id.Account.ID); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrForbidden
 		}
@@ -589,20 +588,30 @@ func (s *BoardService) ListByTeam(ctx context.Context, id Identity, teamID uuid.
 	if err != nil {
 		return nil, err
 	}
-	// Доски с deny для этого участника в список не попадают; CanEdit - право управлять.
+	return visibleBoards(views, id), nil
+}
+
+// ListAll возвращает доски всех команд пользователя одним запросом (кабинет грузит их разом).
+func (s *BoardService) ListAll(ctx context.Context, id Identity) ([]model.BoardView, error) {
+	views, err := repository.NewBoardRepo(s.pool).ListForAccount(ctx, id.Account.ID)
+	if err != nil {
+		return nil, err
+	}
+	return visibleBoards(views, id), nil
+}
+
+// visibleBoards режет доски с deny для этого участника и проставляет CanEdit. Роль зрителя уже
+// в выборке (ViewerRole), поэтому на любом объёме списка это чистый проход без запросов к БД.
+func visibleBoards(views []model.BoardView, id Identity) []model.BoardView {
 	visible := views[:0]
 	for _, v := range views {
-		access, err := boardAccess(ctx, s.pool, v.Board, id)
-		if err != nil {
-			return nil, err
-		}
-		if access == model.BoardAccessDeny {
+		if accessByRole(v.Board, id, v.ViewerRole, true) == model.BoardAccessDeny {
 			continue
 		}
-		v.CanEdit = canEditBoard(v.Board, id.Account.ID, role)
+		v.CanEdit = canEditBoard(v.Board, id.Account.ID, v.ViewerRole)
 		visible = append(visible, v)
 	}
-	return visible, nil
+	return visible
 }
 
 // canEditBoard - право управлять доской (переименовать, удалить, перенести, настроить доступ):
@@ -611,9 +620,7 @@ func canEditBoard(board model.Board, accountID uuid.UUID, role model.TeamRole) b
 	return board.AccountID == accountID || role == model.TeamRoleOwner || role == model.TeamRoleAdmin
 }
 
-// boardAccess - единственное правило доступа к содержимому доски.
-// Админ организации, создатель и owner/admin команды: edit. Участник команды: team_access доски.
-// Не участник: view при включённом доступе по ссылке, иначе deny.
+// boardAccess - доступ к содержимому одной доски: узнаёт роль в команде и применяет accessByRole.
 func boardAccess(ctx context.Context, pool *pgxpool.Pool, board model.Board, id Identity) (model.BoardAccess, error) {
 	if id.OrgRole.IsAdmin() || board.AccountID == id.Account.ID {
 		return model.BoardAccessEdit, nil
@@ -623,18 +630,31 @@ func boardAccess(ctx context.Context, pool *pgxpool.Pool, board model.Board, id 
 		if !errors.Is(err, repository.ErrNotFound) {
 			return model.BoardAccessDeny, err
 		}
+		return accessByRole(board, id, "", false), nil
+	}
+	return accessByRole(board, id, role, true), nil
+}
+
+// accessByRole - единственное правило доступа к содержимому доски.
+// Админ организации, создатель и owner/admin команды: edit. Участник команды: team_access доски.
+// Не участник: view при включённом доступе по ссылке, иначе deny.
+func accessByRole(board model.Board, id Identity, role model.TeamRole, member bool) model.BoardAccess {
+	if id.OrgRole.IsAdmin() || board.AccountID == id.Account.ID {
+		return model.BoardAccessEdit
+	}
+	if !member {
 		if board.LinkAccessEnabled {
-			return model.BoardAccessView, nil
+			return model.BoardAccessView
 		}
-		return model.BoardAccessDeny, nil
+		return model.BoardAccessDeny
 	}
 	if role == model.TeamRoleOwner || role == model.TeamRoleAdmin {
-		return model.BoardAccessEdit, nil
+		return model.BoardAccessEdit
 	}
 	if board.TeamAccess == "" {
-		return model.BoardAccessEdit, nil
+		return model.BoardAccessEdit
 	}
-	return board.TeamAccess, nil
+	return board.TeamAccess
 }
 
 // Access - доступ текущего пользователя к содержимому доски (для страницы, вебсокета, медиа).

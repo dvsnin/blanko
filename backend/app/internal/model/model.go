@@ -114,6 +114,9 @@ type BoardView struct {
 	IsStarred bool
 	// CanEdit: создатель доски или owner/admin команды. Считается в сервисе.
 	CanEdit bool
+	// ViewerRole - роль текущего пользователя в команде доски; списки берут её тем же запросом,
+	// чтобы права считались без похода в БД на каждую доску.
+	ViewerRole TeamRole
 }
 
 // Template: AuthorAccountID == nil у предустановленных.

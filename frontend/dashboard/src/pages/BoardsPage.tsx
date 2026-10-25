@@ -6,6 +6,7 @@ import "../components/Boards.modals.css";
 import "../components/Boards.list.css";
 import BoardCover from "../components/BoardCover";
 import StarToggle from "../components/StarToggle";
+import StarMark from "../components/StarMark";
 import MenuButton from "../components/MenuButton";
 import { Modal } from "../components/Modal";
 import { shortName } from "../utils/shortName";
@@ -544,7 +545,7 @@ export default function BoardsPage() {
                       onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                     >
                       <BoardCover board={b} size="card" template={tpl} />
-                      {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
+                      {isStarred && <StarMark />}
 
                       <span className="board-card__corner" onClick={(e) => e.stopPropagation()}>
                         <StarToggle isStarred={isStarred} onToggle={() => toggleStarBoard(b.id)} notify={showToast} variant="list" />
@@ -605,7 +606,7 @@ export default function BoardsPage() {
                             onAuxClick={(e) => { if (e.button === 1) { markBoardOpened(b.id); openInNewTab(boardUrl(b)); } }}
                           >
                             <BoardCover board={b} size="small" template={tpl} />
-                            {isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
+                            {isStarred && <StarMark />}
                             <div className="board-row__text">
                               <a
                                 className="board-row-title"

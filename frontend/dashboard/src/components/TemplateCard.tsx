@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./TemplateCard.css";
 import { shortName } from "../utils/shortName";
 import StarToggle from "./StarToggle";
+import StarMark from "./StarMark";
 import TemplateMenu from "./TemplateMenu";
 import { AGES } from "../constants/templates";
 import { topicStyle } from "../utils/templates";
@@ -14,6 +15,8 @@ export interface TemplateCardProps {
   onCreate: () => void;
   /** Событие клика нужно, чтобы Ctrl/Cmd-клик открыл шаблон в новой вкладке. */
   onOpen: (ev?: React.MouseEvent) => void;
+  /** Пункт меню «Открыть в новой вкладке», как у доски. */
+  onOpenNewTab: () => void;
   onToggleStar: () => void;
   notify: (message: string) => void;
   onDuplicate: () => void;
@@ -29,7 +32,7 @@ export function agesLabel(ages: Template["ages"]): string {
 }
 
 export default function TemplateCard({
-  template: t, canCreate, onCreate, onOpen, onToggleStar, notify, onDuplicate, onEdit, onDelete,
+  template: t, canCreate, onCreate, onOpen, onOpenNewTab, onToggleStar, notify, onDuplicate, onEdit, onDelete,
 }: TemplateCardProps) {
   const ts = topicStyle(t.topic);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +48,7 @@ export default function TemplateCard({
         <span className="tpl-card__shape tpl-card__shape--a" style={{ background: ts.dot }} />
         <span className="tpl-card__shape tpl-card__shape--b" style={{ background: ts.dot }} />
       </div>
-      {t.isStarred && <span className="card-star-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.8l6.1-.7z" /></svg></span>}
+      {t.isStarred && <StarMark />}
       {/* Вне обложки, чтобы меню не обрезалось её overflow */}
       <span className="tpl-card__corner" onClick={(e) => e.stopPropagation()}>
         <StarToggle isStarred={t.isStarred} onToggle={onToggleStar} notify={notify} variant="list" size={36} />
@@ -53,7 +56,7 @@ export default function TemplateCard({
           template={t}
           open={menuOpen}
           onOpenChange={setMenuOpen}
-          onOpen={() => onOpen()}
+          onOpenNewTab={onOpenNewTab}
           onDuplicate={onDuplicate}
           onEdit={onEdit}
           onDelete={onDelete}

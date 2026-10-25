@@ -56,7 +56,7 @@
 .group-card__role { align-self: flex-end; margin-top: auto; font-size: 13px; font-weight: 700; color: var(--muted); }
 
 .group-card__actions { position: absolute; top: 18px; right: 14px; display: flex; align-items: center; gap: 0; }
-.group-card .card-star-mark { top: 24px; right: 20px; }
+.group-card .card-star-mark { top: 18px; right: 14px; }
 .group-card--menu-open { z-index: 30; }
 /* Как у досок и шаблонов: действия при наведении, у избранной до наведения метка */
 @media (hover: hover) {

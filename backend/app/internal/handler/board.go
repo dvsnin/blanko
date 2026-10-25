@@ -60,7 +60,7 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 
 type listBoardsRequest struct {
 	WithAccount
-	TeamID string `json:"teamId"`
+	TeamID string `json:"teamId"` // пусто - все команды пользователя
 }
 
 type createBoardRequest struct {
@@ -91,19 +91,25 @@ type boardIDRequest struct {
 
 // --- board handlers ---
 
-// ListBoards POST /api/v1/board/list
+// ListBoards POST /api/v1/board/list - доски команды teamId; без teamId доски всех команд пользователя.
 func (a *API) ListBoards(w http.ResponseWriter, r *http.Request) {
 	var req listBoardsRequest
 	id, ok := a.decodeAndAuth(w, r, &req)
 	if !ok {
 		return
 	}
-	teamID, err := uuid.Parse(req.TeamID)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
-		return
+	var boards []model.BoardView
+	var err error
+	if req.TeamID == "" {
+		boards, err = a.services.Board.ListAll(r.Context(), id)
+	} else {
+		teamID, perr := uuid.Parse(req.TeamID)
+		if perr != nil {
+			writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
+			return
+		}
+		boards, err = a.services.Board.ListByTeam(r.Context(), id, teamID)
 	}
-	boards, err := a.services.Board.ListByTeam(r.Context(), id, teamID)
 	if err != nil {
 		writeServiceError(w, err)
 		return

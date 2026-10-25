@@ -21,9 +21,9 @@ import { readPref, savePrefs } from "../utils/prefs";
  * the backend over the REST API at /app/api/v1.
  *
  * Strategy:
- *  - On mount: fetch /team/list, then /board/list per team in parallel. dashData
- *    намеренно не содержит предзагруженных teams/boards - чтобы не дублировать
- *    контракт и не рассинхронизироваться с API.
+ *  - On mount: /team/list и /board/list (все доски пользователя) параллельно, доски
+ *    раскладываются по teamId. dashData намеренно не содержит предзагруженных
+ *    teams/boards - чтобы не дублировать контракт и не рассинхронизироваться с API.
  *  - All mutations hit the API; on success we update local state optimistically
  *    (or with the server response when it's more authoritative, e.g. create).
  *  - Errors are surfaced via the `error` field and logged.
@@ -130,18 +130,14 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     setLoading(true);
     setError(null);
     try {
-      const teamDTOs = await api.teams.list();
-      const withBoards = await Promise.all(
-        teamDTOs.map(async (t) => {
-          try {
-            const boards = await api.boards.listByTeam(t.id);
-            return teamFromDTO(t, mapBoards(boards));
-          } catch (e) {
-            console.warn("failed to load boards for team", t.id, e);
-            return teamFromDTO(t, []);
-          }
-        }),
-      );
+      const [teamDTOs, boardDTOs] = await Promise.all([api.teams.list(), api.boards.list()]);
+      const byTeam = new Map<string, BoardDTO[]>();
+      for (const b of boardDTOs) {
+        const list = byTeam.get(b.teamId);
+        if (list) list.push(b);
+        else byTeam.set(b.teamId, [b]);
+      }
+      const withBoards = teamDTOs.map((t) => teamFromDTO(t, mapBoards(byTeam.get(t.id) ?? [])));
       setTeams(withBoards);
 
       setActiveTeamId((current) => {

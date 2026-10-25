@@ -8,7 +8,7 @@ import { teamDTOs, firstBoard } from "./TeamsContext.boards.fixture";
 vi.mock("../api/client", () => ({
   api: {
     teams: { list: vi.fn() },
-    boards: { listByTeam: vi.fn() },
+    boards: { list: vi.fn() },
     account: { updatePrefs: vi.fn() },
   },
 }));
@@ -27,7 +27,7 @@ function Probe() {
 describe("TeamsContext: активная группа из настроек аккаунта", () => {
   beforeEach(() => {
     vi.mocked(api.teams.list).mockResolvedValue(teamDTOs);
-    vi.mocked(api.boards.listByTeam).mockImplementation(async (teamId: string) => (teamId === "t1" ? [firstBoard] : []));
+    vi.mocked(api.boards.list).mockResolvedValue([firstBoard]);
     vi.mocked(api.account.updatePrefs).mockResolvedValue({});
   });
   afterEach(() => { cleanup(); vi.clearAllMocks(); delete window.dashData; });
