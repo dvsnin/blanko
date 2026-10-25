@@ -21,7 +21,7 @@
 
         /* Шапка повторяет геометрию и токены Topbar.css кабинета (69px с рамкой, отступ 32px, логотип 36px),
            чтобы переход доска <-> кабинет в той же вкладке не дёргал страницу. */
-        .topbar { box-sizing: border-box; height: 69px; background: #FFFFFF; border-bottom: 1px solid #E6E2D9; display: flex; align-items: center; justify-content: space-between; padding: 12px 32px; z-index: 40; position: relative; }
+        .topbar { box-sizing: border-box; height: 69px; background: #FFFFFF; border-bottom: 1px solid #E6E2D9; display: flex; align-items: center; justify-content: space-between; padding: 12px 32px; z-index: 2000; position: relative; } /* выше панелей tldraw, чтобы список участников не перекрывался */
         .brand-row { display: flex; align-items: center; gap: 12px; }
         /* Выход в кабинет хлебными крошками: логотип и раздел ведут назад в той же вкладке */
         .back-link { display: inline-flex; align-items: center; gap: 10px; color: #5B6472; font-size: 14px; font-weight: 700; text-decoration: none; padding: 0 10px 0 0; border-radius: 10px; transition: background .15s, color .15s; }
@@ -35,16 +35,34 @@
         .top-actions { display: flex; gap: 10px; align-items: center; }
         .share-hint { font-size: 13px; color: #64748b; opacity: 0; transition: opacity .2s; }
         .share-hint.is-visible { opacity: 1; }
-        .btn { background: #fff; border: 1px solid #e6e9f2; padding: 9px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; color: #0f1724; transition: background .15s, border-color .15s; }
-        .btn:hover { background: #f8fafc; border-color: rgba(37,100,255,0.14); }
-        /* Share - primary-btn из dashboard: сине-фиолетовый градиент, pill 12px, тень. */
-        .btn.primary { background: linear-gradient(90deg, #4f8bff 0%, #7e5bff 100%); color: #fff; border: none; padding: 10px 16px; font-size: 14px; font-weight: 700; box-shadow: 0 8px 26px rgba(79,139,255,0.12); transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease; }
-        .btn.primary:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(79,139,255,0.18); filter: brightness(1.03); }
-        .btn.primary:active { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(79,139,255,0.14); }
+        /* Кнопки как в кабинете (.btn--ghost и .btn--soft из app.css): 44px, скругление 12px, без градиентов. */
+        .btn { box-sizing: border-box; height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #E6E2D9; background: #FFFFFF; color: #22262E; font: inherit; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; transition: background 150ms ease, border-color 150ms ease; }
+        .btn:hover { background: #ECE9E0; }
+        .btn:focus-visible { outline: 2px solid #1F8A85; outline-offset: 2px; }
+        .btn.primary { background: #E6F4F3; border-color: transparent; color: #1F8A85; }
+        .btn.primary:hover { background: #D6ECEA; }
 
-        /* Профиль - такой же, как в dashboard (ProfileMenu.css): мягкий голубо-лиловый градиент, скруглённый квадрат 10px. */
-        .profile-initial { width: 44px; height: 44px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #0f1724; font-size: 15px; background: linear-gradient(135deg, #eef4ff 0%, #f7f5ff 100%); border: 1px solid rgba(15,23,42,0.06); text-shadow: 0 1px 0 rgba(255,255,255,0.6); transition: box-shadow 160ms ease, border-color 160ms ease; }
-        .profile-initial:hover { box-shadow: 0 10px 22px rgba(46,80,170,0.06); border-color: rgba(37,100,255,0.08); }
+        /* Участники комнаты: в шапке кнопка со своим кружком и числом подключений, по клику список.
+           Цвета те же, что у курсоров на холсте. */
+        .people { position: relative; display: inline-flex; align-items: center; }
+        .people__trigger { box-sizing: border-box; height: 44px; padding: 0 12px 0 4px; border-radius: 12px; border: 1px solid #E6E2D9; background: #FFFFFF; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; color: #22262E; transition: background 150ms ease; }
+        .people__trigger:hover, .people__trigger[aria-expanded="true"] { background: #ECE9E0; }
+        .people__trigger:focus-visible { outline: 2px solid #1F8A85; outline-offset: 2px; }
+        .people__avatar { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: #FFFFFF; text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
+        .people__count { min-width: 20px; text-align: center; }
+        .people__pop { position: absolute; top: calc(100% + 8px); right: 0; width: 320px; max-height: 420px; overflow: auto; background: #FFFFFF; border: 1px solid #E6E2D9; border-radius: 14px; box-shadow: 0 16px 40px rgba(34, 38, 46, 0.14); padding: 8px; z-index: 50; }
+        .people__title { margin: 4px 8px 8px; font-size: 13px; font-weight: 700; color: #5B6472; }
+        .people__row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 0; border-radius: 10px; background: transparent; text-align: left; font: inherit; color: #22262E; cursor: pointer; }
+        .people__row:hover { background: #F6F4EE; }
+        .people__row[disabled] { cursor: default; }
+        .people__row[disabled]:hover { background: transparent; }
+        .people__row--following { background: #E6F4F3; }
+        .people__row--following:hover { background: #D6ECEA; }
+        .people__who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .people__name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .people__meta { font-size: 12px; font-weight: 600; color: #5B6472; }
+        .people__row--away .people__avatar { opacity: 0.5; }
+        .people__follow { font-size: 12px; font-weight: 700; color: #1F8A85; white-space: nowrap; }
 
         #tldraw-root { position: absolute; left: 0; right: 0; top: 69px; bottom: 0; }
         @media (max-width: 720px) { .topbar { padding: 12px 16px; } }
@@ -90,7 +108,7 @@
     <div class="top-actions">
         <span class="share-hint" id="shareHint" role="status" aria-live="polite"></span>
         <button class="btn primary" id="shareBtn">Поделиться</button>
-        <div class="profile-initial" id="profileInitial">U</div>
+        <div class="people" id="people"></div>
     </div>
 </div>
 
@@ -115,7 +133,7 @@
     import { createRoot } from "https://esm.sh/react-dom@18.3.1/client";
     import {
         Tldraw, createTLStore, getSnapshot, loadSnapshot, defaultShapeUtils, defaultBindingUtils,
-        InstancePresenceRecordType, USER_COLORS, useEditor, useValue,
+        InstancePresenceRecordType, USER_COLORS,
     } from "https://esm.sh/tldraw@3.15.3?deps=react@18.3.1,react-dom@18.3.1";
 
     // tldraw 3.15.3 - последняя версия без лицензионного ключа; с 4.0 без ключа
@@ -126,8 +144,6 @@
     // APP_DOC инжектит сервер: kind, id (uuid), publicId, canEdit.
     const APP_DOC = window.APP_DOC || { kind: "board", id: "", publicId: "", canEdit: true };
     const profileName = (window.dashData && window.dashData.name) ? String(window.dashData.name) : "User";
-    const profileInitial = (profileName.trim().charAt(0) || "U").toUpperCase();
-    try { document.getElementById("profileInitial").textContent = profileInitial; } catch {}
 
     // Копирует ссылку на документ; подтверждение рядом с кнопкой, без модального окна.
     document.getElementById("shareBtn").addEventListener("click", async () => {
@@ -290,7 +306,15 @@
     // userId свой на вкладку: два окна одного человека - два курсора.
     const presenceUserId = "u-" + Math.random().toString(36).slice(2, 10);
     const presenceRecordId = InstancePresenceRecordType.createId(presenceUserId);
-    const presenceColor = USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+    // Цвет курсора и кружка - по id аккаунта: один педагог одного цвета с любого устройства, а не
+    // случайный на каждую вкладку. Палитра tldraw из семи цветов, при большем числе людей совпадения неизбежны.
+    function hashString(str) {
+        let h = 2166136261;
+        for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return h >>> 0;
+    }
+    const colorSeed = (window.dashData && window.dashData.accountId) ? String(window.dashData.accountId) : presenceUserId;
+    const presenceColor = USER_COLORS[hashString(colorSeed) % USER_COLORS.length];
     let presenceTimer = null;
     let lastPresenceJson = "";
 
@@ -356,35 +380,110 @@
         try { editor.store.mergeRemoteChanges(() => editor.store.remove(ids)); } catch {}
     }
 
-    // Панель участников в share-зоне tldraw: кружок на человека, клик - режим "следовать".
-    function PeoplePanel() {
-        const ed = useEditor();
-        const peers = useValue("peers", () => ed.store.query.records("instance_presence").get(), [ed]);
-        const followingUserId = useValue("following", () => ed.getInstanceState().followingUserId, [ed]);
-        if (!peers.length) return null;
-        return React.createElement(
-            "div",
-            { className: "people-panel" },
-            peers.map((p) => {
-                const isFollowing = followingUserId === p.userId;
-                return React.createElement("button", {
-                    key: p.userId,
-                    type: "button",
-                    className: "people-avatar" + (isFollowing ? " following" : ""),
-                    style: { backgroundColor: p.color },
-                    title: isFollowing ? `Перестать следовать за «${p.userName}»` : `Следовать за «${p.userName}»`,
-                    onClick: () => {
-                        try {
-                            if (isFollowing) ed.stopFollowingUser();
-                            else ed.startFollowingUser(p.userId);
-                        } catch (e) { console.warn("follow:", e); }
-                    },
-                }, (p.userName || "?").trim().charAt(0).toUpperCase());
-            }),
-        );
+    // Участники в шапке вместо панели tldraw: кнопка со своим кружком и числом подключений, по клику
+    // список (одно подключение - одна строка: ноутбук и панель одного педагога это два участника).
+    // Клик по строке - режим «следовать», ещё клик - перестать. Кто на другой странице - помечен.
+    let peopleOpen = false;
+    let peopleScheduled = false;
+    function schedulePeople() {
+        if (peopleScheduled) return;
+        peopleScheduled = true;
+        requestAnimationFrame(() => { peopleScheduled = false; renderPeople(); });
+    }
+    function initialOf(name) { return (name || "?").trim().charAt(0).toUpperCase() || "?"; }
+    function avatarEl(color, name) {
+        const el = document.createElement("span");
+        el.className = "people__avatar";
+        el.style.backgroundColor = color;
+        el.textContent = initialOf(name);
+        el.setAttribute("aria-hidden", "true");
+        return el;
+    }
+    function setPeopleOpen(open) {
+        if (peopleOpen === open) return;
+        peopleOpen = open;
+        renderPeople();
+    }
+    // Фаза перехвата: tldraw гасит всплытие pointerdown с холста, иначе клик по доске список не закрывал бы.
+    document.addEventListener("pointerdown", (e) => {
+        if (peopleOpen && !document.getElementById("people").contains(e.target)) setPeopleOpen(false);
+    }, true);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && peopleOpen) setPeopleOpen(false); });
+
+    function renderPeople() {
+        const root = document.getElementById("people");
+        if (!root || !editor) return;
+        const pageId = editor.getCurrentPageId();
+        const followingUserId = editor.getInstanceState().followingUserId || null;
+        const peers = editor.store.query.records("instance_presence").get()
+            .filter((p) => p.id !== presenceRecordId)
+            .sort((a, b) => Number(b.currentPageId === pageId) - Number(a.currentPageId === pageId) || (a.userName || "").localeCompare(b.userName || "", "ru"));
+        const total = peers.length + 1;
+        root.replaceChildren();
+
+        const trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "people__trigger";
+        trigger.setAttribute("aria-haspopup", "true");
+        trigger.setAttribute("aria-expanded", String(peopleOpen));
+        trigger.title = total === 1 ? "На доске только вы" : `На доске: ${total}`;
+        trigger.appendChild(avatarEl(presenceColor, profileName));
+        const count = document.createElement("span");
+        count.className = "people__count";
+        count.textContent = String(total);
+        trigger.appendChild(count);
+        trigger.addEventListener("click", () => setPeopleOpen(!peopleOpen));
+        root.appendChild(trigger);
+        if (!peopleOpen) return;
+
+        const pop = document.createElement("div");
+        pop.className = "people__pop";
+        pop.setAttribute("role", "dialog");
+        pop.setAttribute("aria-label", "Участники на доске");
+        const title = document.createElement("div");
+        title.className = "people__title";
+        title.textContent = total === 1 ? "На доске только вы" : `На доске: ${total}`;
+        pop.appendChild(title);
+
+        const row = (color, name, meta, opts) => {
+            const el = document.createElement("button");
+            el.type = "button";
+            el.className = "people__row" + (opts.following ? " people__row--following" : "") + (opts.away ? " people__row--away" : "");
+            if (opts.disabled) el.disabled = true;
+            el.appendChild(avatarEl(color, name));
+            const who = document.createElement("span");
+            who.className = "people__who";
+            const n = document.createElement("span"); n.className = "people__name"; n.textContent = name;
+            const m = document.createElement("span"); m.className = "people__meta"; m.textContent = meta;
+            who.appendChild(n); who.appendChild(m);
+            el.appendChild(who);
+            if (opts.follow) {
+                const f = document.createElement("span");
+                f.className = "people__follow";
+                f.textContent = opts.following ? "Следуете" : "Следовать";
+                el.appendChild(f);
+            }
+            return el;
+        };
+        pop.appendChild(row(presenceColor, profileName, "Это вы", { disabled: true }));
+        peers.forEach((p) => {
+            const away = p.currentPageId !== pageId;
+            const following = followingUserId === p.userId;
+            const el = row(p.color, p.userName || "Участник", away ? "На другой странице" : "На этой странице", { follow: true, following, away });
+            el.addEventListener("click", () => {
+                try {
+                    if (following) editor.stopFollowingUser();
+                    else editor.startFollowingUser(p.userId);
+                } catch (e) { console.warn("follow:", e); }
+                schedulePeople();
+            });
+            pop.appendChild(el);
+        });
+        root.appendChild(pop);
     }
 
-    const uiComponents = { SharePanel: PeoplePanel };
+    // Панель участников tldraw не нужна: список живёт в шапке.
+    const uiComponents = { SharePanel: null };
 
     // --- отправка: всё, что накопилось за кадр, уходит одним push ---
     function onChange(entry) {
@@ -561,10 +660,14 @@
                 editor = ed;
                 window.blankoEditor = ed; // для проверок со стенда из консоли
                 // locale фиксируем явно: по умолчанию tldraw берёт язык из navigator.languages.
-                try { editor.user.updateUserPreferences({ name: profileName, locale: "ru" }); } catch {}
+                try { editor.user.updateUserPreferences({ name: profileName, locale: "ru", color: presenceColor }); } catch {}
                 applyReadonly(); // до init холст только для чтения
                 showOverlay("loading");
                 setStatus();
+                // Список участников: чужие presence-записи и своя страница/режим «следовать».
+                editor.store.listen(schedulePeople, { scope: "presence" });
+                editor.store.listen(schedulePeople, { scope: "session" });
+                renderPeople();
                 connect();
             },
         }),
