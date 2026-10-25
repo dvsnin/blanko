@@ -29,9 +29,9 @@
 
 ## Стенд и процесс
 
-- `make up` собирает фронтенд, пересобирает бэкенд и перезапускает контейнеры; `make up SKIP_FRONTEND=1` только бэкенд. Статика фронтенда запекается в образ, после правок фронта нужен полный `make up`.
+- `make up` собирает оба фронтенд-пакета (`@blanko/dashboard`, `@blanko/canvas`), пересобирает бэкенд и перезапускает контейнеры; `make up SKIP_FRONTEND=1` только бэкенд. Статика фронтенда запекается в образ, после правок кабинета или холста нужен полный `make up`.
 - Секреты в `deploy/.env`, не печатать. psql: `docker exec deploy-postgres_backend-1 psql -U $APP_POSTGRES_USER -d $APP_POSTGRES_DB`.
-- tldraw закреплён на 3.15.3 (бесключевой режим с watermark). Апгрейд только с действующим `TLDRAW_LICENSE_KEY`, watermark скрывать нельзя.
+- tldraw закреплён на 3.15.3 (бесключевой режим с watermark). Апгрейд только с действующим `TLDRAW_LICENSE_KEY`, watermark скрывать нельзя. Логика холста в `frontend/canvas/src/main.js`, Vite собирает её вместе с tldraw, React, стилями и ресурсами редактора в `backend/app/static/canvas/assets` (в .gitignore); `backend/app/static/canvas/index.html` только разметка и стили шапки. Шрифт Nunito лежит в `backend/app/static/fonts` и в теме Keycloak: стенд и показ работают без интернета.
 - Визуальная проверка на живом стенде: `node docs/tools/dashboard-shots.mjs <папка>` логинится тестовым пользователем в headless Chrome и снимает сетку, список, шаблоны и группы (флаги `ACCESS=1`, `MEMBERS=1`, `MENU=1` открывают диалоги и меню); E2E канваса `docs/tools/canvas-e2e.mjs <publicId>` с `MEDIA=1`, `RESTART=1`, `SHOT=путь`.
 - Перед пушем ветка схлопывается в один коммит с коротким сообщением на английском, например `Dashboard redesign: templates, admin role, card polish`. Пуш и слияние делает пользователь.
 - `docs/` в `.gitignore`: спецификации и планы локальные, в коммиты не попадают.

@@ -113,6 +113,10 @@ backend/app/public/
 !backend/app/public/.gitkeep
 # canvas/ - рукописный tldraw-исходник, не build artifact:
 !backend/app/static/canvas/
+# сборка канваса (frontend/canvas) - build artifact
+backend/app/static/canvas/assets/
+# шрифты Nunito лежат в репозитории: стенд работает без интернета
+!backend/app/static/fonts/
 # Иконки вкладки и домашнего экрана: лежат в репозитории, не собираются.
 !backend/app/static/icons/
 

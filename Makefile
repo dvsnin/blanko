@@ -1,7 +1,7 @@
 DOCKER_COMPOSE = docker compose -f deploy/docker-compose.yml
 
 # list of frontend apps to build (adjust package names or paths if needed)
-FRONTEND_FILTERS = @blanko/dashboard
+FRONTEND_FILTERS = @blanko/dashboard @blanko/canvas
 
 # Конфигурация стенда. deploy/.env не хранится в Git - создаётся из примера.
 ENV_FILE = deploy/.env

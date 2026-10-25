@@ -22,7 +22,7 @@
 | Слой | Технологии |
 |---|---|
 | Дашборд | React 19, TypeScript, Vite |
-| Холст | [tldraw](https://tldraw.dev) 3.15.3 (бесключевой режим с watermark), подключён с CDN |
+| Холст | [tldraw](https://tldraw.dev) 3.15.3 (бесключевой режим с watermark), собран в статику вместе с ресурсами, интернет не нужен |
 | Backend | Go 1.25, gorilla/mux, gorilla/websocket, pgx, aws-sdk-go-v2 |
 | База данных | PostgreSQL 17 |
 | Хранилище содержимого | RustFS (S3-совместимое) |
@@ -60,10 +60,12 @@ docker compose -f deploy/docker-compose.yml down -v  # остановить и �
 
 ```
 frontend/dashboard/    # React-приложение кабинета
+frontend/canvas/       # логика холста на tldraw, собирается Vite в backend/app/static/canvas/assets
 backend/app/           # Go-сервис: API, вебсокет комнат, рендер страниц, статика
   internal/            #   handler, service, repository, doc (комнаты), storage
   migration/           #   SQL-миграции
-  static/canvas/       #   холст на tldraw (правится напрямую, без сборки)
+  static/canvas/       #   страница холста: разметка и стили шапки, сборка из frontend/canvas в assets/
+  static/fonts/        #   Nunito для кабинета и холста, работает без интернета
 deploy/                # docker-compose, realm и тема Keycloak, .env.example
 ```
 
@@ -86,6 +88,7 @@ deploy/                # docker-compose, realm и тема Keycloak, .env.exampl
 ```sh
 pnpm --filter @blanko/dashboard dev    # Vite с HMR на :5173
 pnpm --filter @blanko/dashboard build  # сборка в backend/app/static/dashboard
+pnpm --filter @blanko/canvas build     # сборка холста в backend/app/static/canvas/assets
 cd backend/app && go build ./...       # сборка бэкенда
 ```
 
@@ -99,7 +102,7 @@ make test-backend                      # DSN собирается из deploy/.e
 pnpm --filter @blanko/dashboard exec vitest run
 ```
 
-Холст (`backend/app/static/canvas/index.html`) правится напрямую и сборки не требует, но после изменений нужна пересборка образа - статика копируется на этапе build.
+Холст собирается из `frontend/canvas/src/main.js` командой выше; после изменений нужна пересборка образа - статика копируется на этапе build. Кабинет, холст и страница входа не ходят в интернет: tldraw, React и шрифты лежат в статике.
 
 ## Ограничения
 
