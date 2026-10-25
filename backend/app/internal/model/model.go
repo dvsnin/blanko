@@ -63,6 +63,12 @@ type OrganizationMember struct {
 	Role      OrganizationRole
 }
 
+// AccountWithRole - учётная запись с ролью в организации (member, если членства ещё нет).
+type AccountWithRole struct {
+	Account Account
+	Role    OrganizationRole
+}
+
 // Team - команда. Если OrganizationID == nil - личная команда без организации.
 type Team struct {
 	ID                uuid.UUID
@@ -96,17 +102,20 @@ type TeamMemberView struct {
 
 // Board - доска.
 type Board struct {
-	ID                uuid.UUID
-	PublicID          string
-	Name              string
-	TeamID            uuid.UUID
-	AccountID         uuid.UUID
-	TeamAccess        BoardAccess
-	LinkAccessEnabled bool
-	TemplateID        *uuid.UUID
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	LastOpenedAt      *time.Time
+	ID        uuid.UUID
+	PublicID  string
+	Name      string
+	TeamID    uuid.UUID
+	AccountID uuid.UUID
+	// TeamAccess - действующий доступ участников: своя настройка доски или уровень группы.
+	TeamAccess BoardAccess
+	// TeamAccessInherited - у доски нет своей настройки, TeamAccess взят из team.member_board_access.
+	TeamAccessInherited bool
+	LinkAccessEnabled   bool
+	TemplateID          *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	LastOpenedAt        *time.Time
 }
 
 // BoardView - доска с дополнительной информацией для UI.

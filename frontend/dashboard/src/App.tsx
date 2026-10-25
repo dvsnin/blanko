@@ -4,6 +4,7 @@ import BoardsPage from "./pages/BoardsPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import GroupsPage from "./pages/GroupsPage";
 import ProfilePage from "./pages/ProfilePage";
+import PeoplePage from "./pages/PeoplePage";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { useUser } from "./contexts/UserContext";
 import { pageTitle } from "./utils/pageTitle";
@@ -26,6 +27,7 @@ export default function App() {
       {route.name === "templates" && <TemplatesPage key={route.age ?? "all"} initialAge={route.age} />}
       {route.name === "groups" && <GroupsPage />}
       {route.name === "profile" && <ProfilePage />}
+      {route.name === "people" && <PeoplePage />}
     </div>
   );
 }

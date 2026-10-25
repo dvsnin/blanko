@@ -21,8 +21,10 @@ export interface Board {
   colorKey?: string;
   isStarred?: boolean;
   canEdit?: boolean;
-  /** Что могут участники группы с содержимым: edit, view или deny. */
+  /** Что могут участники группы с содержимым: edit, view или deny (действующее значение). */
   teamAccess?: BoardAccess;
+  /** У доски нет своей настройки: уровень взят из группы. */
+  teamAccessInherited?: boolean;
   /** Любой вошедший открывает доску по ссылке только для чтения. */
   linkAccessEnabled?: boolean;
   templateId?: string;
@@ -43,6 +45,8 @@ export interface Team {
   ageGroup?: AgeKey;
   /** Воспитатели группы, свободный текст. */
   teachers?: string;
+  /** Доступ участников к доскам группы по умолчанию; доска может переопределить. */
+  memberBoardAccess?: BoardAccess;
 }
 
 export type OrgRole = "owner" | "admin" | "member";

@@ -4,7 +4,7 @@ import ConfirmModal from "./ConfirmModal";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { VALID_ROLES } from "../constants/roles";
 import { AGES, type AgeKey } from "../constants/templates";
-import type { Team, TeamRole } from "../types";
+import type { BoardAccess, Team, TeamRole } from "../types";
 import TeamMembersTab from "./TeamMembersTab";
 import TeacherPicker from "./TeacherPicker";
 
@@ -20,7 +20,7 @@ interface TeamSettingsModalProps {
   team: Partial<Team> & { create?: boolean };
   onClose: () => void;
   /** May return a promise; if it rejects, the modal stays open. */
-  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | ""; teachers: string }) => void | Promise<unknown>;
+  onSave: (teamId: string, patch: { name: string; ageGroup: AgeKey | ""; teachers: string; memberBoardAccess: BoardAccess }) => void | Promise<unknown>;
   onDelete: (teamId: string) => void | Promise<unknown>;
   onLeave: (teamId: string) => void | Promise<unknown>;
 }
@@ -29,6 +29,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   const [name, setName] = useState(team?.name || "");
   const [ageGroup, setAgeGroup] = useState<AgeKey | "">(team?.ageGroup ?? "");
   const [teachers, setTeachers] = useState(team?.teachers ?? "");
+  const [memberBoardAccess, setMemberBoardAccess] = useState<BoardAccess>(team?.memberBoardAccess ?? "edit");
   const [activeTab, setActiveTab] = useState("main");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -69,7 +70,7 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
     const val = (name || "").trim();
     if (!val) return;
     try {
-      await onSave?.(team?.id || "", { name: val, ageGroup, teachers: teachers.trim() });
+      await onSave?.(team?.id || "", { name: val, ageGroup, teachers: teachers.trim(), memberBoardAccess });
     } catch {
       return;
     }
@@ -126,6 +127,30 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
   );
 
   const teachersField = <TeacherPicker value={teachers} onChange={setTeachers} disabled={isMember} />;
+
+  // Уровень доступа участников ко всем доскам группы; каждая доска может переопределить его у себя.
+  const ACCESS_HINT: Record<BoardAccess, string> = {
+    edit: "Участники рисуют на всех досках группы. Новые доски группы наследуют этот уровень, у любой доски его можно изменить отдельно.",
+    view: "Участники открывают доски группы без права правки. Новые доски группы наследуют этот уровень, у любой доски его можно изменить отдельно.",
+    deny: "Каждый участник видит только свои доски, администраторы группы - все. Новые доски группы наследуют этот уровень, у любой доски его можно изменить отдельно.",
+  };
+  const accessField = (
+    <>
+      <select
+        id="team-member-access"
+        className="boards-modal-input"
+        value={memberBoardAccess}
+        onChange={(e) => setMemberBoardAccess(e.target.value as BoardAccess)}
+        aria-label="Доступ участников к доскам"
+        disabled={isMember}
+      >
+        <option value="edit">Редактируют все доски</option>
+        <option value="view">Только смотрят</option>
+        <option value="deny">Видят только свои доски</option>
+      </select>
+      <p className="ts-section-text">{ACCESS_HINT[memberBoardAccess]}</p>
+    </>
+  );
 
   if (isCreate) {
     return (
@@ -223,6 +248,10 @@ export default function TeamSettingsModal({ team, onClose, onSave, onDelete, onL
                   <div className="ts-section">
                     <label className="field-label ts-section-label">Воспитатели</label>
                     {teachersField}
+                  </div>
+                  <div className="ts-section">
+                    <label className="field-label ts-section-label" htmlFor="team-member-access">Доступ участников к доскам</label>
+                    {accessField}
                   </div>
 
                   <hr className="ts-divider" />

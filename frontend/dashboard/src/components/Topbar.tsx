@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import "./Topbar.css";
-import NotificationButton from "./NotificationButton";
-import NotificationsPanel from "./NotificationsPanel";
 import ProfileButton from "./ProfileButton";
 import ProfileMenu from "./ProfileMenu";
 import TeamSwitcher from "./TeamSwitcher";
@@ -20,17 +18,6 @@ export default function Topbar() {
   const route = useHashRoute();
   const { user, workspaceName } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const notificationsRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!notificationsOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setNotificationsOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [notificationsOpen]);
 
   return (
     <header className="topbar">
@@ -57,7 +44,6 @@ export default function Topbar() {
       </nav>
 
       <div className="topbar__right">
-        <NotificationButton unreadCount={0} onClick={() => setNotificationsOpen((v) => !v)} />
         <ProfileButton initials={initialsOf(user.name || "") || "?"} onClick={() => setMenuOpen((v) => !v)} />
         {menuOpen && (
           <ProfileMenu
@@ -67,6 +53,10 @@ export default function Topbar() {
               setMenuOpen(false);
               navigate({ name: "profile" });
             }}
+            onPeople={user.orgRole === "owner" || user.orgRole === "admin" ? () => {
+              setMenuOpen(false);
+              navigate({ name: "people" });
+            } : undefined}
             onLogout={() => {
               window.location.href = "/app/logout";
             }}
@@ -75,11 +65,6 @@ export default function Topbar() {
         )}
       </div>
 
-      <NotificationsPanel
-        ref={notificationsRef}
-        isOpen={notificationsOpen}
-        onClose={() => setNotificationsOpen(false)}
-      />
     </header>
   );
 }

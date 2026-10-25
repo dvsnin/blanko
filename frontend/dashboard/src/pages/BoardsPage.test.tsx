@@ -13,7 +13,7 @@ const board = (i: number, teamId = "t1"): Board => ({
   id: `b${i}`, publicId: `p${i}`, title: `Доска ${i}`, owner: "Анна П.", ownerId: "u1", lastOpened: "",
   updatedAt: "2026-10-20T10:00:00Z", lastOpenedAt: "2026-10-20T10:00:00Z", canEdit: true, templateId: undefined, ...(teamId ? {} : {}),
 });
-const team: Team = { id: "t1", name: "Ромашка", role: "owner", recentBoards: [], boardCount: 30, isStarred: false };
+const team: Team = { id: "t1", name: "Ромашка", role: "owner", recentBoards: [], boardCount: 30, isStarred: false, memberBoardAccess: "view" };
 const other: Team = { id: "t2", name: "Солнышко", role: "member", recentBoards: [], boardCount: 1, isStarred: false };
 
 function fake(over: Partial<TeamsContextValue> = {}): TeamsContextValue {
@@ -93,5 +93,19 @@ describe("BoardsPage: страницы досок", () => {
     fireEvent.click(screen.getByRole("button", { name: "Мои" }));
     flushPrefs();
     expect(api.account.updatePrefs).toHaveBeenCalledWith({ "boards.segment": "mine" });
+  });
+
+  it("диалог доступа: первая опция «Как в группе» с уровнем группы, у унаследованной доски она выбрана", () => {
+    const items = [{ ...board(1), teamAccess: "view" as const, teamAccessInherited: true }];
+    const v = fake({ activeBoards: items, boardList: { items, total: 1, hasMore: false, loading: false } });
+    setup(v);
+    fireEvent.click(screen.getByRole("button", { name: "Действия с доской" }));
+    fireEvent.click(screen.getByRole("button", { name: /Доступ/ }));
+    const select = screen.getByLabelText("Участники группы") as HTMLSelectElement;
+    expect(select.value).toBe("inherit");
+    expect(select.options[0].textContent).toBe("Как в группе: только смотрят");
+    expect(screen.getByText(/Уровень задан в настройках группы/)).toBeTruthy();
+    fireEvent.change(select, { target: { value: "edit" } });
+    expect(v.updateBoardAccess).toHaveBeenCalledWith("b1", { teamAccess: "edit" });
   });
 });

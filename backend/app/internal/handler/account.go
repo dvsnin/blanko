@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"github.com/google/uuid"
+
+	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"net/http"
 )
 
@@ -15,6 +18,63 @@ type AccountDTO struct {
 	Email   string         `json:"email"`
 	OrgRole string         `json:"orgRole"`
 	Prefs   map[string]any `json:"prefs"`
+}
+
+// AccountListDTO - учётная запись сада в списке администратора.
+type AccountListDTO struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Email   string `json:"email"`
+	OrgRole string `json:"orgRole"`
+}
+
+type accountRoleRequest struct {
+	WithAccount
+	ID   string `json:"id"`   // чья роль меняется
+	Role string `json:"role"` // admin | member
+}
+
+func accountWithRoleToDTO(a model.AccountWithRole) AccountListDTO {
+	return AccountListDTO{ID: a.Account.ID.String(), Name: a.Account.Name, Email: a.Account.Email, OrgRole: string(a.Role)}
+}
+
+// ListAccounts POST /api/v1/account/list - все учётные записи сада с ролями, только администратору.
+func (a *API) ListAccounts(w http.ResponseWriter, r *http.Request) {
+	var req accountGetRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	list, err := a.services.Auth.ListAccounts(r.Context(), id)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	out := make([]AccountListDTO, 0, len(list))
+	for _, acc := range list {
+		out = append(out, accountWithRoleToDTO(acc))
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": out})
+}
+
+// SetAccountRole POST /api/v1/account/role - назначить или снять администратора сада.
+func (a *API) SetAccountRole(w http.ResponseWriter, r *http.Request) {
+	var req accountRoleRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	target, err := uuid.Parse(req.ID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_id", "invalid account id")
+		return
+	}
+	acc, err := a.services.Auth.SetOrgRole(r.Context(), id, target, req.Role)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, accountWithRoleToDTO(*acc))
 }
 
 type accountPrefsRequest struct {

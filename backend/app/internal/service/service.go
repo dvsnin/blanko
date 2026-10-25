@@ -23,8 +23,10 @@ import (
 
 // Ошибки уровня сервиса.
 var (
-	ErrNotFound     = errors.New("not found")
-	ErrForbidden    = errors.New("forbidden")
+	ErrNotFound  = errors.New("not found")
+	ErrForbidden = errors.New("forbidden")
+	// ErrLastAdmin - у сада должен остаться хотя бы один администратор.
+	ErrLastAdmin    = errors.New("last admin")
 	ErrValidation   = errors.New("validation error")
 	ErrUnauthorized = errors.New("unauthorized")
 
@@ -131,6 +133,82 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 		return nil, err
 	}
 	return &identity, nil
+}
+
+// ListAccounts - все учётные записи сада с ролями; только для администратора организации.
+func (s *AuthService) ListAccounts(ctx context.Context, id Identity) ([]model.AccountWithRole, error) {
+	if !id.OrgRole.IsAdmin() || id.OrganizationID == uuid.Nil {
+		return nil, ErrForbidden
+	}
+	list, err := repository.NewAccountRepo(s.pool).ListWithRoles(ctx, id.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	sort.SliceStable(list, func(i, j int) bool {
+		return ruSortKey(list[i].Account.Name) < ruSortKey(list[j].Account.Name)
+	})
+	return list, nil
+}
+
+// SetOrgRole назначает или снимает администратора сада. Делает это администратор; снять права
+// у последнего администратора нельзя (ErrLastAdmin). Владелец при снятии становится пользователем,
+// при повторном назначении - администратором.
+func (s *AuthService) SetOrgRole(ctx context.Context, id Identity, targetID uuid.UUID, role string) (*model.AccountWithRole, error) {
+	if !id.OrgRole.IsAdmin() || id.OrganizationID == uuid.Nil {
+		return nil, ErrForbidden
+	}
+	var want model.OrganizationRole
+	switch role {
+	case string(model.OrgRoleAdmin):
+		want = model.OrgRoleAdmin
+	case string(model.OrgRoleMember):
+		want = model.OrgRoleMember
+	default:
+		return nil, ErrInvalidRole
+	}
+	var out model.AccountWithRole
+	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+		orgs := repository.NewOrganizationRepo(tx)
+		if err := orgs.Lock(ctx, id.OrganizationID); err != nil {
+			return err
+		}
+		acc, err := repository.NewAccountRepo(tx).GetByID(ctx, targetID)
+		if err != nil {
+			return mapNotFound(err)
+		}
+		if err := orgs.EnsureMember(ctx, id.OrganizationID, acc.ID, model.OrgRoleMember); err != nil {
+			return err
+		}
+		current, err := orgs.GetMemberRole(ctx, id.OrganizationID, acc.ID)
+		if err != nil {
+			return err
+		}
+		next := current
+		switch {
+		case want == model.OrgRoleMember && current.IsAdmin():
+			n, err := orgs.CountAdmins(ctx, id.OrganizationID)
+			if err != nil {
+				return err
+			}
+			if n <= 1 {
+				return ErrLastAdmin
+			}
+			next = model.OrgRoleMember
+		case want == model.OrgRoleAdmin && !current.IsAdmin():
+			next = model.OrgRoleAdmin
+		}
+		if next != current {
+			if err := orgs.SetMemberRole(ctx, id.OrganizationID, acc.ID, next); err != nil {
+				return err
+			}
+		}
+		out = model.AccountWithRole{Account: *acc, Role: next}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 // UpdateAccount - переименование текущей учётной записи.
@@ -240,6 +318,8 @@ type TeamUpdateInput struct {
 	Name     string
 	AgeGroup *string
 	Teachers *string
+	// MemberBoardAccess - доступ участников к доскам группы по умолчанию: edit, view, deny.
+	MemberBoardAccess *string
 }
 
 // List возвращает все команды, в которых состоит пользователь.
@@ -337,6 +417,13 @@ func (s *TeamService) Update(ctx context.Context, id Identity, teamID uuid.UUID,
 		teachers = &t
 	}
 	fields := repository.TeamFields{Name: strings.TrimSpace(in.Name), AgeGroup: in.AgeGroup, Teachers: teachers}
+	if in.MemberBoardAccess != nil {
+		access, err := parseBoardAccess(*in.MemberBoardAccess)
+		if err != nil {
+			return nil, err
+		}
+		fields.MemberBoardAccess = access
+	}
 	if err := repo.Update(ctx, teamID, fields); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
 			return nil, ErrNotFound
@@ -565,9 +652,29 @@ type BoardCreateInput struct {
 }
 
 type BoardUpdateInput struct {
-	Name              string
-	TeamAccess        model.BoardAccess
+	Name string
+	// TeamAccess: edit, view, deny или "inherit" - снять свою настройку и брать уровень группы.
+	TeamAccess        string
 	LinkAccessEnabled *bool
+}
+
+// overrideAccess - своя настройка доски для копии: пусто, если доска наследует уровень группы.
+func overrideAccess(b model.Board) model.BoardAccess {
+	if b.TeamAccessInherited {
+		return ""
+	}
+	return b.TeamAccess
+}
+
+// BoardAccessInherit - значение teamAccess в запросе, возвращающее доску к уровню группы.
+const BoardAccessInherit = "inherit"
+
+func parseBoardAccess(s string) (model.BoardAccess, error) {
+	switch model.BoardAccess(s) {
+	case model.BoardAccessEdit, model.BoardAccessView, model.BoardAccessDeny:
+		return model.BoardAccess(s), nil
+	}
+	return "", fmt.Errorf("%w: unknown access %q", ErrValidation, s)
 }
 
 // GetByPublicID - лукап доски по короткому public_id (из URL).
@@ -794,11 +901,11 @@ func (s *BoardService) Create(ctx context.Context, id Identity, teamID uuid.UUID
 			}
 		}
 	}
+	// Доступ участников не задаём: новая доска наследует уровень группы.
 	board := &model.Board{
 		Name:              name,
 		TeamID:            teamID,
 		AccountID:         id.Account.ID,
-		TeamAccess:        model.BoardAccessEdit,
 		LinkAccessEnabled: false,
 		TemplateID:        templateID,
 	}
@@ -831,10 +938,17 @@ func (s *BoardService) Update(ctx context.Context, id Identity, boardID uuid.UUI
 	if err := s.requireBoardWrite(ctx, board, id.Account.ID); err != nil {
 		return nil, err
 	}
-	f := repository.BoardFields{
-		Name:              strings.TrimSpace(in.Name),
-		TeamAccess:        in.TeamAccess,
-		LinkAccessEnabled: in.LinkAccessEnabled,
+	f := repository.BoardFields{Name: strings.TrimSpace(in.Name), LinkAccessEnabled: in.LinkAccessEnabled}
+	switch in.TeamAccess {
+	case "":
+	case BoardAccessInherit:
+		f.TeamAccessInherit = true
+	default:
+		access, err := parseBoardAccess(in.TeamAccess)
+		if err != nil {
+			return nil, err
+		}
+		f.TeamAccess = access
 	}
 	if err := repo.Update(ctx, boardID, f); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -883,7 +997,7 @@ func (s *BoardService) Duplicate(ctx context.Context, id Identity, boardID uuid.
 		Name:       duplicateName(src.Name),
 		TeamID:     src.TeamID,
 		AccountID:  id.Account.ID,
-		TeamAccess: src.TeamAccess,
+		TeamAccess: overrideAccess(*src),
 		TemplateID: src.TemplateID,
 	}
 	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -920,7 +1034,11 @@ func (s *BoardService) Move(ctx context.Context, id Identity, boardID, teamID uu
 		if err := repo.Update(ctx, boardID, repository.BoardFields{TeamID: &teamID}); err != nil {
 			return nil, mapNotFound(err)
 		}
-		board.TeamID = teamID
+		// Перечитываем: наследуемый доступ теперь берётся из новой группы.
+		board, err = repo.GetByID(ctx, boardID)
+		if err != nil {
+			return nil, mapNotFound(err)
+		}
 	}
 	ownerName := id.Account.Name
 	if board.AccountID != id.Account.ID {

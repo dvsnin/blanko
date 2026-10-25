@@ -13,20 +13,21 @@ import (
 
 // BoardDTO - представление доски в API.
 type BoardDTO struct {
-	ID                string    `json:"id"`
-	PublicID          string    `json:"publicId"`
-	Name              string    `json:"name"`
-	TeamID            string    `json:"teamId"`
-	OwnerID           string    `json:"ownerId"`
-	OwnerName         string    `json:"ownerName"`
-	TeamAccess        string    `json:"teamAccess"`
-	LinkAccessEnabled bool      `json:"linkAccessEnabled"`
-	IsStarred         bool      `json:"isStarred"`
-	CanEdit           bool      `json:"canEdit"`
-	TemplateID        string    `json:"templateId"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
-	LastOpenedAt      string    `json:"lastOpenedAt"`
+	ID                  string    `json:"id"`
+	PublicID            string    `json:"publicId"`
+	Name                string    `json:"name"`
+	TeamID              string    `json:"teamId"`
+	OwnerID             string    `json:"ownerId"`
+	OwnerName           string    `json:"ownerName"`
+	TeamAccess          string    `json:"teamAccess"` // действующий: своя настройка или уровень группы
+	TeamAccessInherited bool      `json:"teamAccessInherited"`
+	LinkAccessEnabled   bool      `json:"linkAccessEnabled"`
+	IsStarred           bool      `json:"isStarred"`
+	CanEdit             bool      `json:"canEdit"`
+	TemplateID          string    `json:"templateId"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
+	LastOpenedAt        string    `json:"lastOpenedAt"`
 }
 
 func boardViewToDTO(v model.BoardView) BoardDTO {
@@ -39,20 +40,21 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 		lastOpened = v.Board.LastOpenedAt.Format(time.RFC3339)
 	}
 	return BoardDTO{
-		ID:                v.Board.ID.String(),
-		PublicID:          v.Board.PublicID,
-		Name:              v.Board.Name,
-		TeamID:            v.Board.TeamID.String(),
-		OwnerID:           v.Board.AccountID.String(),
-		OwnerName:         v.OwnerName,
-		TeamAccess:        string(v.Board.TeamAccess),
-		LinkAccessEnabled: v.Board.LinkAccessEnabled,
-		IsStarred:         v.IsStarred,
-		CanEdit:           v.CanEdit,
-		TemplateID:        templateID,
-		CreatedAt:         v.Board.CreatedAt,
-		UpdatedAt:         v.Board.UpdatedAt,
-		LastOpenedAt:      lastOpened,
+		ID:                  v.Board.ID.String(),
+		PublicID:            v.Board.PublicID,
+		Name:                v.Board.Name,
+		TeamID:              v.Board.TeamID.String(),
+		OwnerID:             v.Board.AccountID.String(),
+		OwnerName:           v.OwnerName,
+		TeamAccess:          string(v.Board.TeamAccess),
+		TeamAccessInherited: v.Board.TeamAccessInherited,
+		LinkAccessEnabled:   v.Board.LinkAccessEnabled,
+		IsStarred:           v.IsStarred,
+		CanEdit:             v.CanEdit,
+		TemplateID:          templateID,
+		CreatedAt:           v.Board.CreatedAt,
+		UpdatedAt:           v.Board.UpdatedAt,
+		LastOpenedAt:        lastOpened,
 	}
 }
 
@@ -80,7 +82,7 @@ type updateBoardRequest struct {
 	WithAccount
 	ID                string  `json:"id"`
 	Name              *string `json:"name,omitempty"`
-	TeamAccess        *string `json:"teamAccess,omitempty"`
+	TeamAccess        *string `json:"teamAccess,omitempty"` // edit | view | deny | inherit
 	LinkAccessEnabled *bool   `json:"linkAccessEnabled,omitempty"`
 }
 
@@ -171,7 +173,7 @@ func (a *API) UpdateBoard(w http.ResponseWriter, r *http.Request) {
 		in.Name = *req.Name
 	}
 	if req.TeamAccess != nil {
-		in.TeamAccess = model.BoardAccess(*req.TeamAccess)
+		in.TeamAccess = *req.TeamAccess
 	}
 	view, err := a.services.Board.Update(r.Context(), id, boardID, in)
 	if err != nil {
@@ -287,6 +289,8 @@ func (a *API) Register(r *mux.Router) {
 	post("/account/update", a.UpdateAccount)
 	post("/account/search", a.SearchAccounts)
 	post("/account/prefs", a.UpdateAccountPrefs)
+	post("/account/list", a.ListAccounts)
+	post("/account/role", a.SetAccountRole)
 
 	// Teams
 	post("/team/list", a.ListTeams)

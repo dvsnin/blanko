@@ -7,11 +7,13 @@ interface ProfileMenuProps {
   name: string;
   email: string;
   onProfile: () => void;
+  /** Раздел «Участники» для администратора сада; без обработчика пункта нет. */
+  onPeople?: () => void;
   onLogout: () => void;
   onClose: () => void;
 }
 
-export default function ProfileMenu({ name, email, onProfile, onLogout, onClose }: ProfileMenuProps) {
+export default function ProfileMenu({ name, email, onProfile, onPeople, onLogout, onClose }: ProfileMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEscapeKey(onClose);
@@ -25,6 +27,11 @@ export default function ProfileMenu({ name, email, onProfile, onLogout, onClose 
       <button type="button" className="menu-item" onClick={onProfile}>
         Мой профиль
       </button>
+      {onPeople && (
+        <button type="button" className="menu-item" onClick={onPeople}>
+          Участники сада
+        </button>
+      )}
       <button type="button" className="menu-item" onClick={onLogout}>
         Выйти
       </button>

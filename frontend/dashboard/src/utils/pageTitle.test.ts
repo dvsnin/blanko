@@ -8,6 +8,7 @@ describe("pageTitle", () => {
     expect(pageTitle({ name: "templates", age: "3-4" }, "Детский сад")).toBe("Шаблоны · Детский сад");
     expect(pageTitle({ name: "groups" }, "Детский сад")).toBe("Группы · Детский сад");
     expect(pageTitle({ name: "profile" }, "Детский сад")).toBe("Профиль · Детский сад");
+    expect(pageTitle({ name: "people" }, "Детский сад")).toBe("Участники · Детский сад");
   });
   it("без названия сада только раздел", () => {
     expect(pageTitle({ name: "boards" }, "")).toBe("Доски");

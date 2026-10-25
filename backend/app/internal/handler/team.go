@@ -17,6 +17,8 @@ type TeamDTO struct {
 	Role       string `json:"role"`
 	IsStarred  bool   `json:"isStarred"`
 	BoardCount int    `json:"boardCount"`
+	// Доступ участников к доскам группы по умолчанию; доска может переопределить.
+	MemberBoardAccess string `json:"memberBoardAccess"`
 	// Последние открытые доски группы (до 3), только видимые пользователю.
 	RecentBoards []BoardDTO `json:"recentBoards"`
 	AgeGroup     string     `json:"ageGroup"`
@@ -39,16 +41,17 @@ func teamViewToDTO(v model.TeamView) TeamDTO {
 		recent = append(recent, boardViewToDTO(b))
 	}
 	return TeamDTO{
-		ID:           v.Team.ID.String(),
-		Name:         v.Team.Name,
-		Role:         string(v.Role),
-		IsStarred:    v.IsStarred,
-		BoardCount:   v.BoardCount,
-		RecentBoards: recent,
-		AgeGroup:     ageGroup,
-		Teachers:     teachers,
-		CreatedAt:    v.Team.CreatedAt,
-		UpdatedAt:    v.Team.UpdatedAt,
+		ID:                v.Team.ID.String(),
+		Name:              v.Team.Name,
+		Role:              string(v.Role),
+		IsStarred:         v.IsStarred,
+		BoardCount:        v.BoardCount,
+		MemberBoardAccess: string(v.Team.MemberBoardAccess),
+		RecentBoards:      recent,
+		AgeGroup:          ageGroup,
+		Teachers:          teachers,
+		CreatedAt:         v.Team.CreatedAt,
+		UpdatedAt:         v.Team.UpdatedAt,
 	}
 }
 
@@ -71,6 +74,8 @@ type updateTeamRequest struct {
 	Name     *string `json:"name,omitempty"`
 	AgeGroup *string `json:"ageGroup,omitempty"`
 	Teachers *string `json:"teachers,omitempty"`
+	// Доступ участников к доскам группы по умолчанию: edit, view, deny.
+	MemberBoardAccess *string `json:"memberBoardAccess,omitempty"`
 }
 
 type teamIDRequest struct {
@@ -126,7 +131,7 @@ func (a *API) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_id", "invalid team id")
 		return
 	}
-	in := service.TeamUpdateInput{AgeGroup: req.AgeGroup, Teachers: req.Teachers}
+	in := service.TeamUpdateInput{AgeGroup: req.AgeGroup, Teachers: req.Teachers, MemberBoardAccess: req.MemberBoardAccess}
 	if req.Name != nil {
 		in.Name = *req.Name
 	}

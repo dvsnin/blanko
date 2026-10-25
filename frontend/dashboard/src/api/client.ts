@@ -125,6 +125,8 @@ export interface TeamDTO {
   boardCount: number;
   /** Последние открытые доски группы (до 3), только видимые пользователю. */
   recentBoards: BoardDTO[];
+  /** Доступ участников к доскам группы по умолчанию. */
+  memberBoardAccess: "deny" | "view" | "edit";
   ageGroup: string;
   teachers: string;
   createdAt: string;
@@ -138,7 +140,9 @@ export interface BoardDTO {
   teamId: string;
   ownerId: string;
   ownerName: string;
+  /** Действующий доступ участников группы: своя настройка доски или уровень группы. */
   teamAccess: "deny" | "view" | "edit";
+  teamAccessInherited: boolean;
   linkAccessEnabled: boolean;
   templateId: string;
   isStarred: boolean;
@@ -172,6 +176,13 @@ export interface BoardPage {
   total: number;
 }
 
+export interface AccountListDTO {
+  id: string;
+  name: string;
+  email: string;
+  orgRole: "owner" | "admin" | "member";
+}
+
 interface List<T> {
   items: T[];
 }
@@ -195,7 +206,7 @@ export const api = {
         ...(ageGroup ? { ageGroup } : {}),
         ...(teachers ? { teachers } : {}),
       }),
-    update: (id: string, patch: { name?: string; ageGroup?: string; teachers?: string }) =>
+    update: (id: string, patch: { name?: string; ageGroup?: string; teachers?: string; memberBoardAccess?: "deny" | "view" | "edit" }) =>
       post<TeamDTO>("/team/update", { id, ...patch }),
     delete: (id: string) => post<void>("/team/delete", { id }),
     leave: (id: string) => post<void>("/team/leave", { id }),
@@ -212,6 +223,10 @@ export const api = {
   accounts: {
     /** Все учётные записи сада по части имени или почты; пустой запрос - все. */
     search: (q: string) => post<List<AccountSearchDTO>>("/account/search", { q }).then((r) => r.items ?? []),
+    /** Все учётные записи с ролями организации; только администратору. */
+    list: () => post<List<AccountListDTO>>("/account/list", {}).then((r) => r.items ?? []),
+    /** Назначить или снять администратора сада. */
+    setRole: (id: string, role: "admin" | "member") => post<AccountListDTO>("/account/role", { id, role }),
   },
 
   boards: {

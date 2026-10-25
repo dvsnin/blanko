@@ -1,5 +1,5 @@
-// Package bootstrap: одна организация и роли админов из ADMIN_EMAILS.
-// Выполняется при каждом старте после миграций, идемпотентен.
+// Package bootstrap: одна организация и гарантированные админы из ADMIN_EMAILS.
+// Выполняется при каждом старте после миграций, идемпотентен; снятие прав - только в кабинете.
 package bootstrap
 
 import (
@@ -9,7 +9,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,25 +30,14 @@ func NormalizeEmails(raw string) []string {
 	return out
 }
 
-// PlanMembership: promote - кого сделать admin, demote - кого понизить до member. owner не трогается.
-func PlanMembership(current []model.OrganizationMember, admins []string) (promote []string, demote []uuid.UUID) {
+// PlanMembership: кого из ADMIN_EMAILS сделать администратором. Понижений нет: роли, назначенные
+// в кабинете, живут дальше, а список из env лишь гарантирует, что эти люди всегда администраторы.
+func PlanMembership(current []model.OrganizationMember, admins []string) (promote []string) {
 	promote = []string{}
-	demote = []uuid.UUID{}
-	wanted := map[string]bool{}
-	for _, e := range admins {
-		wanted[e] = true
-	}
 	elevated := map[string]bool{}
 	for _, m := range current {
-		email := strings.ToLower(m.Email)
-		switch m.Role {
-		case model.OrgRoleOwner:
-			elevated[email] = true
-		case model.OrgRoleAdmin:
-			elevated[email] = true
-			if !wanted[email] {
-				demote = append(demote, m.AccountID)
-			}
+		if m.Role.IsAdmin() {
+			elevated[strings.ToLower(m.Email)] = true
 		}
 	}
 	for _, e := range admins {
@@ -57,7 +45,7 @@ func PlanMembership(current []model.OrganizationMember, admins []string) (promot
 			promote = append(promote, e)
 		}
 	}
-	return promote, demote
+	return promote
 }
 
 func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []string) error {
@@ -91,7 +79,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []
 		if err != nil {
 			return fmt.Errorf("list members: %w", err)
 		}
-		promote, demote := PlanMembership(members, adminEmails)
+		promote := PlanMembership(members, adminEmails)
 		for _, email := range promote {
 			acc, err := ensureAccount(ctx, accounts, email)
 			if err != nil {
@@ -101,12 +89,6 @@ func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []
 				return fmt.Errorf("promote %s: %w", email, err)
 			}
 			log.Printf("bootstrap: %s - администратор", email)
-		}
-		for _, id := range demote {
-			if err := orgs.SetMemberRole(ctx, org.ID, id, model.OrgRoleMember); err != nil {
-				return fmt.Errorf("demote %s: %w", id, err)
-			}
-			log.Printf("bootstrap: аккаунт %s понижен до пользователя", id)
 		}
 		return nil
 	})

@@ -269,12 +269,12 @@ export default function GroupsPage() {
         <TeamSettingsModal
           team={editing}
           onClose={() => setEditing(null)}
-          onSave={async (teamId, { name, ageGroup, teachers }) => {
+          onSave={async (teamId, { name, ageGroup, teachers, memberBoardAccess }) => {
             try {
               if ("create" in editing) {
                 await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined, teachers: teachers || undefined });
               } else {
-                await updateTeam(teamId, { name, ageGroup, teachers });
+                await updateTeam(teamId, { name, ageGroup, teachers, memberBoardAccess });
               }
             } catch (e) {
               showToast("Не удалось сохранить группу");

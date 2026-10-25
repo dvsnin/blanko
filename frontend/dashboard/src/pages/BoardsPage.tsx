@@ -171,7 +171,7 @@ export default function BoardsPage() {
     closeMenu();
   };
 
-  const handleAccessChange = (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => {
+  const handleAccessChange = (boardId: string, patch: { teamAccess?: BoardAccess | "inherit"; linkAccessEnabled?: boolean }) => {
     void updateBoardAccess(boardId, patch).catch(() => showToast("Не удалось изменить доступ"));
   };
 
@@ -662,12 +662,12 @@ export default function BoardsPage() {
         <TeamSettingsModal
           team={teamModal === "create" ? NEW_TEAM : activeTeam!}
           onClose={() => setTeamModal(null)}
-          onSave={async (teamId, { name, ageGroup, teachers }) => {
+          onSave={async (teamId, { name, ageGroup, teachers, memberBoardAccess }) => {
             try {
               if (teamModal === "create") {
                 await createTeam({ name, ageGroup: (ageGroup || undefined) as AgeKey | undefined, teachers: teachers || undefined });
               } else {
-                await updateTeam(teamId, { name, ageGroup, teachers });
+                await updateTeam(teamId, { name, ageGroup, teachers, memberBoardAccess });
               }
             } catch (e) {
               showToast("Не удалось сохранить группу");
@@ -753,6 +753,9 @@ export default function BoardsPage() {
           view: "Участники открывают доску без права правки",
           deny: "Доска видна только вам и администраторам группы",
         };
+        const accessWord: Record<BoardAccess, string> = { edit: "редактируют", view: "только смотрят", deny: "не видят" };
+        const groupAccess = activeTeam?.memberBoardAccess ?? "edit";
+        const selected = board.teamAccessInherited ? "inherit" : access;
         return (
           <Modal isOpen onClose={closeDialog} title="Доступ к доске">
             <div className="boards-modal-body">
@@ -761,14 +764,19 @@ export default function BoardsPage() {
                 <select
                   id="board-access-team"
                   className="boards-modal-input"
-                  value={access}
-                  onChange={(e) => handleAccessChange(board.id, { teamAccess: e.target.value as BoardAccess })}
+                  value={selected}
+                  onChange={(e) => handleAccessChange(board.id, { teamAccess: e.target.value as BoardAccess | "inherit" })}
                 >
+                  <option value="inherit">Как в группе: {accessWord[groupAccess]}</option>
                   <option value="edit">Редактируют</option>
                   <option value="view">Только смотрят</option>
                   <option value="deny">Не видят</option>
                 </select>
-                <p className="ts-section-text">{accessHint[access]}</p>
+                <p className="ts-section-text">
+                  {board.teamAccessInherited
+                    ? `${accessHint[access]}. Уровень задан в настройках группы и меняется там для всех её досок сразу`
+                    : `${accessHint[access]}. Своя настройка этой доски, уровень группы на неё не влияет`}
+                </p>
               </div>
               <div className="ts-section">
                 <label className="field-label ts-section-label" htmlFor="board-access-link">Доступ по ссылке</label>

@@ -70,7 +70,7 @@ export interface TeamsContextValue {
 
   setActiveTeamId: (id: string | null) => void;
   createTeam: (opts: { name: string; ageGroup?: AgeKey; teachers?: string }) => Promise<void>;
-  updateTeam: (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string }) => Promise<void>;
+  updateTeam: (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string; memberBoardAccess?: BoardAccess }) => Promise<void>;
   deleteTeam: (teamId: string) => Promise<void>;
   leaveTeam: (teamId: string) => Promise<void>;
   toggleStarTeam: (teamId: string) => Promise<void>;
@@ -81,8 +81,8 @@ export interface TeamsContextValue {
   duplicateBoard: (boardId: string) => Promise<Board | null>;
   /** Перенос доски в другую группу пользователя. */
   moveBoard: (boardId: string, teamId: string) => Promise<void>;
-  /** Доступ участников группы к содержимому и доступ по ссылке. */
-  updateBoardAccess: (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => Promise<void>;
+  /** Доступ участников группы к содержимому ("inherit" - как в группе) и доступ по ссылке. */
+  updateBoardAccess: (boardId: string, patch: { teamAccess?: BoardAccess | "inherit"; linkAccessEnabled?: boolean }) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
   /** Оптимистично помечает доску открытой сейчас (сервер сам обновляет при открытии). */
   markBoardOpened: (boardId: string) => void;
@@ -111,6 +111,7 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     isStarred: dto.isStarred,
     canEdit: dto.canEdit,
     teamAccess: dto.teamAccess,
+    teamAccessInherited: dto.teamAccessInherited,
     linkAccessEnabled: dto.linkAccessEnabled,
     templateId: dto.templateId || undefined,
   };
@@ -126,6 +127,7 @@ export function teamFromDTO(dto: TeamDTO): Team {
     isStarred: dto.isStarred,
     ageGroup: (dto.ageGroup || undefined) as AgeKey | undefined,
     teachers: dto.teachers || undefined,
+    memberBoardAccess: dto.memberBoardAccess || undefined,
   };
 }
 
@@ -374,9 +376,10 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
   }, [selectTeam]);
 
   const updateTeam = useCallback(
-    async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string }) => {
+    async (teamId: string, patch: { name?: string; ageGroup?: AgeKey | ""; teachers?: string; memberBoardAccess?: BoardAccess }) => {
     try {
       const updated = await api.teams.update(teamId, patch);
+      const access = updated.memberBoardAccess || undefined;
       setTeams((prev) =>
         prev.map((t) =>
           t.id === teamId
@@ -385,16 +388,22 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
                 name: updated.name,
                 ageGroup: (updated.ageGroup || undefined) as AgeKey | undefined,
                 teachers: updated.teachers || undefined,
+                memberBoardAccess: access,
+                recentBoards: t.recentBoards.map((b) => (b.teamAccessInherited && access ? { ...b, teamAccess: access } : b)),
               }
             : t,
         ),
       );
+      // Доски без своей настройки сразу показывают новый уровень группы.
+      if (access && teamId === activeTeamId) {
+        setBoardList((prev) => ({ ...prev, items: prev.items.map((b) => (b.teamAccessInherited ? { ...b, teamAccess: access } : b)) }));
+      }
     } catch (e) {
       console.error("updateTeam failed:", e);
       throw e;
     }
     },
-    [],
+    [activeTeamId],
   );
 
   const deleteTeam = useCallback(async (teamId: string) => {
@@ -519,10 +528,10 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, [activeTeamId, findBoard, removeBoard, addBoard]);
 
-  const updateBoardAccess = useCallback(async (boardId: string, patch: { teamAccess?: BoardAccess; linkAccessEnabled?: boolean }) => {
+  const updateBoardAccess = useCallback(async (boardId: string, patch: { teamAccess?: BoardAccess | "inherit"; linkAccessEnabled?: boolean }) => {
     try {
       const updated = await api.boards.update(boardId, patch);
-      patchBoard(boardId, (b) => ({ ...b, teamAccess: updated.teamAccess, linkAccessEnabled: updated.linkAccessEnabled }));
+      patchBoard(boardId, (b) => ({ ...b, teamAccess: updated.teamAccess, teamAccessInherited: updated.teamAccessInherited, linkAccessEnabled: updated.linkAccessEnabled }));
     } catch (e) {
       console.error("updateBoardAccess failed:", e);
       throw e;

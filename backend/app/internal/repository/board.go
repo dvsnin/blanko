@@ -24,8 +24,10 @@ func NewBoardRepo(db DBTX) *BoardRepo {
 
 // BoardFields - набор полей для частичного апдейта доски.
 type BoardFields struct {
-	Name              string
+	Name string
+	// TeamAccess - своя настройка доски; TeamAccessInherit сбрасывает её в «как в группе».
 	TeamAccess        model.BoardAccess
+	TeamAccessInherit bool
 	LinkAccessEnabled *bool
 	// TeamID - перенос доски в другую команду.
 	TeamID *uuid.UUID
@@ -43,63 +45,68 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 		}
 		b.PublicID = pid
 	}
-	if b.TeamAccess == "" {
-		b.TeamAccess = model.BoardAccessEdit
-	}
 	now := time.Now().UTC()
 	b.CreatedAt = now
 	b.UpdatedAt = now
 	b.LastOpenedAt = &now
 
+	// Пустой TeamAccess - доска наследует уровень группы (NULL в колонке).
+	var access *model.BoardAccess
+	if b.TeamAccess != "" {
+		access = &b.TeamAccess
+	}
 	q := psql.Insert("board").
 		Columns("id", "public_id", "name", "team_id", "account_id", "team_access", "link_access_enabled", "template_id", "created_at", "updated_at", "last_opened_at").
-		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, b.TeamAccess, b.LinkAccessEnabled, b.TemplateID, b.CreatedAt, b.UpdatedAt, b.LastOpenedAt)
-	_, err := execBuilder(ctx, r.db, q)
-	return err
+		Values(b.ID, b.PublicID, b.Name, b.TeamID, b.AccountID, access, b.LinkAccessEnabled, b.TemplateID, b.CreatedAt, b.UpdatedAt, b.LastOpenedAt)
+	if _, err := execBuilder(ctx, r.db, q); err != nil {
+		return err
+	}
+	// Перечитываем действующий доступ: он зависит от группы.
+	fresh, err := r.GetByID(ctx, b.ID)
+	if err != nil {
+		return err
+	}
+	*b = *fresh
+	return nil
+}
+
+// boardColumns - колонки доски с действующим доступом участников: своя настройка или уровень группы.
+var boardColumns = []string{
+	"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id",
+	"COALESCE(b.team_access, t.member_board_access) AS team_access", "(b.team_access IS NULL) AS team_access_inherited",
+	"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
+}
+
+func scanBoard(row interface{ Scan(dest ...any) error }, m *model.Board) error {
+	return row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
+		&m.TeamAccess, &m.TeamAccessInherited, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt, &m.LastOpenedAt)
+}
+
+func (r *BoardRepo) getBy(ctx context.Context, where string, arg any) (*model.Board, error) {
+	b := psql.Select(boardColumns...).From("board b").Join("team t ON t.id = b.team_id").
+		Where(where, arg).Limit(1)
+	row, err := queryRowBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
+	var m model.Board
+	if err := scanBoard(row, &m); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &m, nil
 }
 
 // GetByID возвращает доску по UUID.
 func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, error) {
-	b := psql.Select("id", "public_id", "name", "team_id", "account_id", "team_access",
-		"link_access_enabled", "template_id", "created_at", "updated_at", "last_opened_at").
-		From("board").
-		Where("id = ? AND deleted_at IS NULL", id).Limit(1)
-
-	row, err := queryRowBuilder(ctx, r.db, b)
-	if err != nil {
-		return nil, err
-	}
-	var m model.Board
-	if err := row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
-		&m.TeamAccess, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt, &m.LastOpenedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	return &m, nil
+	return r.getBy(ctx, "b.id = ? AND b.deleted_at IS NULL", id)
 }
 
 // GetByPublicID возвращает доску по её короткому public_id (из URL доски).
 func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
-	b := psql.Select("id", "public_id", "name", "team_id", "account_id", "team_access",
-		"link_access_enabled", "template_id", "created_at", "updated_at", "last_opened_at").
-		From("board").
-		Where("public_id = ? AND deleted_at IS NULL", publicID).Limit(1)
-
-	row, err := queryRowBuilder(ctx, r.db, b)
-	if err != nil {
-		return nil, err
-	}
-	var m model.Board
-	if err := row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
-		&m.TeamAccess, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt, &m.LastOpenedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	return &m, nil
+	return r.getBy(ctx, "b.public_id = ? AND b.deleted_at IS NULL", publicID)
 }
 
 // BoardSort - сортировка списка досок; ключи keyset-курсора совпадают с ORDER BY.
@@ -150,8 +157,8 @@ func visibleBoardSQL(b sq.SelectBuilder, viewerID uuid.UUID, orgAdmin bool) sq.S
 	return b.Where(visibleBoardCond, orgAdmin, viewerID)
 }
 
-// visibleBoardCond ждёт доску как b и членство зрителя как tm; аргументы: orgAdmin, viewerID.
-const visibleBoardCond = "(? OR b.account_id = ? OR tm.role IN ('owner', 'admin') OR b.team_access <> 'deny')"
+// visibleBoardCond ждёт доску как b, её группу как t и членство зрителя как tm; аргументы: orgAdmin, viewerID.
+const visibleBoardCond = "(? OR b.account_id = ? OR tm.role IN ('owner', 'admin') OR COALESCE(b.team_access, t.member_board_access) <> 'deny')"
 
 // boardListFrom - общая часть списка и счётчика: доски живых команд зрителя с его ролью и избранным.
 func boardListFrom(b sq.SelectBuilder, f BoardListFilter) sq.SelectBuilder {
@@ -182,9 +189,7 @@ func boardListFrom(b sq.SelectBuilder, f BoardListFilter) sq.SelectBuilder {
 // ListBoards возвращает страницу досок и курсор на следующую (nil, если дальше пусто).
 // Страница запрашивается на одну строку больше лимита, чтобы не делать отдельный запрос «есть ли ещё».
 func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.BoardView, *BoardCursor, error) {
-	b := psql.Select(
-		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
-		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
+	b := psql.Select(boardColumns...).Columns(
 		"a.name",
 		"(bs.board_id IS NOT NULL) AS is_starred",
 		"tm.role",
@@ -226,7 +231,7 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 		var key string
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
-			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
+			&bv.Board.TeamAccess, &bv.Board.TeamAccessInherited, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
 			&bv.ViewerRole,
@@ -252,9 +257,7 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 // RecentByTeams - до perTeam последних открытых видимых досок в каждой команде зрителя, одним
 // запросом через LATERAL: карточкам групп в кабинете не нужен полный список.
 func (r *BoardRepo) RecentByTeams(ctx context.Context, viewerID uuid.UUID, orgAdmin bool, perTeam int) ([]model.BoardView, error) {
-	b := psql.Select(
-		"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id", "b.team_access",
-		"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
+	b := psql.Select(boardColumns...).Columns(
 		"a.name",
 		"(bs.board_id IS NOT NULL) AS is_starred",
 		"tm.role",
@@ -277,7 +280,7 @@ func (r *BoardRepo) RecentByTeams(ctx context.Context, viewerID uuid.UUID, orgAd
 		var bv model.BoardView
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
-			&bv.Board.TeamAccess, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
+			&bv.Board.TeamAccess, &bv.Board.TeamAccessInherited, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
 			&bv.ViewerRole,
@@ -310,7 +313,10 @@ func (r *BoardRepo) Update(ctx context.Context, id uuid.UUID, f BoardFields) err
 		b = b.Set("name", f.Name)
 		touched = true
 	}
-	if f.TeamAccess != "" {
+	if f.TeamAccessInherit {
+		b = b.Set("team_access", nil)
+		touched = true
+	} else if f.TeamAccess != "" {
 		b = b.Set("team_access", f.TeamAccess)
 		touched = true
 	}

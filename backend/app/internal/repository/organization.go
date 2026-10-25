@@ -116,3 +116,24 @@ func (r *OrganizationRepo) SetMemberRole(ctx context.Context, orgID, accountID u
 	_, err := execBuilder(ctx, r.db, b)
 	return err
 }
+
+// Lock берёт строку организации под запись на время транзакции: смена ролей считает админов
+// и не должна пересекаться с другой такой же сменой.
+func (r *OrganizationRepo) Lock(ctx context.Context, orgID uuid.UUID) error {
+	_, err := execBuilder(ctx, r.db, psql.Select("id").From("organization").Where("id = ?", orgID).Suffix("FOR UPDATE"))
+	return err
+}
+
+// CountAdmins - сколько в организации владельцев и администраторов.
+func (r *OrganizationRepo) CountAdmins(ctx context.Context, orgID uuid.UUID) (int, error) {
+	row, err := queryRowBuilder(ctx, r.db, psql.Select("COUNT(*)").From("organization_member").
+		Where("organization_id = ? AND role IN ('owner', 'admin')", orgID))
+	if err != nil {
+		return 0, err
+	}
+	var n int
+	if err := row.Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
+}

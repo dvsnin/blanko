@@ -6,7 +6,7 @@ import { teamDTOs, firstBoard, boardDTO, page } from "./TeamsContext.boards.fixt
 
 vi.mock("../api/client", () => ({
   api: {
-    teams: { list: vi.fn() },
+    teams: { list: vi.fn(), update: vi.fn() },
     boards: { list: vi.fn(), duplicate: vi.fn(), move: vi.fn(), update: vi.fn() },
   },
 }));
@@ -14,7 +14,7 @@ vi.mock("../api/client", () => ({
 const FIRST_PAGE = { teamId: "t1", segment: "all", sort: "recent", q: "", limit: 24 };
 
 function Probe() {
-  const { teams, activeBoards, boardList, loadMoreBoards, setBoardQuery, otherMatches, duplicateBoard, moveBoard, updateBoardAccess } = useTeams();
+  const { teams, activeBoards, boardList, loadMoreBoards, setBoardQuery, otherMatches, duplicateBoard, moveBoard, updateBoardAccess, updateTeam } = useTeams();
   return (
     <div>
       {teams.map((t) => (
@@ -22,11 +22,14 @@ function Probe() {
       ))}
       <span data-testid="list">{activeBoards.map((b) => b.title).join("|")}</span>
       <span data-testid="meta">{boardList.total}:{String(boardList.hasMore)}</span>
-      <span data-testid="access">{activeBoards.map((b) => `${b.id}:${b.teamAccess}:${b.linkAccessEnabled}`).join(",")}</span>
+      <span data-testid="access">{activeBoards.map((b) => `${b.id}:${b.teamAccess}:${b.linkAccessEnabled}${b.teamAccessInherited ? ":inherited" : ""}`).join(",")}</span>
+      <span data-testid="team-access">{teams.map((t) => `${t.id}:${t.memberBoardAccess ?? "-"}`).join(",")}</span>
       <span data-testid="others">{otherMatches.map((m) => `${m.board.title}@${m.team.name}`).join("|")}</span>
       <button onClick={() => void duplicateBoard("b1")}>dup</button>
       <button onClick={() => void moveBoard("b1", "t2")}>move</button>
       <button onClick={() => void updateBoardAccess("b1", { teamAccess: "view", linkAccessEnabled: true })}>access</button>
+      <button onClick={() => void updateBoardAccess("b1", { teamAccess: "inherit" })}>inherit</button>
+      <button onClick={() => void updateTeam("t1", { memberBoardAccess: "view" })}>team-view</button>
       <button onClick={() => void loadMoreBoards()}>more</button>
       <button onClick={() => setBoardQuery({ segment: "mine", sort: "name", q: "" })}>mine</button>
       <button onClick={() => setBoardQuery({ segment: "all", sort: "recent", q: "пер" })}>search</button>
@@ -108,12 +111,29 @@ describe("TeamsContext: мутации правят страницу и карт
   });
 
   it("updateBoardAccess обновляет доступ доски из ответа сервера", async () => {
-    vi.mocked(api.boards.update).mockResolvedValue({ ...boardDTO("b1", "t1", "Первая"), teamAccess: "view", linkAccessEnabled: true });
+    vi.mocked(api.boards.update).mockResolvedValue({ ...boardDTO("b1", "t1", "Первая"), teamAccess: "view", teamAccessInherited: false, linkAccessEnabled: true });
     render(<TeamsProvider><Probe /></TeamsProvider>);
-    await waitFor(() => expect(screen.getByTestId("access").textContent).toBe("b1:edit:false"));
+    await waitFor(() => expect(screen.getByTestId("access").textContent).toBe("b1:edit:false:inherited"));
     await act(async () => { screen.getByText("access").click(); });
     expect(api.boards.update).toHaveBeenCalledWith("b1", { teamAccess: "view", linkAccessEnabled: true });
     expect(screen.getByTestId("access").textContent).toBe("b1:view:true");
+  });
+
+  it("уровень доступа группы: действует на доски без своей настройки, своя настройка переопределяет, «как в группе» возвращает", async () => {
+    vi.mocked(api.boards.list).mockResolvedValue(page([{ ...firstBoard, teamAccessInherited: true }, { ...boardDTO("b2", "t1", "Своя"), teamAccess: "deny", teamAccessInherited: false }]));
+    vi.mocked(api.teams.update).mockResolvedValue({ ...teamDTOs[0], memberBoardAccess: "view" });
+    render(<TeamsProvider><Probe /></TeamsProvider>);
+    await waitFor(() => expect(screen.getByTestId("access").textContent).toBe("b1:edit:false:inherited,b2:deny:false"));
+    expect(screen.getByTestId("team-access").textContent).toBe("t1:edit,t2:edit");
+
+    await act(async () => { screen.getByText("team-view").click(); });
+    expect(api.teams.update).toHaveBeenCalledWith("t1", { memberBoardAccess: "view" });
+    expect(screen.getByTestId("team-access").textContent).toBe("t1:view,t2:edit");
+    expect(screen.getByTestId("access").textContent).toBe("b1:view:false:inherited,b2:deny:false");
+
+    vi.mocked(api.boards.update).mockResolvedValue({ ...firstBoard, teamAccess: "view", teamAccessInherited: true });
+    await act(async () => { screen.getByText("inherit").click(); });
+    expect(api.boards.update).toHaveBeenCalledWith("b1", { teamAccess: "inherit" });
   });
 
   it("moveBoard убирает доску из списка и переносит её в последние доски целевой группы", async () => {

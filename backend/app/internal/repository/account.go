@@ -104,6 +104,28 @@ func (r *AccountRepo) Search(ctx context.Context, q string, limit uint64) ([]mod
 	return out, rows.Err()
 }
 
+// ListWithRoles - все живые учётные записи с ролью в организации; без строки членства - member.
+func (r *AccountRepo) ListWithRoles(ctx context.Context, orgID uuid.UUID) ([]model.AccountWithRole, error) {
+	b := psql.Select("a.id", "a.email", "a.name", "a.created_at", "a.updated_at", "COALESCE(om.role, 'member')").
+		From("account a").
+		LeftJoin("organization_member om ON om.account_id = a.id AND om.organization_id = ?", orgID).
+		Where("a.deleted_at IS NULL")
+	rows, err := queryBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.AccountWithRole
+	for rows.Next() {
+		var a model.AccountWithRole
+		if err := rows.Scan(&a.Account.ID, &a.Account.Email, &a.Account.Name, &a.Account.CreatedAt, &a.Account.UpdatedAt, &a.Role); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 func escapeLike(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, "%", `\%`)

@@ -1,0 +1,15 @@
+.people__sub { margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--muted); }
+.people__toolbar { display: flex; align-items: center; gap: 20px; margin-bottom: 16px; }
+.people__search { flex: 0 0 360px; }
+.people__hint { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); line-height: 1.4; }
+.people__who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.people__you { color: var(--muted); font-weight: 600; }
+.people__email { font-size: 13px; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people__role { flex: 0 0 auto; }
+.people__role--admin { background: var(--teal-bg); color: var(--teal); }
+.people__row .profile__open { white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .people__toolbar { flex-direction: column; align-items: stretch; }
+  .people__search { flex: 1 1 auto; }
+}

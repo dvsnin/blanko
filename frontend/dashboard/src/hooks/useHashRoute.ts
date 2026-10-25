@@ -5,7 +5,8 @@ export type Route =
   | { name: "boards" }
   | { name: "templates"; age?: AgeKey }
   | { name: "groups" }
-  | { name: "profile" };
+  | { name: "profile" }
+  | { name: "people" };
 
 export function parseHash(hash: string): Route {
   const raw = hash.replace(/^#/, "");
@@ -20,6 +21,8 @@ export function parseHash(hash: string): Route {
       return { name: "groups" };
     case "/profile":
       return { name: "profile" };
+    case "/people":
+      return { name: "people" };
     default:
       return { name: "boards" };
   }
@@ -33,6 +36,8 @@ export function routeToHash(r: Route): string {
       return "#/groups";
     case "profile":
       return "#/profile";
+    case "people":
+      return "#/people";
     default:
       return "#/";
   }

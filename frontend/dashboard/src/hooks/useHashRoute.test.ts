@@ -3,6 +3,11 @@ import { renderHook, act } from '@testing-library/react';
 import { parseHash, routeToHash, navigate, useHashRoute, type Route } from './useHashRoute';
 
 describe('parseHash', () => {
+  it('people route for the admin section', () => {
+    expect(parseHash('#/people')).toEqual({ name: 'people' });
+    expect(routeToHash({ name: 'people' })).toBe('#/people');
+  });
+
   it('maps empty and root hashes to boards', () => {
     expect(parseHash('')).toEqual({ name: 'boards' });
     expect(parseHash('#')).toEqual({ name: 'boards' });
