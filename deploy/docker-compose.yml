@@ -9,11 +9,6 @@ services:
       - "80:80"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-    networks:
-      default:
-        aliases:
-          - blanko.localhost
-          - keycloak.localhost
 
   postgres_backend:
     image: postgres:17
@@ -54,19 +49,18 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
 
-      KC_HOSTNAME: keycloak.localhost
-      KC_HOSTNAME_STRICT: "false"
-      KC_PROXY: edge
+      # Keycloak публикуется напрямую на localhost:8081, минуя Traefik. Issuer токенов фиксирован этим
+      # адресом, а backchannel из сети compose (oauth2-proxy -> keycloak:8080) разрешён отдельно.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8081:8080"
     volumes:
       - ./keycloak:/opt/keycloak/data/import
       - ./keycloak/themes/blanko:/opt/keycloak/themes/blanko
     depends_on:
       - postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.keycloak.rule=Host(`keycloak.localhost`)"
-      - "traefik.http.routers.keycloak.entrypoints=web"
-      - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
@@ -80,9 +74,14 @@ services:
     command:
       - --http-address=0.0.0.0:4180
 
-      # OIDC / Keycloak
+      # OIDC / Keycloak. Браузер ходит в Keycloak на localhost:8081, oauth2-proxy внутри сети compose
+      # на keycloak:8080, поэтому discovery выключен и адреса заданы явно; issuer проверяется по публичному.
       - --provider=oidc
-      - --oidc-issuer-url=http://keycloak.localhost/realms/blanko
+      - --oidc-issuer-url=http://localhost:8081/realms/blanko
+      - --skip-oidc-discovery=true
+      - --login-url=http://localhost:8081/realms/blanko/protocol/openid-connect/auth
+      - --redeem-url=http://keycloak:8080/realms/blanko/protocol/openid-connect/token
+      - --oidc-jwks-url=http://keycloak:8080/realms/blanko/protocol/openid-connect/certs
       - --client-id=blanko
       - --client-secret=${OIDC_CLIENT_SECRET}
       - --scope=openid profile email
@@ -90,7 +89,7 @@ services:
       - --insecure-oidc-allow-unverified-email=true
 
       # куда редиректить после логина
-      - --redirect-url=http://blanko.localhost/oauth2/callback
+      - --redirect-url=http://localhost/oauth2/callback
 
       # upstream = твой backend
       - --upstream=http://backend:8080/
@@ -108,7 +107,7 @@ services:
       - --skip-provider-button=true
 
       # разрешаем редирект на Keycloak после /oauth2/sign_out?rd=...
-      - --whitelist-domain=keycloak.localhost
+      - --whitelist-domain=localhost:8081
 
       # прокидываем заголовки в backend
       - --pass-user-headers=true
@@ -119,8 +118,8 @@ services:
 
     labels:
       - "traefik.enable=true"
-      # весь трафик на blanko.localhost идёт в oauth2-proxy
-      - "traefik.http.routers.app.rule=Host(`blanko.localhost`)"
+      # весь трафик на :80 идёт в oauth2-proxy, каким бы именем ни назвали хост (localhost, IP, имя в сети сада)
+      - "traefik.http.routers.app.rule=PathPrefix(`/`)"
       - "traefik.http.routers.app.entrypoints=web"
       - "traefik.http.services.app.loadbalancer.server.port=4180"
       - "traefik.http.routers.app.middlewares=strip-gap-auth"
@@ -135,6 +134,7 @@ services:
       TLDRAW_LICENSE_KEY: ${TLDRAW_LICENSE_KEY}
       ORG_NAME: ${APP_ORG_NAME}
       ADMIN_EMAILS: ${APP_ADMIN_EMAILS}
+      KEYCLOAK_PUBLIC_URL: http://localhost:8081
       S3_ENDPOINT: http://rustfs:9000
       S3_ACCESS_KEY: ${APP_S3_ACCESS_KEY}
       S3_SECRET_KEY: ${APP_S3_SECRET_KEY}

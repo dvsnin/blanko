@@ -22,6 +22,8 @@ type Config struct {
 	// локально (HTTP на loopback) SDK считает окружение разработкой и ключ
 	// не требует. Ключ публичный по дизайну - проверяется на клиенте.
 	TldrawLicenseKey string
+	// KeycloakPublicURL - адрес Keycloak, по которому к нему ходит браузер (RP-initiated logout).
+	KeycloakPublicURL string
 	// OrgName создаётся при первом старте.
 	OrgName string
 	// AdminEmails из ADMIN_EMAILS: первый - владелец, остальные админы.
@@ -53,7 +55,8 @@ func Load() (*Config, error) {
 		MigrationsDir: getEnv("MIGRATIONS_DIR", "migration"),
 		RunMigrations: getEnvBool("RUN_MIGRATIONS", true),
 
-		TldrawLicenseKey: getEnv("TLDRAW_LICENSE_KEY", ""),
+		TldrawLicenseKey:  getEnv("TLDRAW_LICENSE_KEY", ""),
+		KeycloakPublicURL: strings.TrimRight(getEnv("KEYCLOAK_PUBLIC_URL", "http://localhost:8081"), "/"),
 
 		OrgName:     getEnv("ORG_NAME", "Детский сад"),
 		AdminEmails: splitList(getEnv("ADMIN_EMAILS", "")),

@@ -29,15 +29,18 @@ type Server struct {
 	// tldrawLicenseKey прокидывается в canvas-страницу. Пустая строка -
 	// валидное состояние: локально tldraw работает без лицензии.
 	tldrawLicenseKey string
+	// keycloakPublicURL - куда отправлять браузер на выход из Keycloak.
+	keycloakPublicURL string
 }
 
 // New создаёт сервер, прикрученный к pgxpool и сервисам.
-func New(pool *pgxpool.Pool, services *service.Services, tldrawLicenseKey string, mediaMaxBytes int64) *Server {
+func New(pool *pgxpool.Pool, services *service.Services, tldrawLicenseKey, keycloakPublicURL string, mediaMaxBytes int64) *Server {
 	return &Server{
-		pool:             pool,
-		services:         services,
-		api:              handler.NewAPI(services, mediaMaxBytes),
-		tldrawLicenseKey: tldrawLicenseKey,
+		pool:              pool,
+		services:          services,
+		api:               handler.NewAPI(services, mediaMaxBytes),
+		tldrawLicenseKey:  tldrawLicenseKey,
+		keycloakPublicURL: keycloakPublicURL,
 	}
 }
 
@@ -96,11 +99,14 @@ func (s *Server) Router() http.Handler {
 // Чтобы Keycloak не показывал экран подтверждения logout, передаём id_token_hint.
 // id_token приходит в заголовке Authorization (флаг --pass-authorization-header=true в oauth2-proxy).
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	const (
-		keycloakLogout   = "http://keycloak.localhost/realms/blanko/protocol/openid-connect/logout"
-		postLogoutRedir  = "http://blanko.localhost/app/dashboard"
-		keycloakClientID = "blanko"
-	)
+	const keycloakClientID = "blanko"
+	keycloakLogout := s.keycloakPublicURL + "/realms/blanko/protocol/openid-connect/logout"
+	// Возвращаемся на тот хост, с которого вышли: localhost, IP или имя в сети сада.
+	scheme := "http"
+	if p := r.Header.Get("X-Forwarded-Proto"); p != "" {
+		scheme = p
+	}
+	postLogoutRedir := scheme + "://" + r.Host + "/app/dashboard"
 
 	kcURL := fmt.Sprintf(
 		"%s?client_id=%s&post_logout_redirect_uri=%s",

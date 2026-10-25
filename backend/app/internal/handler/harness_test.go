@@ -84,7 +84,7 @@ func newEnvWith(t *testing.T, flushInterval time.Duration) *env {
 	hub := doc.NewHub(store, flushInterval)
 	go hub.Run(ctx)
 	services := service.New(pool, store, hub)
-	s := server.New(pool, services, "", testMediaMaxBytes)
+	s := server.New(pool, services, "", "http://localhost:8081", testMediaMaxBytes)
 	srv := httptest.NewServer(s.Router())
 	t.Cleanup(func() {
 		srv.Close()

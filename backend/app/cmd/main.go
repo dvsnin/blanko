@@ -68,7 +68,7 @@ func main() {
 	go hub.Run(ctx)
 	services := service.New(pool, store, hub)
 	go services.Document.RunPurge(ctx, cfg.PurgeInterval, cfg.PurgeAfter)
-	s := server.New(pool, services, cfg.TldrawLicenseKey, cfg.MediaMaxBytes)
+	s := server.New(pool, services, cfg.TldrawLicenseKey, cfg.KeycloakPublicURL, cfg.MediaMaxBytes)
 
 	httpServer := &http.Server{
 		Addr:              cfg.HTTPAddr,

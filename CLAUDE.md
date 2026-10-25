@@ -29,6 +29,7 @@
 
 ## Стенд и процесс
 
+- Адреса стенда: кабинет `http://localhost` (Traefik, любой хост на :80 идёт в oauth2-proxy), Keycloak `http://localhost:8081` напрямую (консоль там же). Не `*.localhost`: такие имена tldraw в production-сборке считает production и требует ключ, а чистый `localhost` и любой `http://` хост в сети сада работают без ключа.
 - `make up` собирает оба фронтенд-пакета (`@blanko/dashboard`, `@blanko/canvas`), пересобирает бэкенд и перезапускает контейнеры; `make up SKIP_FRONTEND=1` только бэкенд. Статика фронтенда запекается в образ, после правок кабинета или холста нужен полный `make up`.
 - Секреты в `deploy/.env`, не печатать. psql: `docker exec deploy-postgres_backend-1 psql -U $APP_POSTGRES_USER -d $APP_POSTGRES_DB`.
 - tldraw закреплён на 3.15.3 (бесключевой режим с watermark). Апгрейд только с действующим `TLDRAW_LICENSE_KEY`, watermark скрывать нельзя. Логика холста в `frontend/canvas/src/main.js`, Vite собирает её вместе с tldraw, React, стилями и ресурсами редактора в `backend/app/static/canvas/assets` (в .gitignore); `backend/app/static/canvas/index.html` только разметка и стили шапки. Шрифт Nunito лежит в `backend/app/static/fonts` и в теме Keycloak: стенд и показ работают без интернета.
