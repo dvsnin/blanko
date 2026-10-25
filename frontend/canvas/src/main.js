@@ -21,6 +21,9 @@ const licenseKey = window.TLDRAW_LICENSE_KEY || undefined;
 
 // APP_DOC инжектит сервер: kind, id (uuid), publicId, canEdit.
 const APP_DOC = window.APP_DOC || { kind: "board", id: "", publicId: "", canEdit: true };
+// Экран показа: открыт по токену без входа, только смотрит и следует за ведущим.
+const PRESENT = APP_DOC.present || null;
+const MY_ACCOUNT = (window.dashData && window.dashData.accountId) ? String(window.dashData.accountId) : "";
 const profileName = (window.dashData && window.dashData.name) ? String(window.dashData.name) : "User";
 
 // Копирует ссылку на документ; подтверждение рядом с кнопкой, без модального окна.
@@ -50,7 +53,10 @@ const assets = {
     },
     resolve(asset) {
         const src = asset.props.src;
-        return src && src.startsWith("asset:") ? "/app/media/" + src.slice("asset:".length) : src;
+        if (!src || !src.startsWith("asset:")) return src;
+        const key = src.slice("asset:".length);
+        // Экран показа без входа берёт картинки по токену: ключ принадлежит только этой доске.
+        return PRESENT ? `/app/present/${PRESENT.token}/media/${key.split("/").pop()}` : "/app/media/" + key;
     },
 };
 
@@ -123,6 +129,10 @@ function showOverlay(kind) {
         o.spinner.hidden = true;
         o.title.textContent = "Доступ закрыт";
         o.text.textContent = "Владелец изменил доступ к этой доске";
+    } else if (kind === "ended") {
+        o.spinner.hidden = true;
+        o.title.textContent = "Показ завершён";
+        o.text.textContent = "Воспитатель выключил показ или истёк его срок";
     } else if (kind === "failed") {
         o.retry.hidden = false;
         o.spinner.hidden = true;
@@ -157,11 +167,12 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 function readSession() {
+    if (PRESENT) return undefined; // камеру зрителя ведёт ведущий, восстанавливать нечего
     try { return JSON.parse(localStorage.getItem(sessionKey) || "null") || undefined; } catch { return undefined; }
 }
 let sessionTimer = null;
 function saveSessionThrottled() {
-    if (sessionTimer) return;
+    if (PRESENT || sessionTimer) return;
     sessionTimer = setTimeout(() => {
         sessionTimer = null;
         try { localStorage.setItem(sessionKey, JSON.stringify(getSnapshot(editor.store).session)); } catch {}
@@ -202,6 +213,7 @@ function schedulePresence() {
 }
 
 function sendPresence() {
+    if (PRESENT) return; // зритель курсор не показывает
     if (!ws || ws.readyState !== WebSocket.OPEN || !gotInit || !editor) return;
     let record;
     try {
@@ -224,6 +236,8 @@ function sendPresence() {
             scribbles: editor.getInstanceState().scribbles || [],
             chatMessage: "",
             lastActivityTimestamp: Date.now(),
+            // Аккаунт в meta: экран показа узнаёт по нему соединения ведущего.
+            meta: { accountId: MY_ACCOUNT },
         });
     } catch (e) {
         return;
@@ -269,13 +283,20 @@ function schedulePeople() {
     requestAnimationFrame(() => { peopleScheduled = false; renderPeople(); });
 }
 function initialOf(name) { return (name || "?").trim().charAt(0).toUpperCase() || "?"; }
-function avatarEl(color, name) {
+function avatarEl(color, name, icon) {
     const el = document.createElement("span");
     el.className = "people__avatar";
     el.style.backgroundColor = color;
-    el.textContent = initialOf(name);
+    if (icon) el.innerHTML = icon; else el.textContent = initialOf(name);
     el.setAttribute("aria-hidden", "true");
     return el;
+}
+// Экраны показа: сервер присылает список устройств, открывших публичную ссылку (по cookie экрана).
+let screens = [];
+const SCREEN_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
+function onScreens(msg) {
+    screens = Array.isArray(msg.items) ? msg.items : [];
+    schedulePeople();
 }
 function setPeopleOpen(open) {
     if (peopleOpen === open) return;
@@ -296,7 +317,7 @@ function renderPeople() {
     const peers = editor.store.query.records("instance_presence").get()
         .filter((p) => p.id !== presenceRecordId)
         .sort((a, b) => Number(b.currentPageId === pageId) - Number(a.currentPageId === pageId) || (a.userName || "").localeCompare(b.userName || "", "ru"));
-    const total = peers.length + 1;
+    const total = peers.length + 1 + screens.length;
     root.replaceChildren();
 
     const trigger = document.createElement("button");
@@ -357,7 +378,126 @@ function renderPeople() {
         });
         pop.appendChild(el);
     });
+    screens.forEach((s, i) => {
+        const name = screens.length === 1 ? "Экран показа" : `Экран показа ${i + 1}`;
+        const el = row("#5B6472", name, "Смотрит показ, следует за ведущим", { disabled: true });
+        el.querySelector(".people__avatar").replaceWith(avatarEl("#5B6472", name, SCREEN_ICON));
+        pop.appendChild(el);
+    });
     root.appendChild(pop);
+}
+
+// ---------- режим показа: слежение за ведущим ----------
+// Зритель следует за соединением ведущего с самой свежей активностью; у ведущего может быть
+// несколько устройств, переключаемся не чаще раза в 4 с. Ведущего нет - вся доска целиком и плашка.
+let presenterId = APP_DOC.presenterId || "";
+let presenterName = PRESENT ? PRESENT.presenterName : "";
+let followTarget = null;
+let followSwitchedAt = 0;
+let followScheduled = false;
+function scheduleFollow() {
+    if (!PRESENT || followScheduled) return;
+    followScheduled = true;
+    requestAnimationFrame(() => { followScheduled = false; updateFollow(); });
+}
+function updateFollow() {
+    if (!PRESENT || !editor || !gotInit) return;
+    const banner = document.getElementById("presentBanner");
+    const peers = editor.store.query.records("instance_presence").get()
+        .filter((p) => p.meta && p.meta.accountId && p.meta.accountId === presenterId)
+        .sort((a, b) => (b.lastActivityTimestamp || 0) - (a.lastActivityTimestamp || 0));
+    if (!peers.length) {
+        if (followTarget) {
+            followTarget = null;
+            try { editor.stopFollowingUser(); } catch {}
+        }
+        try { editor.zoomToFit({ animation: { duration: 300 } }); } catch {}
+        banner.hidden = false;
+        return;
+    }
+    banner.hidden = true;
+    const current = peers.find((p) => p.userId === followTarget);
+    let target = peers[0];
+    // Гистерезис: текущее устройство ведущего держим, пока другое не активнее заметно дольше.
+    if (current && Date.now() - followSwitchedAt < 4000) target = current;
+    if (target.userId !== followTarget || editor.getInstanceState().followingUserId !== target.userId) {
+        followTarget = target.userId;
+        followSwitchedAt = Date.now();
+        try { editor.startFollowingUser(target.userId); } catch (e) { console.warn("follow:", e); }
+    }
+}
+function setPresentLine() {
+    const line = document.getElementById("presentLine");
+    if (!PRESENT) return;
+    line.hidden = false;
+    line.textContent = presenterName ? `Ведущий: ${presenterName}` : "Ведущий не назначен";
+}
+// Передачу роли ведущего зритель замечает опросом: сервер не шлёт её по вебсокету.
+let presentEnded = false;
+async function pollPresenter() {
+    if (!PRESENT) return;
+    try {
+        const res = await fetch(`/app/present/${PRESENT.token}/info`, { cache: "no-store" });
+        // Срок вышел или показ выключили: закрываем соединение и больше не переподключаемся.
+        if (res.status === 404) { presentEnded = true; showOverlay("ended"); if (ws) ws.close(); return; }
+        if (!res.ok) return;
+        const info = await res.json();
+        if (info.presenterId !== presenterId || info.presenterName !== presenterName) {
+            presenterId = info.presenterId || "";
+            presenterName = info.presenterName || "";
+            setPresentLine();
+            followTarget = null;
+            scheduleFollow();
+        }
+    } catch {}
+}
+
+// Кнопка «Вести показ» у редакторов, когда показ включён и ведёт кто-то другой.
+function setupLeadButton() {
+    const btn = document.getElementById("leadBtn");
+    if (PRESENT || !APP_DOC.presentEnabled || !canEdit || !MY_ACCOUNT) { btn.hidden = true; return; }
+    // Ведущему кнопка не нужна: только надпись, чтобы было видно, что показ идёт.
+    const line = document.getElementById("presentLine");
+    const leading = presenterId === MY_ACCOUNT;
+    line.hidden = !leading;
+    line.textContent = leading ? "Вы ведёте показ" : "";
+    btn.hidden = leading;
+    btn.onclick = async () => {
+        try {
+            const res = await fetch("/app/api/v1/board/present/lead", {
+                method: "POST", headers: { "content-type": "application/json" }, credentials: "include",
+                body: JSON.stringify({ accountId: MY_ACCOUNT, id: APP_DOC.id }),
+            });
+            if (res.ok) { presenterId = MY_ACCOUNT; setupLeadButton(); }
+        } catch {}
+    };
+}
+
+function setupPresentMode() {
+    if (!PRESENT) return;
+    document.body.classList.add("present");
+    document.getElementById("shareBtn").hidden = true;
+    document.getElementById("people").hidden = true;
+    // На телевизоре логотип не должен уводить на вход: ссылку снимаем, остаётся только название доски.
+    const back = document.getElementById("backLink");
+    back.removeAttribute("href");
+    back.removeAttribute("aria-label");
+    back.setAttribute("aria-hidden", "true");
+    document.getElementById("backLabel").hidden = true;
+    document.querySelector(".crumb-sep").hidden = true;
+    // Зритель ничего не сохраняет, обрыв связи покажет оверлей.
+    statusEl.hidden = true;
+    setPresentLine();
+    setInterval(pollPresenter, 10000);
+}
+
+// Полный экран нужен и зрителю на телевизоре, и ведущему на панели группы.
+function setupFullscreenButton() {
+    const fs = document.getElementById("fullscreenBtn");
+    if (!document.documentElement.requestFullscreen) { fs.hidden = true; return; }
+    fs.hidden = false;
+    fs.onclick = () => { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); };
+    document.addEventListener("fullscreenchange", () => { fs.textContent = document.fullscreenElement ? "Выйти из полного экрана" : "Во весь экран"; });
 }
 
 // Панель участников tldraw не нужна: список живёт в шапке.
@@ -488,6 +628,8 @@ function onInit(msg) {
     applyReadonly();
     // Только после снятия readonly: в режиме чтения tldraw молча игнорирует updatePage.
     if (firstInit && canEdit) localizeDefaultPage();
+    setupLeadButton();
+    if (PRESENT) scheduleFollow();
     // Первое открытие на этом устройстве: показать всё содержимое целиком (шаблоны занятий
     // сделаны под панель 1920 px, на ноутбуке без подгонки видна только часть).
     if (firstInit && !readSession() && editor.getCurrentPageShapeIds().size > 0) editor.zoomToFit({ animation: { duration: 0 } });
@@ -499,7 +641,8 @@ function onInit(msg) {
 
 function connect() {
     const proto = location.protocol === "https:" ? "wss://" : "ws://";
-    ws = new WebSocket(`${proto}${location.host}/app/ws/${APP_DOC.kind}/${APP_DOC.id}`);
+    const path = PRESENT ? `/app/present/${PRESENT.token}/ws` : `/app/ws/${APP_DOC.kind}/${APP_DOC.id}`;
+    ws = new WebSocket(`${proto}${location.host}${path}`);
     ws.onmessage = (ev) => {
         let msg;
         try { msg = JSON.parse(ev.data); } catch { return; }
@@ -508,15 +651,18 @@ function connect() {
         else if (msg.type === "patch") onPatch(msg);
         else if (msg.type === "presence") onPresence(msg);
         else if (msg.type === "presence_gone") onPresenceGone(msg);
+        else if (msg.type === "screens") onScreens(msg);
         else if (msg.type === "error") console.warn("ws error:", msg.code);
     };
     ws.onclose = (ev) => {
         ws = null;
         if (ackTimer) { clearTimeout(ackTimer); ackTimer = null; }
+        screens = [];
         clearRemotePresence();
         applyReadonly();
         setStatus();
-        if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; showOverlay("deleted"); return; }
+        if (presentEnded) return;
+        if (ev.code === 4404) { statusEl.textContent = "Документ удалён"; showOverlay(PRESENT ? "ended" : "deleted"); return; }
         if (ev.code === 4403) { statusEl.textContent = "Доступ закрыт"; showOverlay("denied"); return; }
         // 1011: сервер не смог загрузить документ, 1009: наше сообщение больше лимита.
         // Автоматический реконнект тут бессмыслен: повторится то же самое.
@@ -534,6 +680,7 @@ createRoot(document.getElementById("tldraw-root")).render(
         licenseKey,
         store,
         assetUrls,
+        hideUi: !!PRESENT,
         components: uiComponents,
         onMount: (ed) => {
             editor = ed;
@@ -547,6 +694,11 @@ createRoot(document.getElementById("tldraw-root")).render(
             editor.store.listen(schedulePeople, { scope: "presence" });
             editor.store.listen(schedulePeople, { scope: "session" });
             renderPeople();
+            setupFullscreenButton();
+            if (PRESENT) {
+                setupPresentMode();
+                editor.store.listen(scheduleFollow, { scope: "presence" });
+            }
             connect();
         },
     }),

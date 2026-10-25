@@ -175,6 +175,78 @@ func (c *wsClient) Close(code int, reason string) {
 	})
 }
 
+// PresentWS GET /app/present/{token}/ws - вебсокет зрителя показа: без входа, только чтение.
+// Зритель получает документ, патчи и presence остальных, сам ничего не публикует.
+func (a *API) PresentWS(w http.ResponseWriter, r *http.Request) {
+	board, err := a.services.Board.ResolvePresentToken(r.Context(), mux.Vars(r)["token"])
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		writeServiceError(w, err)
+		return
+	}
+	hub := a.services.Document.Hub
+	if hub.Closing() {
+		writeError(w, http.StatusServiceUnavailable, "shutting_down", "server is shutting down")
+		return
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	client := newWSClient(conn)
+	defer client.Close(websocket.CloseNormalClosure, "")
+	done, ok := hub.Track()
+	if !ok {
+		client.Close(closeServerShutdown, "server shutting down")
+		return
+	}
+	defer done()
+	ctx := r.Context()
+	room, err := hub.Join(ctx, doc.KindBoard, board.ID, client)
+	if err != nil {
+		log.Printf("present ws: join %s: %v", board.ID, err)
+		client.Close(websocket.CloseInternalServerErr, "cannot load document")
+		return
+	}
+	defer hub.Leave(ctx, doc.KindBoard, board.ID, client)
+
+	client.sendJSON(wsInit{Type: "init", CanEdit: false, Document: room.Snapshot()})
+	for _, msg := range room.PresenceBacklog(client) {
+		if !client.Send(msg) {
+			break
+		}
+	}
+	room.AddScreen(client, screenID(r))
+	conn.SetReadLimit(wsReadLimit)
+	_ = conn.SetReadDeadline(time.Now().Add(wsReadWait))
+	conn.SetPongHandler(func(string) error { return conn.SetReadDeadline(time.Now().Add(wsReadWait)) })
+	for {
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+		_ = conn.SetReadDeadline(time.Now().Add(wsReadWait))
+		var in wsIn
+		if err := json.Unmarshal(data, &in); err != nil {
+			client.sendJSON(wsErr{Type: "error", Code: "bad_message"})
+			continue
+		}
+		// Экран показа ничего не меняет и не показывает курсор: любое сообщение отклоняется.
+		client.sendJSON(wsErr{Type: "error", Code: "read_only"})
+	}
+}
+
+// screenID - id экрана из cookie страницы показа; без cookie каждое соединение считается своим экраном.
+func screenID(r *http.Request) string {
+	if c, err := r.Cookie(ScreenCookie); err == nil && c.Value != "" && len(c.Value) <= 64 {
+		return c.Value
+	}
+	return uuid.NewString()
+}
+
 // DocWS GET /app/ws/{kind}/{id}
 func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 	kind, ok := doc.ParseKind(mux.Vars(r)["kind"])
@@ -238,6 +310,9 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 		if !client.Send(msg) {
 			break
 		}
+	}
+	if msg := room.ScreensSnapshot(); msg != nil {
+		client.Send(msg)
 	}
 
 	conn.SetReadLimit(wsReadLimit)

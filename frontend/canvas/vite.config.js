@@ -11,6 +11,11 @@ export default defineConfig({
         emptyOutDir: true,
         rollupOptions: {
             input: path.resolve(__dirname, "src/main.js"),
+            // tldraw тянет Radix с директивами "use client", для бандла они не нужны: не шумим в логе сборки.
+            onwarn(warning, warn) {
+                if (warning.code === "MODULE_LEVEL_DIRECTIVE") return;
+                warn(warning);
+            },
             output: {
                 entryFileNames: "canvas.js",
                 chunkFileNames: "[name]-[hash].js",

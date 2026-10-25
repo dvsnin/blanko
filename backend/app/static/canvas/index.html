@@ -62,11 +62,18 @@
         .people__row--away .people__avatar { opacity: 0.5; }
         .people__follow { font-size: 12px; font-weight: 700; color: #1F8A85; white-space: nowrap; }
 
+        /* Экран показа: холст не реагирует на касания, камера едет за ведущим; в шапке только имя ведущего. */
+        .present-line { font-size: 14px; font-weight: 700; color: #5B6472; }
+        .present #tldraw-root { pointer-events: none; }
+        .present .back-link { pointer-events: none; padding: 0; cursor: default; }
+        .present-banner { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 60; background: #22262E; color: #FFFFFF; padding: 12px 18px; border-radius: 12px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 26px rgba(34, 38, 46, 0.2); }
+
         #tldraw-root { position: absolute; left: 0; right: 0; top: 69px; bottom: 0; }
         @media (max-width: 720px) { .topbar { padding: 12px 16px; } }
 
         /* Оверлей поверх холста: загрузка, потеря связи, удалённый документ. Пока виден, холст только для чтения. */
         .overlay { position: absolute; left: 0; right: 0; top: 69px; bottom: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(243,246,249,0.78); backdrop-filter: blur(3px); }
+        [hidden] { display: none !important; } /* перебивает display у .btn и .people */
         .overlay[hidden] { display: none; }
         .overlay-card { background: #fff; border-radius: 16px; padding: 28px 32px; min-width: 280px; text-align: center; box-shadow: 0 18px 50px rgba(15,23,42,0.12); }
         .overlay-title { font-size: 18px; font-weight: 700; color: #0f1724; margin: 14px 0 6px; }
@@ -105,12 +112,16 @@
 
     <div class="top-actions">
         <span class="share-hint" id="shareHint" role="status" aria-live="polite"></span>
+        <span class="present-line" id="presentLine" hidden></span>
+        <button class="btn" id="leadBtn" hidden>Вести показ</button>
+        <button class="btn" id="fullscreenBtn" hidden>Во весь экран</button>
         <button class="btn primary" id="shareBtn">Поделиться</button>
         <div class="people" id="people"></div>
     </div>
 </div>
 
 <div id="tldraw-root"></div>
+<div class="present-banner" id="presentBanner" hidden>Ведущий отключился, показ продолжится автоматически</div>
 
 <div class="overlay" id="overlay" role="status" aria-live="polite">
     <div class="overlay-card">

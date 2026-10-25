@@ -113,9 +113,15 @@ type Board struct {
 	TeamAccessInherited bool
 	LinkAccessEnabled   bool
 	TemplateID          *uuid.UUID
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-	LastOpenedAt        *time.Time
+	// Режим показа: токен публичной ссылки и код для телевизора (nil - выключен), ведущий и его имя.
+	PresentToken       *string
+	PresenterAccountID *uuid.UUID
+	PresenterName      string
+	// PresentExpiresAt - срок ссылки показа; nil - пока не выключат.
+	PresentExpiresAt *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	LastOpenedAt     *time.Time
 }
 
 // BoardView - доска с дополнительной информацией для UI.

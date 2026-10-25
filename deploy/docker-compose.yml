@@ -109,6 +109,10 @@ services:
       # разрешаем редирект на Keycloak после /oauth2/sign_out?rd=...
       - --whitelist-domain=localhost:8081
 
+      # Экран показа работает без входа: страница, вебсокет и медиа по токену, статика холста и шрифты.
+      - --skip-auth-route=^/app/present/
+      - --skip-auth-route=^/app/static/
+
       # прокидываем заголовки в backend
       - --pass-user-headers=true
       # прокидываем id_token в Authorization: Bearer <id_token>,

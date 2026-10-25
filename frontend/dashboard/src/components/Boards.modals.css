@@ -338,3 +338,10 @@ select.boards-modal-input:focus { border-color: var(--teal); }
 .teachers__remove:hover { color: var(--ink); background: rgba(34, 38, 46, 0.08); }
 .teachers .boards-modal-input { margin-top: 0; }
 .teachers__option { width: 100%; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; }
+
+/* Показ на экране в диалоге доступа */
+.present__row { display: flex; align-items: center; gap: 8px; }
+.present__row .boards-modal-input { margin-top: 0; flex: 1; min-width: 0; }
+.present__row .btn { flex: 0 0 auto; height: 44px; }
+.present__main { display: flex; flex-direction: column; gap: 8px; }
+.present .btn--danger-ghost { align-self: flex-start; }

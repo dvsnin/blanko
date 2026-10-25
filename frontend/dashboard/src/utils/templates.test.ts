@@ -51,9 +51,9 @@ describe('lookups', () => {
 });
 
 describe('coverForBoard', () => {
-  it('глиф и тема из переданного шаблона', () => {
-    const c = coverForBoard({ id: 'x', title: 'Занятие', templateId: 't2' }, FIXTURE[1]);
-    expect(c.glyph).toBe('Б');
+  it('тема из шаблона, буква всегда из названия доски', () => {
+    const c = coverForBoard({ id: 'x', title: 'Теремок', templateId: 't2' }, FIXTURE[1]);
+    expect(c.glyph).toBe('Т');
     expect(c.topic?.key).toBe('literacy');
   });
   it('без шаблона (удалён или нет) - базовая обложка', () => {

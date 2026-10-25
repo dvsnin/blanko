@@ -144,6 +144,11 @@ export interface BoardDTO {
   teamAccess: "deny" | "view" | "edit";
   teamAccessInherited: boolean;
   linkAccessEnabled: boolean;
+  presentEnabled: boolean;
+  presentToken: string;
+  presentExpiresAt: string;
+  presenterId: string;
+  presenterName: string;
   templateId: string;
   isStarred: boolean;
   /** Создатель доски или owner/admin группы: можно переименовать, удалить, перенести. */
@@ -248,6 +253,10 @@ export const api = {
     unstar: (id: string) => post<void>("/board/unstar", { id }),
     duplicate: (id: string) => post<BoardDTO>("/board/duplicate", { id }),
     move: (id: string, teamId: string) => post<BoardDTO>("/board/move", { id, teamId }),
+    /** Показ на экране: включить на hours часов (0 - пока не выключат), выключить, стать ведущим. */
+    presentEnable: (id: string, hours: number) => post<BoardDTO>("/board/present/enable", { id, hours }),
+    presentDisable: (id: string) => post<BoardDTO>("/board/present/disable", { id }),
+    presentLead: (id: string) => post<BoardDTO>("/board/present/lead", { id }),
   },
 
   templates: {

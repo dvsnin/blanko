@@ -84,6 +84,8 @@ export interface TeamsContextValue {
   /** Доступ участников группы к содержимому ("inherit" - как в группе) и доступ по ссылке. */
   updateBoardAccess: (boardId: string, patch: { teamAccess?: BoardAccess | "inherit"; linkAccessEnabled?: boolean }) => Promise<void>;
   toggleStarBoard: (boardId: string) => Promise<void>;
+  /** Показ на экране: hours часов (0 - пока не выключат) или null - выключить. */
+  setPresent: (boardId: string, hours: number | null) => Promise<void>;
   /** Оптимистично помечает доску открытой сейчас (сервер сам обновляет при открытии). */
   markBoardOpened: (boardId: string) => void;
   refresh: () => Promise<void>;
@@ -113,6 +115,11 @@ export function boardFromDTO(dto: BoardDTO, colorKey: string = colorForId(dto.id
     teamAccess: dto.teamAccess,
     teamAccessInherited: dto.teamAccessInherited,
     linkAccessEnabled: dto.linkAccessEnabled,
+    presentEnabled: dto.presentEnabled,
+    presentToken: dto.presentToken || undefined,
+    presentExpiresAt: dto.presentExpiresAt || undefined,
+    presenterId: dto.presenterId || undefined,
+    presenterName: dto.presenterName || undefined,
     templateId: dto.templateId || undefined,
   };
 }
@@ -551,6 +558,20 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
     }
   }, [findBoard, patchBoard]);
 
+  const setPresent = useCallback(async (boardId: string, hours: number | null) => {
+    try {
+      const updated = hours === null ? await api.boards.presentDisable(boardId) : await api.boards.presentEnable(boardId, hours);
+      const fresh = boardFromDTO(updated);
+      patchBoard(boardId, (b) => ({
+        ...b, presentEnabled: fresh.presentEnabled, presentToken: fresh.presentToken,
+        presentExpiresAt: fresh.presentExpiresAt, presenterId: fresh.presenterId, presenterName: fresh.presenterName,
+      }));
+    } catch (e) {
+      console.error("setPresent failed:", e);
+      throw e;
+    }
+  }, [patchBoard]);
+
   const markBoardOpened = useCallback((boardId: string) => {
     const now = new Date().toISOString();
     patchBoard(boardId, (b) => ({ ...b, lastOpenedAt: now, lastOpened: formatLastOpened(now) }));
@@ -582,6 +603,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       moveBoard,
       updateBoardAccess,
       toggleStarBoard,
+      setPresent,
       markBoardOpened,
       refresh: refreshAll,
     }),
@@ -609,6 +631,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       moveBoard,
       updateBoardAccess,
       toggleStarBoard,
+      setPresent,
       markBoardOpened,
       refreshAll,
     ],

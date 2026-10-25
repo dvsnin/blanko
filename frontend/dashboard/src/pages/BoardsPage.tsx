@@ -15,6 +15,7 @@ import ViewToggle from "../components/ViewToggle";
 import GroupHeader from "../components/GroupHeader";
 import TeamSettingsModal, { NEW_TEAM } from "../components/TeamSettingsModal";
 import TemplateSettingsModal, { NEW_TEMPLATE } from "../components/TemplateSettingsModal";
+import PresentSection from "../components/PresentSection";
 import { useTeams } from "../contexts/TeamsContext";
 import { useTemplates } from "../contexts/TemplatesContext";
 import { useUser } from "../contexts/UserContext";
@@ -50,7 +51,7 @@ export default function BoardsPage() {
     toggleStarBoard,
     loading,
   } = useTeams();
-  const { teams: allTeams, activeTeamId: currentTeamId, duplicateBoard, moveBoard, updateBoardAccess } = useTeams();
+  const { teams: allTeams, activeTeamId: currentTeamId, duplicateBoard, moveBoard, updateBoardAccess, setPresent } = useTeams();
   const { byId: byTemplateId, createTemplate } = useTemplates();
 
   const { user } = useUser();
@@ -793,6 +794,15 @@ export default function BoardsPage() {
                   {board.linkAccessEnabled ? "Любой вошедший откроет доску по ссылке, но править не сможет" : "Доску открывают только участники группы"}
                 </p>
               </div>
+              <PresentSection
+                board={board}
+                onNotify={showToast}
+                onSetPresent={(hours) => {
+                  void setPresent(board.id, hours)
+                    .then(() => showToast(hours === null ? "Показ выключен" : "Показ включён"))
+                    .catch(() => showToast("Не удалось изменить показ"));
+                }}
+              />
             </div>
             <div className="boards-modal-footer">
               <button type="button" className="primary-btn" onClick={closeDialog}>Готово</button>

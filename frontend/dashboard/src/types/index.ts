@@ -27,6 +27,13 @@ export interface Board {
   teamAccessInherited?: boolean;
   /** Любой вошедший открывает доску по ссылке только для чтения. */
   linkAccessEnabled?: boolean;
+  /** Режим показа: экран без входа следует за ведущим. Токен и код видны только тем, кто управляет доской. */
+  presentEnabled?: boolean;
+  presentToken?: string;
+  /** ISO; пусто - пока не выключат. */
+  presentExpiresAt?: string;
+  presenterId?: string;
+  presenterName?: string;
   templateId?: string;
 }
 

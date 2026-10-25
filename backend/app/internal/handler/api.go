@@ -88,6 +88,8 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, "forbidden", err.Error())
 	case errors.Is(err, service.ErrLastAdmin):
 		writeError(w, http.StatusConflict, "last_admin", err.Error())
+	case errors.Is(err, service.ErrPresentOff):
+		writeError(w, http.StatusConflict, "present_off", err.Error())
 	case errors.Is(err, service.ErrInvalidAgeGroup):
 		writeError(w, http.StatusBadRequest, "invalid_age_group", err.Error())
 	case errors.Is(err, service.ErrInvalidTeachers):

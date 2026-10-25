@@ -22,9 +22,10 @@ function fake(over: Partial<TeamsContextValue> = {}): TeamsContextValue {
     teams: [team, other], activeTeamId: "t1", activeTeam: team, activeBoards: items,
     boardList: { items, total: 30, hasMore: true, loading: false },
     boardQuery: DEFAULT_BOARD_QUERY, setBoardQuery: vi.fn(), loadMoreBoards: vi.fn().mockResolvedValue(undefined), otherMatches: [],
+    setPresent: vi.fn().mockResolvedValue(undefined),
     loading: false, error: null,
     setActiveTeamId: vi.fn(), createTeam: vi.fn(), updateTeam: vi.fn(), deleteTeam: vi.fn(), leaveTeam: vi.fn(), toggleStarTeam: vi.fn(),
-    createBoard: vi.fn(), renameBoard: vi.fn(), deleteBoard: vi.fn(), duplicateBoard: vi.fn(), moveBoard: vi.fn(), updateBoardAccess: vi.fn(),
+    createBoard: vi.fn(), renameBoard: vi.fn(), deleteBoard: vi.fn(), duplicateBoard: vi.fn(), moveBoard: vi.fn(), updateBoardAccess: vi.fn().mockResolvedValue(undefined),
     toggleStarBoard: vi.fn(), markBoardOpened: vi.fn(), refresh: vi.fn(),
     ...over,
   };
@@ -107,5 +108,30 @@ describe("BoardsPage: страницы досок", () => {
     expect(screen.getByText(/Уровень задан в настройках группы/)).toBeTruthy();
     fireEvent.change(select, { target: { value: "edit" } });
     expect(v.updateBoardAccess).toHaveBeenCalledWith("b1", { teamAccess: "edit" });
+  });
+
+  it("диалог доступа: раздел «Показ на экране» включает показ с выбранным сроком", () => {
+    const items = [board(1)];
+    const v = fake({ activeBoards: items, boardList: { items, total: 1, hasMore: false, loading: false } });
+    setup(v);
+    fireEvent.click(screen.getByRole("button", { name: "Действия с доской" }));
+    fireEvent.click(screen.getByRole("button", { name: /Доступ/ }));
+    expect(screen.getByText("Показ на экране")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Срок показа"), { target: { value: "24" } });
+    fireEvent.click(screen.getByRole("button", { name: "Включить показ" }));
+    expect(v.setPresent).toHaveBeenCalledWith("b1", 24);
+  });
+
+  it("показ включён: ссылка, ведущий и выключение", () => {
+    const items = [{ ...board(1), presentEnabled: true, presentToken: "abc123def456abc123def456abc12345", presenterName: "Анна Петрова", presentExpiresAt: "2026-10-26T10:00:00Z" }];
+    const v = fake({ activeBoards: items, boardList: { items, total: 1, hasMore: false, loading: false } });
+    setup(v);
+    fireEvent.click(screen.getByRole("button", { name: "Действия с доской" }));
+    fireEvent.click(screen.getByRole("button", { name: /Доступ/ }));
+    const link = screen.getByLabelText("Ссылка показа") as HTMLInputElement;
+    expect(link.value).toBe("http://localhost:3000/app/present/abc123def456abc123def456abc12345");
+    expect(screen.getByText(/Ведущий: Анна Петрова/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Выключить показ" }));
+    expect(v.setPresent).toHaveBeenCalledWith("b1", null);
   });
 });

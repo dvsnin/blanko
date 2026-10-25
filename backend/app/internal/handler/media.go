@@ -109,6 +109,41 @@ func (a *API) GetMedia(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.Copy(w, rc)
 }
 
+// GetPresentMedia GET /app/present/{token}/media/{name}: картинки доски для экрана показа, без входа.
+// Токен открывает только медиа своей доски: ключ собирается из id доски по токену.
+func (a *API) GetPresentMedia(w http.ResponseWriter, r *http.Request) {
+	name := mux.Vars(r)["name"]
+	if !mediaNameRe.MatchString(name) {
+		http.NotFound(w, r)
+		return
+	}
+	board, err := a.services.Board.ResolvePresentToken(r.Context(), mux.Vars(r)["token"])
+	if err != nil {
+		if errors.Is(err, service.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		writeServiceError(w, err)
+		return
+	}
+	rc, info, err := a.services.Document.Store.Get(r.Context(), doc.MediaKey(doc.KindBoard, board.ID, name))
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			http.NotFound(w, r)
+			return
+		}
+		writeServiceError(w, service.ErrStorageUnavailable)
+		return
+	}
+	defer rc.Close()
+	w.Header().Set("Content-Type", info.ContentType)
+	w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, rc)
+}
+
 // resolveMediaDoc разбирает kind и id из URL, проверяет документ и право записи.
 // Ответ в случае ошибки уже записан.
 func (a *API) resolveMediaDoc(w http.ResponseWriter, r *http.Request) (doc.Kind, uuid.UUID, bool) {

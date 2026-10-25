@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -74,6 +75,12 @@ func (s *Server) Router() http.Handler {
 
 	// Страница доски - uid трактуется как public_id
 	r.HandleFunc("/app/board/{uid}", s.boardHandler)
+
+	// Режим показа: публичные маршруты по токену, без входа (oauth2-proxy пропускает /app/present/).
+	r.HandleFunc("/app/present/{token}/ws", s.api.PresentWS).Methods(http.MethodGet)
+	r.HandleFunc("/app/present/{token}/info", s.presentInfoHandler).Methods(http.MethodGet)
+	r.HandleFunc("/app/present/{token}/media/{name}", s.api.GetPresentMedia).Methods(http.MethodGet)
+	r.HandleFunc("/app/present/{token}", s.presentHandler).Methods(http.MethodGet)
 
 	// Страница шаблона на том же канвасе, права решает сервер
 	r.HandleFunc("/app/template/{uid}", s.templateHandler)
@@ -296,7 +303,7 @@ func (s *Server) boardHandler(w http.ResponseWriter, r *http.Request) {
 	if err := s.services.Board.MarkOpened(r.Context(), uid); err != nil {
 		log.Printf("board mark opened %s: %v", uid, err)
 	}
-	s.renderCanvas(w, r, title, canvasDoc{Kind: "board", ID: board.ID.String(), PublicID: uid, CanEdit: access == model.BoardAccessEdit})
+	s.renderCanvas(w, r, title, canvasDoc{Kind: "board", ID: board.ID.String(), PublicID: uid, CanEdit: access == model.BoardAccessEdit, PresentEnabled: board.PresentToken != nil, PresenterID: presenterID(board)})
 }
 
 // templateHandler: автор и админы получают запись, остальные только чтение.
@@ -336,7 +343,7 @@ func (s *Server) renderDenied(w http.ResponseWriter) {
 <style>body{margin:0;font-family:Nunito,"Segoe UI",system-ui,sans-serif;background:#F6F4EE;color:#22262E;display:flex;align-items:center;justify-content:center;height:100vh}
 .card{background:#fff;border:1px solid #E6E2D9;border-radius:16px;padding:28px 32px;text-align:center;max-width:420px}
 h1{font-size:20px;margin:0 0 8px}p{margin:0 0 18px;color:#5B6472;font-size:14px;line-height:1.5}
-a{display:inline-block;padding:10px 16px;border-radius:12px;background:#E6F4F3;color:#1F8A85;font-weight:700;text-decoration:none}</style></head>
+</style></head>
 <body><div class="card"><h1>Доска недоступна</h1><p>У вас нет доступа к этой доске. Попросите владельца добавить вас в группу или открыть доступ по ссылке.</p><a href="/app/dashboard#/boards">В кабинет</a></div></body></html>`))
 }
 
@@ -346,6 +353,81 @@ type canvasDoc struct {
 	ID       string `json:"id"`
 	PublicID string `json:"publicId"`
 	CanEdit  bool   `json:"canEdit"`
+	// Показ включён и кто ведёт: редакторам нужно для кнопки «Вести показ».
+	PresentEnabled bool   `json:"presentEnabled"`
+	PresenterID    string `json:"presenterId"`
+	// Present заполнен только на экране показа: токен для вебсокета и медиа, ведущий.
+	Present *presentDoc `json:"present,omitempty"`
+}
+
+type presentDoc struct {
+	Token         string `json:"token"`
+	PresenterID   string `json:"presenterId"`
+	PresenterName string `json:"presenterName"`
+}
+
+func presenterID(b *model.Board) string {
+	if b.PresenterAccountID == nil {
+		return ""
+	}
+	return b.PresenterAccountID.String()
+}
+
+// presentHandler - экран показа: холст только для чтения, следует за ведущим, без входа.
+func (s *Server) presentHandler(w http.ResponseWriter, r *http.Request) {
+	board, err := s.services.Board.ResolvePresentToken(r.Context(), mux.Vars(r)["token"])
+	if errors.Is(err, service.ErrNotFound) {
+		s.renderPresentGone(w)
+		return
+	}
+	if err != nil {
+		log.Printf("present page: %v", err)
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	title := strings.TrimSpace(board.Name)
+	if title == "" {
+		title = board.PublicID
+	}
+	// Экран получает постоянный id: редакторы видят его в списке участников одной строкой,
+	// сколько бы окон на нём ни открыли.
+	if c, err := r.Cookie(handler.ScreenCookie); err != nil || c.Value == "" {
+		http.SetCookie(w, &http.Cookie{Name: handler.ScreenCookie, Value: uuid.NewString(), Path: "/app/present/", MaxAge: 365 * 24 * 3600, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	}
+	s.renderCanvas(w, r, title, canvasDoc{
+		Kind: "board", ID: board.ID.String(), PublicID: board.PublicID, CanEdit: false,
+		PresentEnabled: true, PresenterID: presenterID(board),
+		Present: &presentDoc{Token: *board.PresentToken, PresenterID: presenterID(board), PresenterName: board.PresenterName},
+	})
+}
+
+// presentInfoHandler - кто сейчас ведёт показ: зритель опрашивает, чтобы заметить передачу роли.
+func (s *Server) presentInfoHandler(w http.ResponseWriter, r *http.Request) {
+	board, err := s.services.Board.ResolvePresentToken(r.Context(), mux.Vars(r)["token"])
+	if errors.Is(err, service.ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte(mustJSON(presentDoc{Token: "", PresenterID: presenterID(board), PresenterName: board.PresenterName})))
+}
+
+// renderPresentGone - ссылка показа не действует: показ выключен или истёк.
+func (s *Server) renderPresentGone(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write([]byte(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Показ недоступен</title><link rel="stylesheet" href="/app/static/fonts/nunito.css">
+<style>body{margin:0;font-family:Nunito,"Segoe UI",system-ui,sans-serif;background:#F6F4EE;color:#22262E;display:flex;align-items:center;justify-content:center;height:100vh}
+.card{background:#fff;border:1px solid #E6E2D9;border-radius:16px;padding:28px 32px;text-align:center;max-width:440px}
+h1{font-size:20px;margin:0 0 8px}p{margin:0 0 18px;color:#5B6472;font-size:14px;line-height:1.5}
+</style></head>
+<body><div class="card"><h1>Показ недоступен</h1><p>Ссылка больше не действует: показ выключен или его срок истёк. Попросите воспитателя включить показ заново.</p></div></body></html>`))
 }
 
 func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title string, d canvasDoc) {
@@ -363,6 +445,9 @@ func (s *Server) renderCanvas(w http.ResponseWriter, r *http.Request, title stri
 	kindWord := "Доска"
 	if d.Kind == "template" {
 		kindWord = "Шаблон"
+	}
+	if d.Present != nil {
+		kindWord = "Показ"
 	}
 	indexHTML = strings.ReplaceAll(indexHTML, "%%PAGE_TITLE%%", html.EscapeString(pageTitle(title, kindWord)))
 

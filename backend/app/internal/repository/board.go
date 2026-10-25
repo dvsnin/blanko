@@ -71,19 +71,24 @@ func (r *BoardRepo) Create(ctx context.Context, b *model.Board) error {
 }
 
 // boardColumns - колонки доски с действующим доступом участников: своя настройка или уровень группы.
+// Запросы ждут доску как b, её группу как t и ведущего показа как p (LEFT JOIN account p).
 var boardColumns = []string{
 	"b.id", "b.public_id", "b.name", "b.team_id", "b.account_id",
 	"COALESCE(b.team_access, t.member_board_access) AS team_access", "(b.team_access IS NULL) AS team_access_inherited",
 	"b.link_access_enabled", "b.template_id", "b.created_at", "b.updated_at", "b.last_opened_at",
+	"b.present_token", "b.presenter_account_id", "COALESCE(p.name, '') AS presenter_name", "b.present_expires_at",
 }
+
+const presenterJoin = "account p ON p.id = b.presenter_account_id"
 
 func scanBoard(row interface{ Scan(dest ...any) error }, m *model.Board) error {
 	return row.Scan(&m.ID, &m.PublicID, &m.Name, &m.TeamID, &m.AccountID,
-		&m.TeamAccess, &m.TeamAccessInherited, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt, &m.LastOpenedAt)
+		&m.TeamAccess, &m.TeamAccessInherited, &m.LinkAccessEnabled, &m.TemplateID, &m.CreatedAt, &m.UpdatedAt, &m.LastOpenedAt,
+		&m.PresentToken, &m.PresenterAccountID, &m.PresenterName, &m.PresentExpiresAt)
 }
 
 func (r *BoardRepo) getBy(ctx context.Context, where string, arg any) (*model.Board, error) {
-	b := psql.Select(boardColumns...).From("board b").Join("team t ON t.id = b.team_id").
+	b := psql.Select(boardColumns...).From("board b").Join("team t ON t.id = b.team_id").LeftJoin(presenterJoin).
 		Where(where, arg).Limit(1)
 	row, err := queryRowBuilder(ctx, r.db, b)
 	if err != nil {
@@ -107,6 +112,50 @@ func (r *BoardRepo) GetByID(ctx context.Context, id uuid.UUID) (*model.Board, er
 // GetByPublicID возвращает доску по её короткому public_id (из URL доски).
 func (r *BoardRepo) GetByPublicID(ctx context.Context, publicID string) (*model.Board, error) {
 	return r.getBy(ctx, "b.public_id = ? AND b.deleted_at IS NULL", publicID)
+}
+
+// GetByPresentToken - доска по токену показа.
+func (r *BoardRepo) GetByPresentToken(ctx context.Context, token string) (*model.Board, error) {
+	return r.getBy(ctx, "b.present_token = ? AND b.deleted_at IS NULL AND (b.present_expires_at IS NULL OR b.present_expires_at > now())", token)
+}
+
+// SetPresent включает (token, presenter, expires) или выключает (все nil) показ.
+func (r *BoardRepo) SetPresent(ctx context.Context, id uuid.UUID, token *string, presenter *uuid.UUID, expires *time.Time) error {
+	b := psql.Update("board").
+		Set("present_token", token).Set("presenter_account_id", presenter).Set("present_expires_at", expires).
+		Where("id = ? AND deleted_at IS NULL", id)
+	tag, err := execBuilder(ctx, r.db, b)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetPresentExpiry продлевает или снимает срок уже включённого показа.
+func (r *BoardRepo) SetPresentExpiry(ctx context.Context, id uuid.UUID, expires *time.Time) error {
+	tag, err := execBuilder(ctx, r.db, psql.Update("board").Set("present_expires_at", expires).Where("id = ? AND deleted_at IS NULL", id))
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetPresenter меняет ведущего показа.
+func (r *BoardRepo) SetPresenter(ctx context.Context, id, presenter uuid.UUID) error {
+	tag, err := execBuilder(ctx, r.db, psql.Update("board").Set("presenter_account_id", presenter).Where("id = ? AND deleted_at IS NULL", id))
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // BoardSort - сортировка списка досок; ключи keyset-курсора совпадают с ORDER BY.
@@ -194,7 +243,7 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 		"(bs.board_id IS NOT NULL) AS is_starred",
 		"tm.role",
 	)
-	b = boardListFrom(b, f).Join("account a ON a.id = b.account_id")
+	b = boardListFrom(b, f).Join("account a ON a.id = b.account_id").LeftJoin(presenterJoin)
 	var keyCol string
 	switch f.Sort {
 	case BoardSortName:
@@ -232,6 +281,7 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
 			&bv.Board.TeamAccess, &bv.Board.TeamAccessInherited, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
+			&bv.Board.PresentToken, &bv.Board.PresenterAccountID, &bv.Board.PresenterName, &bv.Board.PresentExpiresAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
 			&bv.ViewerRole,
@@ -267,6 +317,7 @@ func (r *BoardRepo) RecentByTeams(ctx context.Context, viewerID uuid.UUID, orgAd
 		JoinClause("JOIN LATERAL (SELECT b.* FROM board b WHERE b.team_id = tm.team_id AND b.deleted_at IS NULL AND "+visibleBoardCond+
 			" ORDER BY COALESCE(b.last_opened_at, b.updated_at) DESC, b.id DESC LIMIT ?) b ON true", orgAdmin, viewerID, perTeam).
 		Join("account a ON a.id = b.account_id").
+		LeftJoin(presenterJoin).
 		LeftJoin("board_starred bs ON bs.board_id = b.id AND bs.account_id = ?", viewerID).
 		Where("tm.account_id = ?", viewerID).
 		OrderBy("b.team_id", "COALESCE(b.last_opened_at, b.updated_at) DESC", "b.id DESC")
@@ -281,6 +332,7 @@ func (r *BoardRepo) RecentByTeams(ctx context.Context, viewerID uuid.UUID, orgAd
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
 			&bv.Board.TeamAccess, &bv.Board.TeamAccessInherited, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
+			&bv.Board.PresentToken, &bv.Board.PresenterAccountID, &bv.Board.PresenterName, &bv.Board.PresentExpiresAt,
 			&bv.OwnerName,
 			&bv.IsStarred,
 			&bv.ViewerRole,

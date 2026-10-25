@@ -186,6 +186,16 @@ func (h *Hub) Close(kind Kind, id uuid.UUID) {
 	}
 }
 
+// CloseScreens отключает экраны показа комнаты, если она открыта.
+func (h *Hub) CloseScreens(kind Kind, id uuid.UUID, code int, reason string) {
+	h.mu.Lock()
+	room, ok := h.rooms[roomKey(kind, id)]
+	h.mu.Unlock()
+	if ok {
+		room.CloseScreens(code, reason)
+	}
+}
+
 // Run - тикер записи изменённых комнат, работает до отмены ctx.
 func (h *Hub) Run(ctx context.Context) {
 	t := time.NewTicker(h.interval)

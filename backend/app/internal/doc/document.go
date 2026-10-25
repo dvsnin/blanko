@@ -69,6 +69,18 @@ type PresenceGoneMessage struct {
 	ID   string `json:"id"`
 }
 
+// ScreensMessage - экраны показа в комнате; редакторы показывают их в списке участников.
+type ScreensMessage struct {
+	Type  string   `json:"type"`
+	Items []Screen `json:"items"`
+}
+
+// Screen - одно устройство показа (по cookie), сколько бы окон оно ни открыло.
+type Screen struct {
+	ID    string `json:"id"`
+	Since int64  `json:"since"` // unix ms первого подключения
+}
+
 // Client - подключение к комнате. Send неблокирующий: false значит очередь полна.
 type Client interface {
 	Send(msg []byte) bool

@@ -2,8 +2,10 @@ package doc
 
 import (
 	"encoding/json"
+	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -21,6 +23,8 @@ type Room struct {
 	clients map[Client]struct{}
 	// presence: последний курсор каждого клиента - только ретрансляция, в records не попадает.
 	presence map[Client]presenceEntry
+	// screens: соединения экранов показа; им не шлём список экранов, остальным шлём при каждом изменении.
+	screens map[Client]screenEntry
 
 	dirty atomic.Bool
 	// flushMu сериализует сброс: тикер, Leave, Flush и Shutdown не должны класть снапшоты вперемешку.
@@ -36,8 +40,13 @@ type presenceEntry struct {
 	msg []byte // готовое к отправке {"type":"presence","record":...}
 }
 
+type screenEntry struct {
+	id    string
+	since time.Time
+}
+
 func newRoom(kind Kind, id uuid.UUID, d *Document) *Room {
-	r := &Room{kind: kind, id: id, records: map[string]json.RawMessage{}, clients: map[Client]struct{}{}, presence: map[Client]presenceEntry{}}
+	r := &Room{kind: kind, id: id, records: map[string]json.RawMessage{}, clients: map[Client]struct{}{}, presence: map[Client]presenceEntry{}, screens: map[Client]screenEntry{}}
 	if d != nil {
 		r.schema = d.Schema
 		for k, v := range d.Store {
@@ -114,6 +123,64 @@ func (r *Room) PresenceBacklog(exclude Client) [][]byte {
 	return out
 }
 
+// AddScreen регистрирует соединение экрана показа и рассылает редакторам новый список.
+func (r *Room) AddScreen(c Client, id string) {
+	r.mu.Lock()
+	r.screens[c] = screenEntry{id: id, since: time.Now()}
+	slow := r.broadcastScreensLocked()
+	r.mu.Unlock()
+	for _, cl := range slow {
+		cl.Close(1008, "slow consumer")
+	}
+}
+
+// ScreensSnapshot - список экранов для нового редактора; nil, если экранов нет.
+func (r *Room) ScreensSnapshot() []byte {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.screens) == 0 {
+		return nil
+	}
+	return r.screensMessageLocked()
+}
+
+// screensMessageLocked собирает экраны по id (первое подключение задаёт порядок). Под r.mu.
+func (r *Room) screensMessageLocked() []byte {
+	first := map[string]time.Time{}
+	for _, s := range r.screens {
+		if t, ok := first[s.id]; !ok || s.since.Before(t) {
+			first[s.id] = s.since
+		}
+	}
+	items := make([]Screen, 0, len(first))
+	for id, t := range first {
+		items = append(items, Screen{ID: id, Since: t.UnixMilli()})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Since != items[j].Since {
+			return items[i].Since < items[j].Since
+		}
+		return items[i].ID < items[j].ID
+	})
+	msg, _ := json.Marshal(ScreensMessage{Type: "screens", Items: items})
+	return msg
+}
+
+// broadcastScreensLocked шлёт список экранов всем, кроме самих экранов; возвращает медленных. Под r.mu.
+func (r *Room) broadcastScreensLocked() []Client {
+	msg := r.screensMessageLocked()
+	var slow []Client
+	for c := range r.clients {
+		if _, isScreen := r.screens[c]; isScreen {
+			continue
+		}
+		if !c.Send(msg) {
+			slow = append(slow, c)
+		}
+	}
+	return slow
+}
+
 // otherClients зовётся под r.mu.
 func (r *Room) otherClients(from Client) []Client {
 	out := make([]Client, 0, len(r.clients))
@@ -166,6 +233,10 @@ func (r *Room) removeClient(c Client) int {
 			slow = append(slow, cl)
 		}
 	}
+	if _, ok := r.screens[c]; ok {
+		delete(r.screens, c)
+		slow = append(slow, r.broadcastScreensLocked()...)
+	}
 	r.mu.Unlock()
 	for _, cl := range slow {
 		cl.Close(1008, "slow consumer")
@@ -183,6 +254,19 @@ func (r *Room) isTouched() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.touched
+}
+
+// CloseScreens отключает экраны показа: показ выключен, ссылка больше не действует.
+func (r *Room) CloseScreens(code int, reason string) {
+	r.mu.RLock()
+	clients := make([]Client, 0, len(r.screens))
+	for c := range r.screens {
+		clients = append(clients, c)
+	}
+	r.mu.RUnlock()
+	for _, c := range clients {
+		c.Close(code, reason)
+	}
 }
 
 func (r *Room) closeClients(code int, reason string) {

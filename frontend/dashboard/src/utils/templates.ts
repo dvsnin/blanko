@@ -41,12 +41,13 @@ export function topicCounts(list: Template[], q: string, age: AgeKey | "all"): R
   return counts;
 }
 
-/** Глиф и тема из шаблона, если он передан. */
+/** Обложка доски плюс тема шаблона, если он передан. Буква всегда из названия доски:
+    глиф шаблона на карточках досок не показываем. */
 export function coverForBoard(
   board: { id: string; title: string; templateId?: string; colorKey?: string },
   template?: Template,
 ): Cover & { topic?: TopicStyle } {
   const base = coverFor(board);
   if (!template) return base;
-  return { ...base, glyph: templateGlyph(template), topic: topicStyle(template.topic) };
+  return { ...base, topic: topicStyle(template.topic) };
 }

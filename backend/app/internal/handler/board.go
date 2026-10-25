@@ -1,33 +1,41 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	"github.com/dvsnin/blanko/backend/app/internal/doc"
 	"github.com/dvsnin/blanko/backend/app/internal/model"
 	"github.com/dvsnin/blanko/backend/app/internal/service"
 )
 
 // BoardDTO - представление доски в API.
 type BoardDTO struct {
-	ID                  string    `json:"id"`
-	PublicID            string    `json:"publicId"`
-	Name                string    `json:"name"`
-	TeamID              string    `json:"teamId"`
-	OwnerID             string    `json:"ownerId"`
-	OwnerName           string    `json:"ownerName"`
-	TeamAccess          string    `json:"teamAccess"` // действующий: своя настройка или уровень группы
-	TeamAccessInherited bool      `json:"teamAccessInherited"`
-	LinkAccessEnabled   bool      `json:"linkAccessEnabled"`
-	IsStarred           bool      `json:"isStarred"`
-	CanEdit             bool      `json:"canEdit"`
-	TemplateID          string    `json:"templateId"`
-	CreatedAt           time.Time `json:"createdAt"`
-	UpdatedAt           time.Time `json:"updatedAt"`
-	LastOpenedAt        string    `json:"lastOpenedAt"`
+	ID                  string `json:"id"`
+	PublicID            string `json:"publicId"`
+	Name                string `json:"name"`
+	TeamID              string `json:"teamId"`
+	OwnerID             string `json:"ownerId"`
+	OwnerName           string `json:"ownerName"`
+	TeamAccess          string `json:"teamAccess"` // действующий: своя настройка или уровень группы
+	TeamAccessInherited bool   `json:"teamAccessInherited"`
+	LinkAccessEnabled   bool   `json:"linkAccessEnabled"`
+	// Режим показа: включён ли, токен и код (только тем, кто управляет доской), срок, ведущий.
+	PresentEnabled   bool      `json:"presentEnabled"`
+	PresentToken     string    `json:"presentToken"`
+	PresentExpiresAt string    `json:"presentExpiresAt"`
+	PresenterID      string    `json:"presenterId"`
+	PresenterName    string    `json:"presenterName"`
+	IsStarred        bool      `json:"isStarred"`
+	CanEdit          bool      `json:"canEdit"`
+	TemplateID       string    `json:"templateId"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+	LastOpenedAt     string    `json:"lastOpenedAt"`
 }
 
 func boardViewToDTO(v model.BoardView) BoardDTO {
@@ -39,7 +47,23 @@ func boardViewToDTO(v model.BoardView) BoardDTO {
 	if v.Board.LastOpenedAt != nil {
 		lastOpened = v.Board.LastOpenedAt.Format(time.RFC3339)
 	}
+	presenterID := ""
+	if v.Board.PresenterAccountID != nil {
+		presenterID = v.Board.PresenterAccountID.String()
+	}
+	presentToken, presentExpires := "", ""
+	if v.Board.PresentToken != nil && v.Board.PresentExpiresAt != nil {
+		presentExpires = v.Board.PresentExpiresAt.UTC().Format(time.RFC3339)
+	}
+	if v.CanEdit && v.Board.PresentToken != nil {
+		presentToken = *v.Board.PresentToken
+	}
 	return BoardDTO{
+		PresentEnabled:      v.Board.PresentToken != nil,
+		PresentToken:        presentToken,
+		PresentExpiresAt:    presentExpires,
+		PresenterID:         presenterID,
+		PresenterName:       v.Board.PresenterName,
 		ID:                  v.Board.ID.String(),
 		PublicID:            v.Board.PublicID,
 		Name:                v.Board.Name,
@@ -134,6 +158,68 @@ func (a *API) ListBoards(w http.ResponseWriter, r *http.Request) {
 		out = append(out, boardViewToDTO(b))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": out, "nextCursor": page.NextCursor, "total": page.Total})
+}
+
+type presentEnableRequest struct {
+	WithAccount
+	ID    string `json:"id"`
+	Hours int    `json:"hours"` // 0 - пока не выключат, иначе 1, 12 или 24
+}
+
+// EnablePresent POST /api/v1/board/present/enable - включить показ: ссылка, код, срок, ведущий.
+func (a *API) EnablePresent(w http.ResponseWriter, r *http.Request) {
+	var req presentEnableRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	boardID, err := uuid.Parse(req.ID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_id", "invalid board id")
+		return
+	}
+	view, err := a.services.Board.EnablePresent(r.Context(), id, boardID, req.Hours)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, boardViewToDTO(*view))
+}
+
+// DisablePresent POST /api/v1/board/present/disable.
+func (a *API) DisablePresent(w http.ResponseWriter, r *http.Request) {
+	a.presentAction(w, r, func(ctx context.Context, id service.Identity, boardID uuid.UUID) (*model.BoardView, error) {
+		view, err := a.services.Board.DisablePresent(ctx, id, boardID)
+		if err == nil {
+			// Экраны отключаем сразу, не дожидаясь их опроса: ссылка уже не действует.
+			a.services.Document.Hub.CloseScreens(doc.KindBoard, boardID, 4404, "present off")
+		}
+		return view, err
+	})
+}
+
+// LeadPresent POST /api/v1/board/present/lead - стать ведущим показа.
+func (a *API) LeadPresent(w http.ResponseWriter, r *http.Request) {
+	a.presentAction(w, r, a.services.Board.LeadPresent)
+}
+
+func (a *API) presentAction(w http.ResponseWriter, r *http.Request, action func(context.Context, service.Identity, uuid.UUID) (*model.BoardView, error)) {
+	var req boardIDRequest
+	id, ok := a.decodeAndAuth(w, r, &req)
+	if !ok {
+		return
+	}
+	boardID, err := uuid.Parse(req.ID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad_id", "invalid board id")
+		return
+	}
+	view, err := action(r.Context(), id, boardID)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, boardViewToDTO(*view))
 }
 
 // CreateBoard POST /api/v1/board/create
@@ -310,6 +396,9 @@ func (a *API) Register(r *mux.Router) {
 	post("/board/create", a.CreateBoard)
 	post("/board/update", a.UpdateBoard)
 	post("/board/delete", a.DeleteBoard)
+	post("/board/present/enable", a.EnablePresent)
+	post("/board/present/disable", a.DisablePresent)
+	post("/board/present/lead", a.LeadPresent)
 	post("/board/star", a.StarBoard)
 	post("/board/unstar", a.UnstarBoard)
 	post("/board/duplicate", a.DuplicateBoard)

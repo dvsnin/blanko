@@ -13,7 +13,7 @@ export function page(items: BoardDTO[], total = items.length, nextCursor = ""): 
 export function boardDTO(id: string, teamId: string, name: string): BoardDTO {
   return {
     id, publicId: "p-" + id, name, teamId, ownerId: "u1", ownerName: "Анна",
-    teamAccess: "edit", teamAccessInherited: true, linkAccessEnabled: false, isStarred: false, canEdit: true, templateId: "",
+    teamAccess: "edit", teamAccessInherited: true, linkAccessEnabled: false, presentEnabled: false, presentToken: "", presentExpiresAt: "", presenterId: "", presenterName: "", isStarred: false, canEdit: true, templateId: "",
     createdAt: "2026-10-02T00:00:00Z", updatedAt: "2026-10-02T00:00:00Z", lastOpenedAt: "2026-10-02T00:00:00Z",
   };
 }
