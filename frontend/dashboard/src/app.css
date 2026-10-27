@@ -216,51 +216,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
     white-space: nowrap;
 }
 
-/* ====== PROFILE MENU ====== */
-
-.profile-menu {
-    position: absolute;
-    top: 70px;
-    right: 32px;
-    width: 200px;
-    background: var(--surface);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    padding: 8px 0;
-    animation: fadeIn 0.15s ease-out;
-    z-index: 100;
-}
-
-.profile-menu .menu-item {
-    padding: 10px 15px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.profile-menu .menu-item.header {
-    font-weight: 600;
-}
-
-.profile-menu .menu-item.small {
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.profile-menu .menu-item:hover {
-    background: #f5f5f5;
-}
-
-.profile-menu hr {
-    border: none;
-    border-top: 1px solid #eee;
-    margin: 6px 0;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 /* ====== UTILITIES ====== */
 
 .input-disabled {
