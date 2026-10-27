@@ -59,7 +59,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []
 				log.Printf("bootstrap: ADMIN_EMAILS пуст, организация не создана, админов сада нет")
 				return nil
 			}
-			owner, err := ensureAccount(ctx, accounts, adminEmails[0])
+			owner, err := ensureAccount(ctx, accounts, adminEmails[0], ownerName)
 			if err != nil {
 				return err
 			}
@@ -81,7 +81,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []
 		}
 		promote := PlanMembership(members, adminEmails)
 		for _, email := range promote {
-			acc, err := ensureAccount(ctx, accounts, email)
+			acc, err := ensureAccount(ctx, accounts, email, strings.SplitN(email, "@", 2)[0])
 			if err != nil {
 				return err
 			}
@@ -94,10 +94,13 @@ func Run(ctx context.Context, pool *pgxpool.Pool, orgName string, adminEmails []
 	})
 }
 
-func ensureAccount(ctx context.Context, accounts *repository.AccountRepo, email string) (*model.Account, error) {
+// Имя владельца при создании: Keycloak имя в базу не передаёт, пользователь меняет его в кабинете.
+const ownerName = "Администратор"
+
+func ensureAccount(ctx context.Context, accounts *repository.AccountRepo, email, name string) (*model.Account, error) {
 	acc, err := accounts.GetByEmail(ctx, email)
 	if errors.Is(err, repository.ErrNotFound) {
-		acc = &model.Account{Email: email, Name: strings.SplitN(email, "@", 2)[0]}
+		acc = &model.Account{Email: email, Name: name}
 		if err := accounts.Create(ctx, acc); err != nil {
 			return nil, fmt.Errorf("create account %s: %w", email, err)
 		}
