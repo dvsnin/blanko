@@ -1,6 +1,6 @@
 module github.com/dvsnin/blanko/backend/app
 
-go 1.25.3
+go 1.27.3
 
 require (
 	github.com/Masterminds/squirrel v1.5.4
