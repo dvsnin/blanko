@@ -23,7 +23,7 @@
 | Слой | Технологии |
 |---|---|
 | Дашборд | React 19, TypeScript, Vite |
-| Холст | [tldraw](https://tldraw.dev) 5.5.2 (без ключа на localhost и http-хостах, с watermark), собран в статику вместе с ресурсами, интернет не нужен |
+| Холст | [tldraw](https://tldraw.dev) 5.5.2 (без ключа на localhost и http-хостах), собран в статику вместе с ресурсами, интернет не нужен |
 | Backend | Go 1.25, gorilla/mux, gorilla/websocket, pgx, aws-sdk-go-v2 |
 | База данных | PostgreSQL 17 |
 | Хранилище содержимого | RustFS (S3-совместимое) |
@@ -123,4 +123,4 @@ pnpm --filter @blanko/dashboard exec vitest run
 
 Код - под лицензией MIT, см. [LICENSE](LICENSE).
 
-Холст построен на tldraw. Начиная с 4-й версии SDK требует лицензионный ключ при работе в production - это HTTPS на публичном домене; локально по HTTP ключ не нужен и переменная `TLDRAW_LICENSE_KEY` может быть пустой. Без ключа в production холст перестаёт отрисовываться. Проект рассчитан на бесплатную [hobby-лицензию](https://tldraw.dev/get-a-license/hobby) для некоммерческих и учебных работ: она требует сохранять на доске отметку «made with tldraw», скрывать её нельзя.
+Холст построен на tldraw по бесплатной [hobby-лицензии](https://tldraw.dev/get-a-license/hobby) для некоммерческих и учебных работ. Локально по HTTP ключ не нужен, для публичного HTTPS-развёртывания ключ задаётся в `TLDRAW_LICENSE_KEY`.
