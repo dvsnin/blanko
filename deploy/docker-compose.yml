@@ -10,14 +10,20 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
 
-  postgres_backend:
+  # Один Postgres на стенд: база приложения, база Keycloak и app_test. Роль и базы, кроме основной,
+  # создаёт deploy/postgres/init.sh при первом старте на пустом томе.
+  postgres:
     image: postgres:17
     environment:
       POSTGRES_USER: ${APP_POSTGRES_USER}
       POSTGRES_PASSWORD: ${APP_POSTGRES_PASSWORD}
       POSTGRES_DB: ${APP_POSTGRES_DB}
+      KC_POSTGRES_USER: ${KC_POSTGRES_USER}
+      KC_POSTGRES_PASSWORD: ${KC_POSTGRES_PASSWORD}
+      KC_POSTGRES_DB: ${KC_POSTGRES_DB}
     volumes:
-      - pgdata_backend:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     ports:
       - "${APP_POSTGRES_PORT}:5432"
     healthcheck:
@@ -26,15 +32,6 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
-
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: ${KC_POSTGRES_USER}
-      POSTGRES_PASSWORD: ${KC_POSTGRES_PASSWORD}
-      POSTGRES_DB: ${KC_POSTGRES_DB}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.5
@@ -60,7 +57,8 @@ services:
       - ./keycloak:/opt/keycloak/data/import
       - ./keycloak/themes/blanko:/opt/keycloak/themes/blanko
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.7.1
@@ -128,7 +126,7 @@ services:
     # Docker по умолчанию убивает контейнер через 10 с, комнатам нужно время на сброс в хранилище.
     stop_grace_period: 30s
     environment:
-      POSTGRES_DSN: postgres://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@postgres_backend:5432/${APP_POSTGRES_DB}?sslmode=disable
+      POSTGRES_DSN: postgres://${APP_POSTGRES_USER}:${APP_POSTGRES_PASSWORD}@postgres:5432/${APP_POSTGRES_DB}?sslmode=disable
       TLDRAW_LICENSE_KEY: ${TLDRAW_LICENSE_KEY}
       ORG_NAME: ${APP_ORG_NAME}
       ADMIN_EMAILS: ${APP_ADMIN_EMAILS}
@@ -140,7 +138,7 @@ services:
       S3_SECRET_KEY: ${APP_S3_SECRET_KEY}
       S3_BUCKET: ${APP_S3_BUCKET}
     depends_on:
-      postgres_backend:
+      postgres:
         condition: service_healthy
       rustfs:
         condition: service_healthy
@@ -165,5 +163,4 @@ services:
 
 volumes:
   pgdata:
-  pgdata_backend:
   rustfsdata:

@@ -80,7 +80,7 @@
       "email": "admin@blanko.ru",
       "emailVerified": true,
       "firstName": "Администратор",
-      "lastName": "",
+      "lastName": "Blanko",
       "credentials": [
         {
           "type": "password",

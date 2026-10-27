@@ -48,7 +48,7 @@ build-frontend:
 	done
 	@echo "Frontend build finished."
 
-# Тесты бэкенда: Postgres стенда и база app_test (создать один раз через psql). DSN из deploy/.env
+# Тесты бэкенда: Postgres стенда и база app_test (создаётся init-скриптом при первом старте). DSN из deploy/.env
 # или свой: make test-backend TEST_POSTGRES_DSN=...
 envval = $(shell grep -E '^$(1)=' $(ENV_FILE) | head -1 | cut -d= -f2-)
 TEST_POSTGRES_DSN ?= postgres://$(call envval,APP_POSTGRES_USER):$(call envval,APP_POSTGRES_PASSWORD)@localhost:$(call envval,APP_POSTGRES_PORT)/app_test?sslmode=disable

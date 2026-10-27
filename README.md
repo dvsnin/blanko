@@ -95,10 +95,9 @@ cd backend/app && go build ./...       # сборка бэкенда
 
 Dev-сервер Vite отдаёт только вёрстку: данные пользователя инжектит бэкенд при рендере страницы, а запросы к API требуют сессии. Дашборд с данными проверяется через `make up`.
 
-Тесты бэкенда интеграционные, им нужен Postgres стенда и отдельная база `app_test`:
+Тесты бэкенда интеграционные, им нужен Postgres стенда и база `app_test`, которую `deploy/postgres/init.sh` создаёт при первом старте:
 
 ```sh
-docker exec deploy-postgres_backend-1 psql -U <APP_POSTGRES_USER> -d <APP_POSTGRES_DB> -c 'create database app_test'
 make test-backend                      # DSN собирается из deploy/.env
 pnpm --filter @blanko/dashboard exec vitest run
 ```
