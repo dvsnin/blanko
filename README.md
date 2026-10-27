@@ -32,7 +32,7 @@
 
 ## Быстрый старт
 
-Нужны Docker с Compose v2, pnpm 10 и Node.js 20+.
+Нужны Docker с Compose v2, pnpm 12 и Node.js 24+.
 
 ```sh
 git clone git@github.com:dvsnin/blanko.git

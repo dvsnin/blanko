@@ -1,2 +1,6 @@
 packages:
   - "frontend/*"
+
+# esbuild проверяет свой бинарник в install-скрипте; pnpm 12 без разрешения считает это ошибкой.
+allowBuilds:
+  esbuild: true

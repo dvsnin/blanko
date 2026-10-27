@@ -2,7 +2,7 @@
   "name": "blanko-monorepo",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@12.15.0",
   "workspaces": [
     "frontend/*"
   ],
@@ -12,7 +12,7 @@
     "build:dashboard": "pnpm --filter @blanko/dashboard build",
     "build:all": "pnpm -w run -r build"
   },
-  "devDependencies": {
-    "pnpm": "^10"
+  "engines": {
+    "node": ">=24"
   }
 }
