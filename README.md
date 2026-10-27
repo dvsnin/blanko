@@ -22,13 +22,13 @@
 
 | Слой | Технологии |
 |---|---|
-| Дашборд | React 19, TypeScript, Vite |
+| Дашборд | [React](https://react.dev) 19, [TypeScript](https://www.typescriptlang.org), [Vite](https://vite.dev) |
 | Холст | [tldraw](https://tldraw.dev) 5.5.2 (без ключа на localhost и http-хостах), собран в статику вместе с ресурсами, интернет не нужен |
-| Backend | Go 1.25, gorilla/mux, gorilla/websocket, pgx, aws-sdk-go-v2 |
-| База данных | PostgreSQL 17 |
-| Хранилище содержимого | RustFS (S3-совместимое) |
-| Вход и маршрутизация | Keycloak 26, oauth2-proxy, Traefik |
-| Запуск | Docker Compose |
+| Backend | [Go](https://go.dev) 1.25, [gorilla/mux](https://github.com/gorilla/mux), [gorilla/websocket](https://github.com/gorilla/websocket), [pgx](https://github.com/jackc/pgx), [aws-sdk-go-v2](https://github.com/aws/aws-sdk-go-v2) |
+| База данных | [PostgreSQL](https://www.postgresql.org) 17 |
+| Хранилище содержимого | [RustFS](https://rustfs.com) (S3-совместимое) |
+| Вход и маршрутизация | [Keycloak](https://www.keycloak.org) 26, [oauth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/), [Traefik](https://traefik.io/traefik) |
+| Запуск | [Docker Compose](https://docs.docker.com/compose/) |
 
 ## Быстрый старт
 
