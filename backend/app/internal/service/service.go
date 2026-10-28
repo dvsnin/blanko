@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -86,8 +85,24 @@ func (s *AuthService) Resolve(ctx context.Context, email, name string) (*Identit
 		name = strings.SplitN(email, "@", 2)[0]
 	}
 
+	// Быстрый путь: аккаунт и членство уже есть, значит на запрос приходится один SELECT без транзакции.
+	// Иначе (первый вход, организация появилась позже) идём медленным путём с созданием строк.
+	known, err := repository.NewAccountRepo(s.pool).GetWithOrgRole(ctx, email)
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return nil, fmt.Errorf("get account: %w", err)
+	}
+	if known != nil && (known.OrgID == uuid.Nil || known.Role != "") {
+		identity := Identity{Account: known.Account, OrgRole: model.OrgRoleMember}
+		if known.OrgID != uuid.Nil {
+			identity.OrganizationID = known.OrgID
+			identity.OrgName = known.OrgName
+			identity.OrgRole = known.Role
+		}
+		return &identity, nil
+	}
+
 	var identity Identity
-	err := withTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = withTx(ctx, s.pool, func(tx pgx.Tx) error {
 		accRepo := repository.NewAccountRepo(tx)
 
 		acc, err := accRepo.GetByEmail(ctx, email)
@@ -137,9 +152,7 @@ func (s *AuthService) ListAccounts(ctx context.Context, id Identity) ([]model.Ac
 	if err != nil {
 		return nil, err
 	}
-	sort.SliceStable(list, func(i, j int) bool {
-		return ruSortKey(list[i].Account.Name) < ruSortKey(list[j].Account.Name)
-	})
+	sortRu(list, func(a model.AccountWithRole) string { return ruSortKey(a.Account.Name) })
 	return list, nil
 }
 
@@ -284,10 +297,8 @@ func (s *AuthService) SearchAccounts(ctx context.Context, q string) ([]model.Acc
 	if err != nil {
 		return nil, fmt.Errorf("search accounts: %w", err)
 	}
-	sort.SliceStable(list, func(i, j int) bool {
-		ki, kj := ruSortKey(list[i].Name), ruSortKey(list[j].Name)
-		return ki < kj || (ki == kj && list[i].Email < list[j].Email)
-	})
+	// Разделитель \x00 меньше любого символа: порядок тот же, что «по имени, затем по email».
+	sortRu(list, func(a model.Account) string { return ruSortKey(a.Name) + "\x00" + a.Email })
 	return list, nil
 }
 
@@ -570,16 +581,11 @@ func (s *TeamService) RemoveMember(ctx context.Context, id Identity, teamID, acc
 }
 
 func (s *TeamService) member(ctx context.Context, repo *repository.TeamRepo, teamID, accountID uuid.UUID) (*model.TeamMemberView, error) {
-	members, err := repo.ListMembers(ctx, teamID)
+	m, err := repo.GetMember(ctx, teamID, accountID)
 	if err != nil {
-		return nil, err
+		return nil, mapNotFound(err)
 	}
-	for i := range members {
-		if members[i].AccountID == accountID {
-			return &members[i], nil
-		}
-	}
-	return nil, ErrNotFound
+	return m, nil
 }
 
 func validateEmail(email string) error {
@@ -701,10 +707,11 @@ type BoardListInput struct {
 }
 
 // BoardListResult - страница: доски, курсор на следующую (пусто - конец) и total по фильтру.
+// Total считается только на первой странице (nil дальше): клиент держит его с первой.
 type BoardListResult struct {
 	Items      []model.BoardView
 	NextCursor string
-	Total      int
+	Total      *int
 }
 
 const (
@@ -794,9 +801,13 @@ func (s *BoardService) List(ctx context.Context, id Identity, in BoardListInput)
 	if err != nil {
 		return nil, err
 	}
-	total, err := repo.CountBoards(ctx, f)
-	if err != nil {
-		return nil, err
+	var total *int
+	if f.After == nil {
+		n, err := repo.CountBoards(ctx, f)
+		if err != nil {
+			return nil, err
+		}
+		total = &n
 	}
 	return &BoardListResult{Items: visibleBoards(views, id), NextCursor: encodeBoardCursor(f.Sort, next), Total: total}, nil
 }

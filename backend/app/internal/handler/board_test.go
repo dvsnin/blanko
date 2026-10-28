@@ -169,8 +169,8 @@ func TestListBoards(t *testing.T) {
 			t.Fatalf("page 1 total/cursor = %v / %v", p1["total"], p1["nextCursor"])
 		}
 		_, p2 := list("member@example.com", map[string]any{"sort": "name", "limit": 2, "cursor": p1["nextCursor"]})
-		if got := namesOf(p2); !reflect.DeepEqual(got, []string{"ёлка", "Моя доска"}) {
-			t.Fatalf("page 2 = %v", got)
+		if got := namesOf(p2); !reflect.DeepEqual(got, []string{"ёлка", "Моя доска"}) || p2["total"] != nil {
+			t.Fatalf("page 2 = %v, total %v (считается только на первой странице)", got, p2["total"])
 		}
 		_, p3 := list("member@example.com", map[string]any{"sort": "name", "limit": 2, "cursor": p2["nextCursor"]})
 		if got := namesOf(p3); !reflect.DeepEqual(got, []string{"Яблоко"}) || p3["nextCursor"] != "" {

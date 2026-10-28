@@ -103,10 +103,24 @@ func ruSortKey(s string) string {
 	return strings.ReplaceAll(strings.ToLower(s), "ё", "е")
 }
 
+// sortRu сортирует устойчиво по ключу, который считается один раз на элемент, а не на сравнение.
+func sortRu[T any](items []T, key func(T) string) {
+	type keyed struct {
+		k string
+		v T
+	}
+	tmp := make([]keyed, len(items))
+	for i, it := range items {
+		tmp[i] = keyed{k: key(it), v: it}
+	}
+	sort.SliceStable(tmp, func(i, j int) bool { return tmp[i].k < tmp[j].k })
+	for i := range tmp {
+		items[i] = tmp[i].v
+	}
+}
+
 func sortTemplatesRu(views []model.TemplateView) {
-	sort.SliceStable(views, func(i, j int) bool {
-		return ruSortKey(views[i].Template.Name) < ruSortKey(views[j].Template.Name)
-	})
+	sortRu(views, func(v model.TemplateView) string { return ruSortKey(v.Template.Name) })
 }
 
 type TemplateService struct {
@@ -142,16 +156,12 @@ func (s *TemplateService) List(ctx context.Context, id Identity) ([]model.Templa
 }
 
 func (s *TemplateService) view(ctx context.Context, id Identity, templateID uuid.UUID) (*model.TemplateView, error) {
-	views, err := s.List(ctx, id)
+	v, err := repository.NewTemplateRepo(s.pool).GetView(ctx, templateID, id.Account.ID)
 	if err != nil {
-		return nil, err
+		return nil, mapNotFound(err)
 	}
-	for _, v := range views {
-		if v.Template.ID == templateID {
-			return &v, nil
-		}
-	}
-	return nil, ErrNotFound
+	v.CanEdit = canEditTemplate(v.Template, id)
+	return v, nil
 }
 
 // Create: fromBoardID - доска-источник, нужно членство в её группе.

@@ -281,18 +281,11 @@ func (h *Hub) flushRoom(ctx context.Context, room *Room) error {
 	if !room.dirty.Swap(false) {
 		return nil
 	}
-	d := room.Snapshot()
-	if d == nil {
+	room.flushBuf.Reset()
+	if !room.WriteSnapshot(&room.flushBuf) {
 		return nil
 	}
-	if len(d.Schema) == 0 {
-		d.Schema = json.RawMessage("{}")
-	}
-	body, err := json.Marshal(d)
-	if err != nil {
-		room.dirty.Store(true)
-		return err
-	}
+	body := room.flushBuf.Bytes()
 	key := DocumentKey(room.kind, room.id)
 	if err := h.store.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "application/json"); err != nil {
 		room.dirty.Store(true)

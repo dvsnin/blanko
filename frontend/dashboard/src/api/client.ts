@@ -167,8 +167,8 @@ export interface BoardPage {
   items: BoardDTO[];
   /** Пусто - страниц больше нет. */
   nextCursor: string;
-  /** Всего досок под тем же фильтром. */
-  total: number;
+  /** Всего досок под тем же фильтром; сервер считает только на первой странице, дальше null. */
+  total: number | null;
 }
 
 export interface AccountListDTO {
@@ -227,7 +227,7 @@ export const api = {
   boards: {
     /** Страница досок: группы teamId или всех групп пользователя (без teamId). */
     list: (params: BoardListParams) =>
-      post<BoardPage>("/board/list", { ...params }).then((r) => ({ items: r.items ?? [], nextCursor: r.nextCursor ?? "", total: r.total ?? 0 })),
+      post<BoardPage>("/board/list", { ...params }).then((r) => ({ items: r.items ?? [], nextCursor: r.nextCursor ?? "", total: r.total ?? null })),
     create: (teamId: string, name?: string, templateId?: string) =>
       post<BoardDTO>("/board/create", {
         teamId,

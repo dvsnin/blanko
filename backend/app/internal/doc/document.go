@@ -3,6 +3,7 @@
 package doc
 
 import (
+	"bytes"
 	"encoding/json"
 
 	"github.com/google/uuid"
@@ -49,11 +50,21 @@ type Patch struct {
 	Remove []string                   `json:"remove"`
 }
 
-// PatchMessage - то, что уходит остальным клиентам комнаты.
-type PatchMessage struct {
-	Type   string                     `json:"type"`
-	Put    map[string]json.RawMessage `json:"put"`
-	Remove []string                   `json:"remove"`
+// PatchMessageBytes собирает {"type":"patch","put":...,"remove":...} из сырых байт запроса:
+// записи не перекодируются и ключи не сортируются, как это сделал бы json.Marshal.
+func PatchMessageBytes(put, remove json.RawMessage) []byte {
+	if len(put) == 0 || bytes.Equal(put, []byte("null")) {
+		put = json.RawMessage("{}")
+	}
+	if len(remove) == 0 || bytes.Equal(remove, []byte("null")) {
+		remove = json.RawMessage("[]")
+	}
+	msg := make([]byte, 0, len(put)+len(remove)+32)
+	msg = append(msg, `{"type":"patch","put":`...)
+	msg = append(msg, put...)
+	msg = append(msg, `,"remove":`...)
+	msg = append(msg, remove...)
+	return append(msg, '}')
 }
 
 // PresenceMessage - курсор/камера одного участника, ретранслируется остальным.

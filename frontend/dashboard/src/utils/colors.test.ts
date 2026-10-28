@@ -36,6 +36,13 @@ describe('assignColors', () => {
     expect(out.map((b) => b.id)).toEqual(['z', 'a', 'm']);
   });
 
+  it('повторный вызов возвращает те же объекты, если цвета уже верные', () => {
+    const first = assignColors(['z', 'a', 'm'].map(mk));
+    const second = assignColors(first);
+    expect(second.map((b) => b.colorKey)).toEqual(first.map((b) => b.colorKey));
+    second.forEach((b, i) => expect(b).toBe(first[i]));
+  });
+
   it('одна доска сохраняет colorForId', () => {
     expect(assignColors([mk('abc')])[0].colorKey).toBe(colorForId('abc'));
   });

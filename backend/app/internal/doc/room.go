@@ -1,6 +1,7 @@
 package doc
 
 import (
+	"bytes"
 	"encoding/json"
 	"sort"
 	"sync"
@@ -29,6 +30,8 @@ type Room struct {
 	dirty atomic.Bool
 	// flushMu сериализует сброс: тикер, Leave, Flush и Shutdown не должны класть снапшоты вперемешку.
 	flushMu sync.Mutex
+	// flushBuf переиспользуется между сбросами (под flushMu): большой документ не аллоцируется заново каждую секунду.
+	flushBuf bytes.Buffer
 
 	// loading закрывается, когда документ загружен (или загрузка провалилась: loadErr).
 	loading chan struct{}
@@ -56,11 +59,9 @@ func newRoom(kind Kind, id uuid.UUID, d *Document) *Room {
 	return r
 }
 
-// Apply накладывает дифф, пересылает его остальным клиентам и подтверждает отправителю.
+// Apply накладывает дифф, пересылает msg (готовый patch) остальным клиентам и подтверждает отправителю.
 // Всё под r.mu и без таймеров: порядок сообщений у клиента равен порядку применения на сервере.
-func (r *Room) Apply(schema json.RawMessage, p Patch, from Client, ack []byte) {
-	msg, _ := json.Marshal(PatchMessage{Type: "patch", Put: p.Put, Remove: p.Remove})
-
+func (r *Room) Apply(schema json.RawMessage, p Patch, msg []byte, from Client, ack []byte) {
 	r.mu.Lock()
 	if len(schema) > 0 && string(schema) != "null" {
 		r.schema = schema
@@ -72,12 +73,7 @@ func (r *Room) Apply(schema json.RawMessage, p Patch, from Client, ack []byte) {
 		delete(r.records, id)
 	}
 	r.touched = true
-	var slow []Client
-	for _, c := range r.otherClients(from) {
-		if !c.Send(msg) {
-			slow = append(slow, c)
-		}
-	}
+	slow := r.sendOthersLocked(msg, from)
 	if from != nil && ack != nil {
 		from.Send(ack)
 	}
@@ -98,12 +94,7 @@ func (r *Room) Presence(from Client, id string, record json.RawMessage) {
 	}
 	r.mu.Lock()
 	r.presence[from] = presenceEntry{id: id, msg: msg}
-	var slow []Client
-	for _, c := range r.otherClients(from) {
-		if !c.Send(msg) {
-			slow = append(slow, c)
-		}
-	}
+	slow := r.sendOthersLocked(msg, from)
 	r.mu.Unlock()
 	for _, c := range slow {
 		c.Close(1008, "slow consumer")
@@ -181,6 +172,17 @@ func (r *Room) broadcastScreensLocked() []Client {
 	return slow
 }
 
+// sendOthersLocked шлёт msg всем, кроме from, без промежуточного слайса; возвращает медленных. Под r.mu.
+func (r *Room) sendOthersLocked(msg []byte, from Client) []Client {
+	var slow []Client
+	for c := range r.clients {
+		if c != from && !c.Send(msg) {
+			slow = append(slow, c)
+		}
+	}
+	return slow
+}
+
 // otherClients зовётся под r.mu.
 func (r *Room) otherClients(from Client) []Client {
 	out := make([]Client, 0, len(r.clients))
@@ -190,6 +192,40 @@ func (r *Room) otherClients(from Client) []Client {
 		}
 	}
 	return out
+}
+
+// WriteSnapshot пишет документ в buf без копии карты и без сортировки ключей, как это делает
+// json.Marshal; записи уже валидный JSON. false, если в комнате ничего нет.
+func (r *Room) WriteSnapshot(buf *bytes.Buffer) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if len(r.records) == 0 && len(r.schema) == 0 {
+		return false
+	}
+	buf.WriteString(`{"schema":`)
+	if len(r.schema) == 0 {
+		buf.WriteString("{}")
+	} else {
+		buf.Write(r.schema)
+	}
+	buf.WriteString(`,"store":{`)
+	first := true
+	for k, v := range r.records {
+		if !first {
+			buf.WriteByte(',')
+		}
+		first = false
+		key, _ := json.Marshal(k)
+		buf.Write(key)
+		buf.WriteByte(':')
+		if len(v) == 0 {
+			buf.WriteString("null")
+		} else {
+			buf.Write(v)
+		}
+	}
+	buf.WriteString("}}")
+	return true
 }
 
 // Snapshot - копия документа; nil, если в комнате ничего нет.

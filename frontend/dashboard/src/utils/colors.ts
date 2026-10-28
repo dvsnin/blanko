@@ -19,5 +19,9 @@ export function assignColors<T extends { id: string; colorKey?: string }>(list: 
     taken.add(idx);
     byId.set(id, COVER_KEYS[idx]);
   }
-  return list.map((b) => ({ ...b, colorKey: byId.get(b.id) }));
+  // Объект с уже верным цветом возвращается как есть: мемоизированные карточки не перерисовываются.
+  return list.map((b) => {
+    const colorKey = byId.get(b.id);
+    return b.colorKey === colorKey ? b : { ...b, colorKey };
+  });
 }

@@ -225,6 +225,8 @@ COMMENT ON COLUMN board.purged_at IS 'Когда содержимое и мед�
 CREATE INDEX idx_board_team_id ON board (team_id);
 CREATE INDEX idx_board_account_id ON board (account_id);
 CREATE INDEX idx_board_template_id ON board (template_id);
+-- Список и карточки групп сортируют по последнему открытию внутри группы.
+CREATE INDEX idx_board_team_recent ON board (team_id, (COALESCE(last_opened_at, updated_at)) DESC, id DESC) WHERE deleted_at IS NULL;
 CREATE UNIQUE INDEX board_present_token_idx ON board (present_token) WHERE present_token IS NOT NULL;
 -- Поиск досок по подстроке названия в списке со страницами; удалённые доски в индексе не нужны.
 CREATE INDEX board_name_trgm_idx ON board USING gin (name gin_trgm_ops) WHERE deleted_at IS NULL;

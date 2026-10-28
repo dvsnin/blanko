@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
@@ -103,9 +104,9 @@ func (r *TemplateRepo) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
 	return true, nil
 }
 
-// List: CanEdit здесь не вычисляется, это делает сервис.
-func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.TemplateView, error) {
-	b := psql.Select(
+// viewSelect - живые шаблоны с автором и избранным зрителя; CanEdit вычисляет сервис.
+func viewSelect(viewerID uuid.UUID) sq.SelectBuilder {
+	return psql.Select(
 		"t.id", "t.public_id", "t.preset_key", "t.name", "t.description", "t.topic", "t.ages", "t.duration_min",
 		"t.author_account_id", "t.created_at", "t.updated_at",
 		"COALESCE(a.name, '') AS author_name",
@@ -114,8 +115,34 @@ func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.Te
 		From("template t").
 		LeftJoin("account a ON a.id = t.author_account_id").
 		LeftJoin("template_starred ts ON ts.template_id = t.id AND ts.account_id = ?", viewerID).
-		Where("t.deleted_at IS NULL").
-		OrderBy("t.created_at ASC") // по имени сортирует сервис
+		Where("t.deleted_at IS NULL")
+}
+
+func scanTemplateView(row pgx.Row, v *model.TemplateView) error {
+	t := &v.Template
+	return row.Scan(&t.ID, &t.PublicID, &t.PresetKey, &t.Name, &t.Description, &t.Topic, &t.Ages,
+		&t.DurationMin, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt,
+		&v.AuthorName, &v.IsStarred)
+}
+
+// GetView - один шаблон в том же виде, что и в List, без выборки всего списка.
+func (r *TemplateRepo) GetView(ctx context.Context, id, viewerID uuid.UUID) (*model.TemplateView, error) {
+	row, err := queryRowBuilder(ctx, r.db, viewSelect(viewerID).Where("t.id = ?", id).Limit(1))
+	if err != nil {
+		return nil, err
+	}
+	var v model.TemplateView
+	if err := scanTemplateView(row, &v); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &v, nil
+}
+
+func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.TemplateView, error) {
+	b := viewSelect(viewerID).OrderBy("t.created_at ASC") // по имени сортирует сервис
 
 	rows, err := queryBuilder(ctx, r.db, b)
 	if err != nil {
@@ -126,10 +153,7 @@ func (r *TemplateRepo) List(ctx context.Context, viewerID uuid.UUID) ([]model.Te
 	var result []model.TemplateView
 	for rows.Next() {
 		var v model.TemplateView
-		t := &v.Template
-		if err := rows.Scan(&t.ID, &t.PublicID, &t.PresetKey, &t.Name, &t.Description, &t.Topic, &t.Ages,
-			&t.DurationMin, &t.AuthorAccountID, &t.CreatedAt, &t.UpdatedAt,
-			&v.AuthorName, &v.IsStarred); err != nil {
+		if err := scanTemplateView(rows, &v); err != nil {
 			return nil, err
 		}
 		result = append(result, v)

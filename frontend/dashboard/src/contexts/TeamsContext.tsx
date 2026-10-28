@@ -162,6 +162,22 @@ function withRecent(team: Team, board: Board): Team {
 }
 
 /** Группа, в чьих последних досках есть доска; для доски со страницы это активная группа. */
+// mapChanged - map, который возвращает исходный массив, если fn не заменила ни одного элемента.
+function mapChanged<T>(list: T[], fn: (item: T) => T): T[] {
+  let changed = false;
+  const next = list.map((item) => {
+    const out = fn(item);
+    if (out !== item) changed = true;
+    return out;
+  });
+  return changed ? next : list;
+}
+
+// inheritAccess - доска без своей настройки берёт новый уровень группы; остальные остаются теми же объектами.
+function inheritAccess(b: Board, access: BoardAccess): Board {
+  return b.teamAccessInherited && b.teamAccess !== access ? { ...b, teamAccess: access } : b;
+}
+
 function teamOfBoard(teams: Team[], boardId: string): string | undefined {
   return teams.find((t) => t.recentBoards.some((b) => b.id === boardId))?.id;
 }
@@ -223,7 +239,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       ]);
       if (seq !== requestSeq.current) return;
       nextCursorRef.current = page.nextCursor;
-      setBoardList({ items: mapBoards(page.items), total: page.total, hasMore: page.nextCursor !== "", loading: false });
+      setBoardList({ items: mapBoards(page.items), total: page.total ?? 0, hasMore: page.nextCursor !== "", loading: false });
       const teamById = new Map(teamsRef.current.map((t) => [t.id, t]));
       setOtherMatches(
         others
@@ -254,7 +270,7 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
       setBoardList((prev) => {
         const known = new Set(prev.items.map((b) => b.id));
         const fresh = mapBoards(page.items).filter((b) => !known.has(b.id));
-        return { items: [...prev.items, ...fresh], total: page.total, hasMore: page.nextCursor !== "", loading: false };
+        return { items: [...prev.items, ...fresh], total: page.total ?? prev.total, hasMore: page.nextCursor !== "", loading: false };
       });
     } catch (e) {
       if (seq !== requestSeq.current) return;
@@ -316,9 +332,14 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
 
   // Локальные правки страницы списка и последних досок групп.
 
+  // Нетронутые группы и списки возвращаются теми же объектами: их карточки не перерисовываются.
   const patchBoard = useCallback((boardId: string, fn: (b: Board) => Board) => {
-    setBoardList((prev) => ({ ...prev, items: prev.items.map((b) => (b.id === boardId ? fn(b) : b)) }));
-    setTeams((prev) => prev.map((t) => ({ ...t, recentBoards: t.recentBoards.map((b) => (b.id === boardId ? fn(b) : b)) })));
+    setBoardList((prev) =>
+      prev.items.some((b) => b.id === boardId) ? { ...prev, items: prev.items.map((b) => (b.id === boardId ? fn(b) : b)) } : prev,
+    );
+    setTeams((prev) => mapChanged(prev, (t) =>
+      t.recentBoards.some((b) => b.id === boardId) ? { ...t, recentBoards: t.recentBoards.map((b) => (b.id === boardId ? fn(b) : b)) } : t,
+    ));
   }, []);
 
   const findBoard = useCallback((boardId: string): Board | undefined => {
@@ -384,14 +405,17 @@ export function TeamsProvider({ children }: TeamsProviderProps) {
                 ageGroup: (updated.ageGroup || undefined) as AgeKey | undefined,
                 teachers: updated.teachers || undefined,
                 memberBoardAccess: access,
-                recentBoards: t.recentBoards.map((b) => (b.teamAccessInherited && access ? { ...b, teamAccess: access } : b)),
+                recentBoards: access ? t.recentBoards.map((b) => inheritAccess(b, access)) : t.recentBoards,
               }
             : t,
         ),
       );
       // Доски без своей настройки сразу показывают новый уровень группы.
       if (access && teamId === activeTeamId) {
-        setBoardList((prev) => ({ ...prev, items: prev.items.map((b) => (b.teamAccessInherited ? { ...b, teamAccess: access } : b)) }));
+        setBoardList((prev) => {
+          const items = mapChanged(prev.items, (b) => inheritAccess(b, access));
+          return items === prev.items ? prev : { ...prev, items };
+        });
       }
     } catch (e) {
       console.error("updateTeam failed:", e);

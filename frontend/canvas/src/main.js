@@ -238,10 +238,11 @@ function sendPresence() {
         return;
     }
     // Без активности не шлём: timestamp не считается изменением, курсор у остальных гаснет сам.
-    const comparable = JSON.stringify({ ...record, lastActivityTimestamp: 0 });
+    // Сериализация одна: сравниваем текст без timestamp, а в отправку дописываем его в конец объекта.
+    const comparable = JSON.stringify(record, (k, v) => (k === "lastActivityTimestamp" ? undefined : v));
     if (comparable === lastPresenceJson) return;
     lastPresenceJson = comparable;
-    ws.send(JSON.stringify({ type: "presence", record }));
+    ws.send(`{"type":"presence","record":${comparable.slice(0, -1)},"lastActivityTimestamp":${record.lastActivityTimestamp}}}`);
 }
 
 function onPresence(msg) {
@@ -517,21 +518,24 @@ function flushPending() {
     if (!ws || ws.readyState !== WebSocket.OPEN || !gotInit || !canEdit) return;
     if (!pending.put.size && !pending.remove.size) return;
     const schema = editor.store.schema.serialize();
+    const schemaJson = JSON.stringify(schema);
     const entries = [...pending.put.entries()];
     const remove = [...pending.remove];
     pending.put.clear(); pending.remove.clear();
-    let put = {}, size = 0;
-    const send = (chunkPut, chunkRemove) => {
+    // Запись сериализуется один раз: текст push собирается из готовых кусков,
+    // объект msg нужен только для inflight (повтор после переподключения, locallyDirtyIds).
+    let put = {}, parts = [], size = 0;
+    const send = (chunkPut, chunkParts, chunkRemove) => {
         const msg = { type: "push", seq: ++seq, schema, put: chunkPut, remove: chunkRemove };
         inflight.set(msg.seq, msg);
-        ws.send(JSON.stringify(msg));
+        ws.send(`{"type":"push","seq":${msg.seq},"schema":${schemaJson},"put":{${chunkParts.join(",")}},"remove":${JSON.stringify(chunkRemove)}}`);
     };
     for (const [id, rec] of entries) {
-        const len = JSON.stringify(rec).length;
-        if (size && size + len > pushChunkBytes) { send(put, []); put = {}; size = 0; }
-        put[id] = rec; size += len;
+        const json = JSON.stringify(rec);
+        if (size && size + json.length > pushChunkBytes) { send(put, parts, []); put = {}; parts = []; size = 0; }
+        put[id] = rec; parts.push(`${JSON.stringify(id)}:${json}`); size += json.length;
     }
-    send(put, remove);
+    send(put, parts, remove);
     armAckTimer();
     setStatus();
 }

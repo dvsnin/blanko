@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -91,6 +92,7 @@ func (s *S3) List(ctx context.Context, prefix string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+		keys = slices.Grow(keys, len(page.Contents))
 		for _, o := range page.Contents {
 			keys = append(keys, aws.ToString(o.Key))
 		}

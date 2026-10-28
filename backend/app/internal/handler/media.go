@@ -49,11 +49,16 @@ func (a *API) UploadMedia(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unsupported_media", "unsupported content type "+contentType)
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(part, a.mediaMaxBytes+1))
-	if err != nil {
+	// Content-Length запроса - верхняя граница размера файла: буфер берётся сразу, без удвоений.
+	var buf bytes.Buffer
+	if n := r.ContentLength; n > 0 {
+		buf.Grow(int(min(n, a.mediaMaxBytes+1)))
+	}
+	if _, err := buf.ReadFrom(io.LimitReader(part, a.mediaMaxBytes+1)); err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", "cannot read file")
 		return
 	}
+	data := buf.Bytes()
 	if int64(len(data)) > a.mediaMaxBytes {
 		writeError(w, http.StatusRequestEntityTooLarge, "too_large", "file is too large")
 		return

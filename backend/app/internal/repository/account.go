@@ -52,6 +52,47 @@ func (r *AccountRepo) GetByEmail(ctx context.Context, email string) (*model.Acco
 	return r.getBy(ctx, "email = ? AND deleted_at IS NULL", email)
 }
 
+// AccountOrgRole - аккаунт вместе с организацией коробки и ролью в ней одним запросом.
+// OrgID пустой, если организации ещё нет; Role пустая, если строки членства нет.
+type AccountOrgRole struct {
+	Account model.Account
+	OrgID   uuid.UUID
+	OrgName string
+	Role    model.OrganizationRole
+}
+
+// GetWithOrgRole - быстрый путь Resolve: один SELECT без записи для уже известного аккаунта.
+func (r *AccountRepo) GetWithOrgRole(ctx context.Context, email string) (*AccountOrgRole, error) {
+	b := psql.Select("a.id", "a.email", "a.name", "a.prefs", "a.created_at", "a.updated_at", "o.id", "o.name", "om.role").
+		From("account a").
+		JoinClause("LEFT JOIN LATERAL (SELECT id, name FROM organization ORDER BY created_at ASC LIMIT 1) o ON true").
+		LeftJoin("organization_member om ON om.organization_id = o.id AND om.account_id = a.id").
+		Where("a.email = ? AND a.deleted_at IS NULL", email).
+		Limit(1)
+	row, err := queryRowBuilder(ctx, r.db, b)
+	if err != nil {
+		return nil, err
+	}
+	var out AccountOrgRole
+	var orgID *uuid.UUID
+	var orgName, role *string
+	a := &out.Account
+	if err := row.Scan(&a.ID, &a.Email, &a.Name, &a.Prefs, &a.CreatedAt, &a.UpdatedAt, &orgID, &orgName, &role); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if orgID != nil {
+		out.OrgID = *orgID
+		out.OrgName = *orgName
+	}
+	if role != nil {
+		out.Role = model.OrganizationRole(*role)
+	}
+	return &out, nil
+}
+
 func (r *AccountRepo) getBy(ctx context.Context, where string, arg any) (*model.Account, error) {
 	b := psql.Select("id", "email", "name", "prefs", "created_at", "updated_at").
 		From("account").

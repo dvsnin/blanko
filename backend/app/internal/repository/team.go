@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
@@ -212,12 +213,32 @@ func (r *TeamRepo) SetStarred(ctx context.Context, teamID, accountID uuid.UUID, 
 	return err
 }
 
-// ListMembers - участники команды с аккаунтами: владелец первым, дальше по имени.
-func (r *TeamRepo) ListMembers(ctx context.Context, teamID uuid.UUID) ([]model.TeamMemberView, error) {
-	b := psql.Select("a.id", "a.email", "a.name", "tm.role", "tm.created_at").
+func memberSelect(teamID uuid.UUID) sq.SelectBuilder {
+	return psql.Select("a.id", "a.email", "a.name", "tm.role", "tm.created_at").
 		From("team_member tm").
 		Join("account a ON a.id = tm.account_id AND a.deleted_at IS NULL").
-		Where("tm.team_id = ?", teamID).
+		Where("tm.team_id = ?", teamID)
+}
+
+// GetMember - один участник команды в том же виде, что и в ListMembers.
+func (r *TeamRepo) GetMember(ctx context.Context, teamID, accountID uuid.UUID) (*model.TeamMemberView, error) {
+	row, err := queryRowBuilder(ctx, r.db, memberSelect(teamID).Where("tm.account_id = ?", accountID).Limit(1))
+	if err != nil {
+		return nil, err
+	}
+	var m model.TeamMemberView
+	if err := row.Scan(&m.AccountID, &m.Email, &m.Name, &m.Role, &m.JoinedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &m, nil
+}
+
+// ListMembers - участники команды с аккаунтами: владелец первым, дальше по имени.
+func (r *TeamRepo) ListMembers(ctx context.Context, teamID uuid.UUID) ([]model.TeamMemberView, error) {
+	b := memberSelect(teamID).
 		OrderBy("CASE tm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END", "a.name", "a.email")
 	rows, err := queryBuilder(ctx, r.db, b)
 	if err != nil {

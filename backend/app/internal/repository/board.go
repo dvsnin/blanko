@@ -269,11 +269,11 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 		return nil, nil, err
 	}
 	defer rows.Close()
-	var result []model.BoardView
-	var keys []string
+	result := make([]model.BoardView, 0, f.Limit+1)
+	// pageKey - ключ последней строки страницы (индекс Limit-1); (Limit+1)-я строка только говорит, что есть ещё.
+	var pageKey, key string
 	for rows.Next() {
 		var bv model.BoardView
-		var key string
 		if err := rows.Scan(
 			&bv.Board.ID, &bv.Board.PublicID, &bv.Board.Name, &bv.Board.TeamID, &bv.Board.AccountID,
 			&bv.Board.TeamAccess, &bv.Board.TeamAccessInherited, &bv.Board.LinkAccessEnabled, &bv.Board.TemplateID, &bv.Board.CreatedAt, &bv.Board.UpdatedAt, &bv.Board.LastOpenedAt,
@@ -285,8 +285,10 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 		); err != nil {
 			return nil, nil, err
 		}
+		if len(result) == f.Limit-1 {
+			pageKey = key
+		}
 		result = append(result, bv)
-		keys = append(keys, key)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
@@ -295,7 +297,7 @@ func (r *BoardRepo) ListBoards(ctx context.Context, f BoardListFilter) ([]model.
 	if len(result) > f.Limit {
 		result = result[:f.Limit]
 		last := result[len(result)-1]
-		next = &BoardCursor{Key: keys[len(result)-1], ID: last.Board.ID}
+		next = &BoardCursor{Key: pageKey, ID: last.Board.ID}
 	}
 	return result, next, nil
 }

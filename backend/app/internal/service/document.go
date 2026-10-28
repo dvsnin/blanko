@@ -5,13 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/dvsnin/blanko/backend/app/internal/doc"
 	"github.com/dvsnin/blanko/backend/app/internal/model"
@@ -81,15 +81,19 @@ func (s *DocumentService) copyPrefix(ctx context.Context, srcKind doc.Kind, srcI
 		return err
 	}
 	srcDoc := doc.DocumentKey(srcKind, srcID)
+	// Медиа копируются параллельно: каждое это отдельный round-trip в хранилище.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(copyParallel)
 	for _, key := range keys {
 		if key == srcDoc {
 			continue
 		}
-		if err := s.Store.Copy(ctx, key, dst+strings.TrimPrefix(key, src)); err != nil {
-			return err
-		}
+		g.Go(func() error { return s.Store.Copy(gctx, key, dst+strings.TrimPrefix(key, src)) })
 	}
-	rc, _, err := s.Store.Get(ctx, srcDoc)
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	rc, info, err := s.Store.Get(ctx, srcDoc)
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil
 	}
@@ -97,12 +101,15 @@ func (s *DocumentService) copyPrefix(ctx context.Context, srcKind doc.Kind, srcI
 		return err
 	}
 	defer rc.Close()
-	body, err := io.ReadAll(rc)
-	if err != nil {
+	var buf bytes.Buffer
+	if info.Size > 0 {
+		buf.Grow(int(info.Size))
+	}
+	if _, err := buf.ReadFrom(rc); err != nil {
 		return err
 	}
 	// Ссылка несёт префикс владельца, строка с UUID уникальна: разбирать JSON не нужно.
-	body = bytes.ReplaceAll(body, []byte("asset:"+src), []byte("asset:"+dst))
+	body := bytes.ReplaceAll(buf.Bytes(), []byte("asset:"+src), []byte("asset:"+dst))
 	return s.Store.Put(ctx, doc.DocumentKey(dstKind, dstID), bytes.NewReader(body), int64(len(body)), "application/json")
 }
 
@@ -171,6 +178,9 @@ func (s *DocumentService) RunPurge(ctx context.Context, interval, retention time
 
 // purgeBatch - сколько документов одного вида вычищается за проход.
 const purgeBatch = 200
+
+// copyParallel - сколько объектов копируется одновременно при копировании документа.
+const copyParallel = 8
 
 // touchUpdated: updated_at документа отражает правки содержимого. Зовётся хабом после записи снапшота.
 func (s *DocumentService) touchUpdated(kind doc.Kind, id uuid.UUID) {

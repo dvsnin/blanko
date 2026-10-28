@@ -34,13 +34,30 @@ const (
 	closeNotFound       = 4404
 )
 
+// Put и Remove остаются сырыми: из них собирается patch остальным без перекодирования.
 type wsIn struct {
-	Type   string                     `json:"type"`
-	Seq    int64                      `json:"seq"`
-	Schema json.RawMessage            `json:"schema"`
-	Put    map[string]json.RawMessage `json:"put"`
-	Remove []string                   `json:"remove"`
-	Record json.RawMessage            `json:"record"`
+	Type   string          `json:"type"`
+	Seq    int64           `json:"seq"`
+	Schema json.RawMessage `json:"schema"`
+	Put    json.RawMessage `json:"put"`
+	Remove json.RawMessage `json:"remove"`
+	Record json.RawMessage `json:"record"`
+}
+
+// patchOf разбирает put и remove из push-сообщения.
+func (in *wsIn) patchOf() (doc.Patch, bool) {
+	var p doc.Patch
+	if len(in.Put) > 0 {
+		if err := json.Unmarshal(in.Put, &p.Put); err != nil {
+			return p, false
+		}
+	}
+	if len(in.Remove) > 0 {
+		if err := json.Unmarshal(in.Remove, &p.Remove); err != nil {
+			return p, false
+		}
+	}
+	return p, true
 }
 
 // validRecords: сервер не знает схему tldraw, но ключ обязан совпадать с id записи,
@@ -344,11 +361,12 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 			client.sendJSON(wsErr{Type: "error", Code: "read_only"})
 			continue
 		}
-		if !validRecords(in.Put) {
+		patch, ok := in.patchOf()
+		if !ok || !validRecords(patch.Put) {
 			client.sendJSON(wsErr{Type: "error", Code: "bad_message"})
 			continue
 		}
 		ack, _ := json.Marshal(wsAck{Type: "ack", Seq: in.Seq})
-		room.Apply(in.Schema, doc.Patch{Put: in.Put, Remove: in.Remove}, client, ack)
+		room.Apply(in.Schema, patch, doc.PatchMessageBytes(in.Put, in.Remove), client, ack)
 	}
 }
