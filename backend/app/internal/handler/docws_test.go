@@ -184,6 +184,76 @@ func TestDocWS(t *testing.T) {
 		}
 	})
 
+	t.Run("parent cycle rejected", func(t *testing.T) {
+		b := e.board(team, owner, "Цикл родителей")
+		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		other, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		writeMsg(t, c, pushMsg(1, map[string]any{"shape:a": shapeIn("shape:a", "page:page"), "shape:b": shapeIn("shape:b", "shape:a")}, nil))
+		if ack := readMsg(t, c, time.Second); ack["type"] != "ack" {
+			t.Fatalf("ack = %v", ack)
+		}
+		readMsg(t, other, time.Second)
+		cases := []struct {
+			name string
+			seq  int
+			put  map[string]any
+		}{
+			{"замыкает существующую цепочку: a -> b -> a", 2, map[string]any{"shape:a": shapeIn("shape:a", "shape:b")}},
+			{"цикл внутри одного патча", 3, map[string]any{"shape:c": shapeIn("shape:c", "shape:d"), "shape:d": shapeIn("shape:d", "shape:c")}},
+			{"сама себе родитель", 4, map[string]any{"shape:e": shapeIn("shape:e", "shape:e")}},
+		}
+		for _, tc := range cases {
+			writeMsg(t, c, pushMsg(tc.seq, tc.put, nil))
+			if msg := readMsg(t, c, time.Second); msg["type"] != "error" || msg["code"] != "bad_patch" || msg["seq"] != float64(tc.seq) {
+				t.Fatalf("%s: msg = %v", tc.name, msg)
+			}
+		}
+		// Родитель ещё не пришёл (следующий чанк) - это не цикл.
+		writeMsg(t, c, pushMsg(5, map[string]any{"shape:f": shapeIn("shape:f", "shape:missing")}, nil))
+		if ack := readMsg(t, c, time.Second); ack["type"] != "ack" {
+			t.Fatalf("orphan rejected: %v", ack)
+		}
+		// Второй клиент получил только принятые патчи.
+		if patch := readMsg(t, other, time.Second); patch["type"] != "patch" || patch["put"].(map[string]any)["shape:f"] == nil {
+			t.Fatalf("other got %v", patch)
+		}
+		eventually(t, 2*time.Second, func() bool {
+			body := string(e.store.Bytes(key(b.ID)))
+			return strings.Contains(body, `"id":"shape:a","parentId":"page:page"`) && strings.Contains(body, `"shape:f"`) &&
+				!strings.Contains(body, `"shape:c"`) && !strings.Contains(body, `"shape:e"`)
+		})
+	})
+
+	t.Run("stored cycle repaired on load", func(t *testing.T) {
+		b := e.board(team, owner, "Битое дерево")
+		stored := `{"schema":{"schemaVersion":2},"store":{` +
+			`"page:p2":{"id":"page:p2","typeName":"page","name":"Page 2"},` +
+			`"page:p1":{"id":"page:p1","typeName":"page","name":"Page 1"},` +
+			`"shape:a":{"id":"shape:a","typeName":"shape","type":"frame","parentId":"shape:b","props":{"w":1}},` +
+			`"shape:b":{"id":"shape:b","typeName":"shape","type":"frame","parentId":"shape:a"},` +
+			`"shape:c":{"id":"shape:c","typeName":"shape","type":"geo","parentId":"shape:b"},` +
+			`"shape:d":{"id":"shape:d","typeName":"shape","type":"geo","parentId":"page:p1"},` +
+			`"shape:e":{"id":"shape:e","typeName":"shape","type":"geo","parentId":"shape:gone"}}}`
+		if err := e.store.Put(e.ctx, key(b.ID), strings.NewReader(stored), int64(len(stored)), "application/json"); err != nil {
+			t.Fatal(err)
+		}
+		c, init := e.mustDial("owner@example.com", doc.KindBoard, b.ID)
+		store := init["document"].(map[string]any)["store"].(map[string]any)
+		parent := func(id string) any { return store[id].(map[string]any)["parentId"] }
+		// Участники кольца уходят на первую страницу, остальные записи не трогаются.
+		if parent("shape:a") != "page:p1" || parent("shape:b") != "page:p1" || parent("shape:c") != "shape:b" || parent("shape:d") != "page:p1" || parent("shape:e") != "shape:gone" {
+			t.Fatalf("store after repair = %v", store)
+		}
+		if store["shape:a"].(map[string]any)["props"].(map[string]any)["w"] != float64(1) {
+			t.Fatalf("record content lost: %v", store["shape:a"])
+		}
+		c.Close()
+		eventually(t, 2*time.Second, func() bool {
+			body := string(e.store.Bytes(key(b.ID)))
+			return strings.Contains(body, `"id":"shape:a","parentId":"page:p1"`) && strings.Contains(body, `"id":"shape:b","parentId":"page:p1"`)
+		})
+	})
+
 	t.Run("bad message", func(t *testing.T) {
 		b := e.board(team, owner, "Мусор")
 		c, _ := e.mustDial("owner@example.com", doc.KindBoard, b.ID)

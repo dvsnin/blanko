@@ -298,6 +298,10 @@ func shape(id string) map[string]any {
 	return map[string]any{"id": id, "typeName": "shape", "type": "geo"}
 }
 
+func shapeIn(id, parentID string) map[string]any {
+	return map[string]any{"id": id, "typeName": "shape", "type": "geo", "parentId": parentID}
+}
+
 // presenceMsg - сообщение presence с минимальной записью: сервер не заглядывает
 // внутрь record дальше id, остальные поля для него непрозрачны.
 func presenceMsg(id, name string) map[string]any {

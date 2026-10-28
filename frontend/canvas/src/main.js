@@ -8,6 +8,7 @@ import {
 } from "tldraw";
 import { getAssetUrlsByImport } from "@tldraw/assets/imports.vite";
 import "tldraw/tldraw.css";
+import { repairParents } from "./tree.js";
 
 // Шрифты, иконки и переводы tldraw из бандла, а не с cdn.tldraw.com.
 const assetUrls = getAssetUrlsByImport();
@@ -583,6 +584,10 @@ function onPatch(msg) {
 // Переподключение: сервер главный, свои несохранённые правки докладываем поверх.
 function onInit(msg) {
     canEdit = !!msg.canEdit;
+    if (msg.document && msg.document.store) {
+        const fixed = repairParents(msg.document.store);
+        if (fixed.length) console.warn("parent cycle in document, shapes moved to page:", fixed.join(" "));
+    }
     const firstInit = !gotInit;
     if (!gotInit) {
         if (msg.document) loadSnapshot(editor.store, { document: msg.document, session: readSession() });
@@ -634,6 +639,17 @@ function onInit(msg) {
     schedulePresence();
 }
 
+// bad_patch: сервер не принял push (кольцо parentId после вставки - баг tldraw 5.5.2). Локальное
+// состояние уже битое, спорить бессмысленно: забываем свои правки и переподключаемся, сервер главный.
+function onWsError(msg) {
+    console.warn("ws error:", msg.code, msg.seq || "");
+    if (msg.code !== "bad_patch") return;
+    inflight.clear();
+    pending.put.clear();
+    pending.remove.clear();
+    try { ws && ws.close(); } catch {}
+}
+
 function connect() {
     const proto = location.protocol === "https:" ? "wss://" : "ws://";
     const path = PRESENT ? `/app/present/${PRESENT.token}/ws` : `/app/ws/${APP_DOC.kind}/${APP_DOC.id}`;
@@ -647,7 +663,7 @@ function connect() {
         else if (msg.type === "presence") onPresence(msg);
         else if (msg.type === "presence_gone") onPresenceGone(msg);
         else if (msg.type === "screens") onScreens(msg);
-        else if (msg.type === "error") console.warn("ws error:", msg.code);
+        else if (msg.type === "error") onWsError(msg);
     };
     ws.onclose = (ev) => {
         ws = null;

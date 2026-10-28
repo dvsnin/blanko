@@ -60,19 +60,27 @@ func (in *wsIn) patchOf() (doc.Patch, bool) {
 	return p, true
 }
 
-// validRecords: сервер не знает схему tldraw, но ключ обязан совпадать с id записи,
-// а у записи должен быть typeName, иначе документ со временем превратится в мусор.
-func validRecords(put map[string]json.RawMessage) bool {
+// recordHeads: сервер не знает схему tldraw, но ключ обязан совпадать с id записи, а у записи
+// должен быть typeName, иначе документ со временем превратится в мусор. Заодно собирает parentId
+// фигур: по ним комната проверяет, что патч не замыкает цепочку родителей.
+func recordHeads(put map[string]json.RawMessage) (shapeParents map[string]string, ok bool) {
 	for key, raw := range put {
 		var rec struct {
 			ID       string `json:"id"`
 			TypeName string `json:"typeName"`
+			ParentID string `json:"parentId"`
 		}
 		if err := json.Unmarshal(raw, &rec); err != nil || rec.ID != key || rec.TypeName == "" {
-			return false
+			return nil, false
+		}
+		if rec.TypeName == "shape" {
+			if shapeParents == nil {
+				shapeParents = make(map[string]string, len(put))
+			}
+			shapeParents[key] = rec.ParentID
 		}
 	}
-	return true
+	return shapeParents, true
 }
 
 // presenceID достаёт id presence-записи; остальное содержимое сервер не разбирает.
@@ -100,6 +108,8 @@ type wsAck struct {
 type wsErr struct {
 	Type string `json:"type"`
 	Code string `json:"code"`
+	// Seq - отклонённый push (bad_patch), чтобы клиент знал, какая правка не принята.
+	Seq int64 `json:"seq,omitempty"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -362,11 +372,19 @@ func (a *API) DocWS(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		patch, ok := in.patchOf()
-		if !ok || !validRecords(patch.Put) {
+		if !ok {
+			client.sendJSON(wsErr{Type: "error", Code: "bad_message"})
+			continue
+		}
+		parents, ok := recordHeads(patch.Put)
+		if !ok {
 			client.sendJSON(wsErr{Type: "error", Code: "bad_message"})
 			continue
 		}
 		ack, _ := json.Marshal(wsAck{Type: "ack", Seq: in.Seq})
-		room.Apply(in.Schema, patch, doc.PatchMessageBytes(in.Put, in.Remove), client, ack)
+		if err := room.Apply(in.Schema, patch, parents, doc.PatchMessageBytes(in.Put, in.Remove), client, ack); err != nil {
+			// Кольцо родителей: документ с ним не открывается, правка не принимается целиком.
+			client.sendJSON(wsErr{Type: "error", Code: "bad_patch", Seq: in.Seq})
+		}
 	}
 }

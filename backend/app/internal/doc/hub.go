@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -84,16 +85,19 @@ func (h *Hub) Join(ctx context.Context, kind Kind, id uuid.UUID, c Client) (*Roo
 		h.mu.Unlock()
 
 		d, err := h.load(ctx, kind, id)
+		var fixed []string
 		room.mu.Lock()
 		if err != nil {
 			room.loadErr = err
 		} else if d != nil {
-			room.schema = d.Schema
-			for k, v := range d.Store {
-				room.records[k] = v
-			}
+			fixed = room.loadLocked(d)
 		}
 		room.mu.Unlock()
+		if len(fixed) > 0 {
+			// Починенный документ надо записать, даже если никто ничего не поправит.
+			room.dirty.Store(true)
+			log.Printf("doc: %s/%s: parent cycle, %d shapes moved to page: %s", kind, id, len(fixed), strings.Join(fixed, " "))
+		}
 		close(room.loading)
 		if err != nil {
 			h.mu.Lock()

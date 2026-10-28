@@ -3,7 +3,9 @@ package doc
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,6 +21,8 @@ type Room struct {
 	mu      sync.RWMutex
 	schema  json.RawMessage
 	records map[string]json.RawMessage
+	// parents: parentId каждой фигуры из records - для проверки патчей на кольцо без разбора JSON.
+	parents map[string]string
 	// touched: комната менялась после загрузки, при остановке её нужно сохранить.
 	touched bool
 	clients map[Client]struct{}
@@ -49,28 +53,117 @@ type screenEntry struct {
 }
 
 func newRoom(kind Kind, id uuid.UUID, d *Document) *Room {
-	r := &Room{kind: kind, id: id, records: map[string]json.RawMessage{}, clients: map[Client]struct{}{}, presence: map[Client]presenceEntry{}, screens: map[Client]screenEntry{}}
+	r := &Room{kind: kind, id: id, records: map[string]json.RawMessage{}, parents: map[string]string{}, clients: map[Client]struct{}{}, presence: map[Client]presenceEntry{}, screens: map[Client]screenEntry{}}
 	if d != nil {
-		r.schema = d.Schema
-		for k, v := range d.Store {
-			r.records[k] = v
-		}
+		r.loadLocked(d)
 	}
 	return r
 }
 
+// loadLocked кладёт документ из хранилища в комнату и чинит кольца родителей;
+// возвращает переподчинённые фигуры (комната после этого touched). Под r.mu.
+func (r *Room) loadLocked(d *Document) []string {
+	r.schema = d.Schema
+	for k, v := range d.Store {
+		r.records[k] = v
+		if parent, ok := shapeParent(v); ok {
+			r.parents[k] = parent
+		}
+	}
+	fixed := cycleMembers(r.parents)
+	if len(fixed) == 0 {
+		return nil
+	}
+	page := r.firstPageLocked()
+	for _, id := range fixed {
+		rec, err := withParent(r.records[id], page)
+		if err != nil {
+			continue
+		}
+		r.records[id] = rec
+		r.parents[id] = page
+	}
+	r.touched = true
+	return fixed
+}
+
+// firstPageLocked - страница с наименьшим id; без страниц дефолтная tldraw. Под r.mu.
+func (r *Room) firstPageLocked() string {
+	page := ""
+	for id, rec := range r.records {
+		if !strings.HasPrefix(id, "page:") || (page != "" && id >= page) {
+			continue
+		}
+		var h struct {
+			TypeName string `json:"typeName"`
+		}
+		if json.Unmarshal(rec, &h) == nil && h.TypeName == "page" {
+			page = id
+		}
+	}
+	if page == "" {
+		return "page:page"
+	}
+	return page
+}
+
+// ErrCycle - патч замыкает цепочку parentId; принимать его нельзя: такой документ вешает tldraw.
+var ErrCycle = errors.New("parent cycle")
+
+// cycleLocked: даст ли патч кольцо родителей. parents - parentId фигур из патча. Под r.mu.
+func (r *Room) cycleLocked(p Patch, parents map[string]string) bool {
+	if len(parents) == 0 {
+		return false
+	}
+	var removed map[string]struct{}
+	if len(p.Remove) > 0 {
+		removed = make(map[string]struct{}, len(p.Remove))
+		for _, id := range p.Remove {
+			removed[id] = struct{}{}
+		}
+	}
+	lookup := func(id string) (string, bool) {
+		if parent, ok := parents[id]; ok {
+			return parent, true
+		}
+		if _, gone := removed[id]; gone {
+			return "", false
+		}
+		parent, ok := r.parents[id]
+		return parent, ok
+	}
+	done := make(map[string]struct{}, len(parents))
+	for id := range parents {
+		if findCycle(id, lookup, done) != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // Apply накладывает дифф, пересылает msg (готовый patch) остальным клиентам и подтверждает отправителю.
 // Всё под r.mu и без таймеров: порядок сообщений у клиента равен порядку применения на сервере.
-func (r *Room) Apply(schema json.RawMessage, p Patch, msg []byte, from Client, ack []byte) {
+// parents - parentId фигур из p.Put (разобраны хендлером); патч с кольцом отклоняется целиком: ErrCycle.
+func (r *Room) Apply(schema json.RawMessage, p Patch, parents map[string]string, msg []byte, from Client, ack []byte) error {
 	r.mu.Lock()
+	if r.cycleLocked(p, parents) {
+		r.mu.Unlock()
+		return ErrCycle
+	}
 	if len(schema) > 0 && string(schema) != "null" {
 		r.schema = schema
 	}
 	for id, rec := range p.Put {
 		r.records[id] = rec
+		if parent, ok := parents[id]; ok {
+			r.parents[id] = parent
+		} else {
+			delete(r.parents, id)
+		}
 	}
 	for _, id := range p.Remove {
 		delete(r.records, id)
+		delete(r.parents, id)
 	}
 	r.touched = true
 	slow := r.sendOthersLocked(msg, from)
@@ -83,6 +176,7 @@ func (r *Room) Apply(schema json.RawMessage, p Patch, msg []byte, from Client, a
 	for _, c := range slow {
 		c.Close(1008, "slow consumer")
 	}
+	return nil
 }
 
 // Presence запоминает курсор клиента и пересылает его остальным. Как и в Apply,

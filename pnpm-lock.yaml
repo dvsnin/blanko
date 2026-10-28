@@ -184,6 +184,9 @@ importers:
       vite:
         specifier: ^5.0.0
         version: 5.4.21(@types/node@26.6.5)
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@26.6.5)(jsdom@26.1.0)
 
   frontend/dashboard:
     dependencies:
